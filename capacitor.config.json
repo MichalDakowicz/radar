@@ -1,0 +1,12 @@
+{
+  "appId": "com.michaldakowicz.radar",
+  "appName": "Radar",
+  "webDir": "dist",
+  "plugins": {
+    "GoogleAuth": {
+      "scopes": ["profile", "email"],
+      "serverClientId": "242743922949-gdtdh8osnddop51uu82f9qvd79l12puh.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": false
+    }
+  }
+}

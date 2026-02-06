@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Radar</string>
+    <string name="title_activity_main">Radar</string>
+    <string name="package_name">com.michaldakowicz.radar</string>
+    <string name="custom_url_scheme">com.michaldakowicz.radar</string>
+    <string name="server_client_id">242743922949-gdtdh8osnddop51uu82f9qvd79l12puh.apps.googleusercontent.com</string>
+</resources>
