@@ -1,4 +1,4 @@
-import { X, Calendar, Clapperboard, StickyNote, Quote, Monitor, ExternalLink, Star } from "lucide-react";
+import { X, Calendar, Clapperboard, StickyNote, Monitor, ExternalLink, Star, Clock, Play } from "lucide-react";
 import { getServiceStyle } from "../../lib/services";
 
 export default function MovieDetailsModal({ isOpen, onClose, movie }) {
@@ -10,7 +10,6 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
       : (Array.isArray(movie.artist) ? movie.artist : [movie.artist || movie.director]).filter(Boolean);
 
   const availability = Array.isArray(movie.availability) ? movie.availability : (movie.format ? [movie.format] : []);
-  const quotes = movie.quotes || movie.favoriteTracks;
   const ratings = movie.ratings || {};
 
   return (
@@ -35,12 +34,25 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
           )}
            
            <div className="absolute top-4 right-4 flex gap-2 z-10">
+               {movie.tmdbId && (
+                   <a 
+                    href={movie.type === 'tv' ? `https://pstream.mov/media/tmdb-tv-${movie.tmdbId}` : `https://pstream.mov/media/tmdb-movie-${movie.tmdbId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 rounded-full px-4 py-2 backdrop-blur-lg bg-black/50 hover:bg-black/70 text-white transition-colors border border-white/10"
+                   >
+                       <span className="text-xl">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 20.927 20.927" preserveAspectRatio="xMidYMid meet"><g transform="translate(0,20.927) scale(0.003333,-0.003333)" fill="currentColor" stroke="none"><path d="M3910 5527 c-33 -4 -145 -17 -250 -28 -645 -73 -900 -187 -900 -405 l0 -89 154 -2 c209 -2 225 -17 381 -354 186 -399 337 -491 557 -341 103 70 176 67 252 -9 143 -142 -15 -342 -320 -404 l-123 -25 185 -393 c101 -217 189 -396 194 -398 6 -3 87 6 182 20 499 71 1160 -296 972 -541 -77 -101 -183 -100 -307 2 -186 154 -407 223 -610 188 -123 -21 -119 -9 -80 -274 40 -273 18 -701 -48 -916 -25 -82 252 -99 463 -28 655 220 1146 748 1330 1430 44 165 46 201 53 1206 l8 1035 -67 66 c-185 183 -1376 336 -2026 260z m1078 -1219 c118 -81 204 -84 312 -10 239 163 453 -73 240 -265 -241 -218 -703 -178 -832 71 -93 179 105 323 280 204z"></path><path d="M2410 4591 c-950 -201 -2404 -1015 -2409 -1348 -1 -69 771 -1707 885 -1878 422 -633 1185 -984 1924 -886 221 29 293 68 482 264 575 594 727 1466 390 2232 -231 525 -749 1600 -785 1630 -57 48 -214 44 -487 -14z m579 -1122 c114 -54 145 -188 64 -281 -48 -56 -60 -58 -265 -47 -102 6 -177 -42 -229 -143 -95 -187 -339 -145 -339 57 0 291 482 550 769 414z m-1319 -630 c215 -106 85 -350 -173 -326 -144 13 -209 -21 -270 -140 -102 -197 -381 -119 -339 94 59 295 506 508 782 372z m1472 -577 c216 -217 -287 -789 -786 -895 -473 -100 -909 127 -654 341 71 60 93 62 226 22 348 -106 739 77 903 423 83 177 201 218 311 109z"></path></g></svg>
+                       </span>
+                       <span className="font-semibold text-white">P-Stream</span>
+                   </a>
+               )}
                <a 
-                href={`https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}`}
+                href={movie.imdbId ? `https://www.imdb.com/title/${movie.imdbId}` : `https://www.imdb.com/find?q=${encodeURIComponent(movie.title)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="p-2 rounded-full bg-yellow-500 hover:bg-yellow-400 text-black transition-colors font-bold text-xs flex items-center gap-1"
-                title="Search on IMDB"
+                title="Open IMDb"
                >
                    IMDb <ExternalLink size={12}/>
                </a>
@@ -74,13 +86,21 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
             
-            {/* Metadata Grid */}
+            {/* Grid for runtime/date/availability/type */}
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-neutral-800/10 rounded-lg p-3 border border-neutral-800">
                     <div className="text-xs text-neutral-500 uppercase font-bold mb-1">Release Date</div>
-                    <div className="flex items-center gap-2 text-neutral-200">
-                        <Calendar size={16} className="text-blue-500"/>
-                        <span className="font-mono text-sm">{movie.releaseDate || 'Unknown'}</span>
+                    <div className="flex items-center gap-3 text-neutral-200">
+                        <div className="flex items-center gap-2">
+                             <Calendar size={16} className="text-blue-500"/>
+                             <span className="font-mono text-sm">{movie.releaseDate || 'Unknown'}</span>
+                        </div>
+                        {movie.runtime > 0 && (
+                            <div className="flex items-center gap-1.5 pl-3 border-l border-neutral-700">
+                                <Clock size={14} className="text-neutral-500"/>
+                                <span className="font-mono text-xs text-neutral-400">{movie.runtime}m</span>
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div className="bg-neutral-800/10 rounded-lg p-3 border border-neutral-800">
@@ -104,6 +124,22 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                     </div>
                 </div>
 
+                {/* Removed separate runtime block */}
+                
+                <div className="bg-neutral-800/10 rounded-lg p-3 border border-neutral-800">
+                    <div className="text-xs text-neutral-500 uppercase font-bold mb-1">Type</div>
+                    <div className="flex items-center gap-2 text-neutral-200">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">
+                            {movie.type === 'tv' ? 'TV Show' : 'Movie'}
+                        </span>
+                        {movie.type === 'tv' && movie.status && (
+                             <span className="text-xs text-neutral-400 border-l border-neutral-700 pl-2 ml-1">
+                                {movie.status}
+                             </span>
+                        )}
+                    </div>
+                </div>
+
                  <div className="bg-neutral-800/10 rounded-lg p-3 border border-neutral-800 col-span-2">
                     <div className="text-xs text-neutral-500 uppercase font-bold mb-1">Genres</div>
                     <div className="flex flex-wrap gap-1">
@@ -118,6 +154,21 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                          )}
                     </div>
                 </div>
+                
+                <div className="bg-neutral-800/10 rounded-lg p-3 border border-neutral-800 col-span-2">
+                    <div className="text-xs text-neutral-500 uppercase font-bold mb-1">Cast</div>
+                    <div className="flex flex-wrap gap-2">
+                         {movie.cast && movie.cast.length > 0 ? (
+                             movie.cast.map((c, i) => (
+                                 <span key={i} className="text-xs px-2 py-1 rounded-full bg-neutral-800 border border-neutral-700 text-neutral-300">
+                                     {c}
+                                 </span>
+                             ))
+                         ) : (
+                             <span className="text-neutral-500 italic text-sm">No cast listed</span>
+                         )}
+                    </div>
+                </div>
             </div>
             
             {/* Ratings Section */}
@@ -127,6 +178,12 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                         <h3 className="text-xs font-bold text-neutral-400 uppercase flex items-center gap-2 tracking-wide">
                             <Star size={14} className="text-amber-500 fill-amber-500" /> Ratings
                         </h3>
+                        <div className="flex items-center gap-3">
+                            {movie.voteAverage > 0 && (
+                                <div className="text-xs font-bold text-neutral-400 bg-neutral-800/50 px-2 py-1 rounded border border-neutral-700/50 flex items-center gap-1">
+                                    <span className="text-yellow-500">IMDb</span> {movie.voteAverage.toFixed(1)}
+                                </div>
+                            )}
                         {(() => {
                            // Calculate or use Overall
                            let displayRating = null;
@@ -167,9 +224,10 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                                </div>
                            );
                         })()}
+                        </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                         {Object.entries(ratings).filter(([k]) => k !== 'overall').map(([key, val]) => (
+                         {Object.entries(ratings).filter(([k]) => ['story', 'acting', 'ending', 'enjoyment'].includes(k)).map(([key, val]) => (
                              val > 0 && <div key={key} className="flex justify-between items-center bg-neutral-800/30 p-2 rounded">
                                  <span className="text-xs uppercase text-neutral-400 font-medium">{key}</span>
                                  <div className="flex items-center gap-2">
@@ -223,18 +281,6 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                 </div>
             )}
 
-             {/* Quotes */}
-            {quotes && (
-                <div className="space-y-2">
-                    <h3 className="text-xs font-bold text-neutral-400 uppercase flex items-center gap-2 tracking-wide">
-                        <Quote size={14} /> Favorite Quotes / Scenes
-                    </h3>
-                    <div className="p-4 rounded-xl bg-neutral-800/30 border border-neutral-800/50 text-neutral-300 leading-relaxed whitespace-pre-wrap text-sm italic font-serif">
-                        "{quotes}"
-                    </div>
-                </div>
-            )}
-            
             {/* Acquisition Date Only */}
             {movie.acquisitionDate && (
                 <div className="pt-4 border-t border-neutral-800">

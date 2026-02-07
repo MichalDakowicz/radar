@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import Logo from "../ui/Logo";
-import { BarChart3, Clock, LayoutGrid, Plus, Share2, Shuffle, Settings, Users } from "lucide-react";
+import { BarChart3, Clock, LayoutGrid, Plus, Share2, Shuffle, Settings, Users, Search } from "lucide-react";
 import { useAuth } from "../../features/auth/AuthContext";
 import { useToast } from "../ui/Toast";
 import { useMovies } from "../../hooks/useMovies";
@@ -63,6 +63,13 @@ export function Navbar({ onPickRandom }) {
               title="Library"
             >
               <LayoutGrid size={20} />
+            </Link>
+            <Link
+              to="/browse"
+              className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${isActive('/browse') ? 'text-white bg-neutral-800' : 'text-neutral-400 hover:text-white hover:bg-neutral-800'}`}
+              title="Browse"
+            >
+              <Search size={20} />
             </Link>
             <Link
               to="/stats"

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutGrid, BarChart3, Clock, Users, Settings } from "lucide-react";
+import { LayoutGrid, BarChart3, Clock, Users, Settings, Search } from "lucide-react";
 
 export function BottomNav() {
     const location = useLocation();
@@ -17,6 +17,16 @@ export function BottomNav() {
                 >
                     <LayoutGrid size={24} />
                     <span className="text-[10px] font-medium">Library</span>
+                </Link>
+
+                <Link
+                    to="/browse"
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+                        isActive("/browse") ? "text-blue-500" : "text-neutral-400 hover:text-blue-500"
+                    }`}
+                >
+                    <Search size={24} />
+                    <span className="text-[10px] font-medium">Browse</span>
                 </Link>
 
                 <Link

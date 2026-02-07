@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, Search, Loader2, Plus, Minus, PenLine, Link, Check, Clapperboard, Heart, Clock, Disc, Disc3, Monitor, FileVideo, Film, Library, Calculator } from "lucide-react";
 import { StarRating } from "./StarRating";
-import { fetchMovieMetadata, searchMovies } from "../../services/tmdb";
+import { fetchMediaMetadata, searchMedia } from "../../services/tmdb";
 import { getServiceStyle } from "../../lib/services";
 
 export default function AddMovieModal({ isOpen, onClose, onAdd }) {
@@ -15,21 +15,33 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
 
   // Editable fields state
   // -- Main --
+  const [type, setType] = useState("movie"); // "movie" | "tv"
   const [title, setTitle] = useState("");
   const [director, setDirector] = useState([]);
   const [coverUrl, setCoverUrl] = useState("");
   const [releaseDate, setReleaseDate] = useState("");
   const [availability, setAvailability] = useState([]); // Replaces formats
   const [directorInput, setDirectorInput] = useState("");
+  const [tmdbId, setTmdbId] = useState(null);
+  const [imdbId, setImdbId] = useState("");
+  const [voteAverage, setVoteAverage] = useState(0);
+  
+  // Additional Data
+  const [cast, setCast] = useState([]);
+  const [genres, setGenres] = useState([]);
+  const [runtime, setRuntime] = useState(0);
+  const [overview, setOverview] = useState("");
   
   // Status State
   const [inWatchlist, setInWatchlist] = useState(true);
   const [timesWatched, setTimesWatched] = useState(0);
   const [storedTimesWatched, setStoredTimesWatched] = useState(1);
-  
+  const [tvStatus, setTvStatus] = useState("Watching"); 
+  const [numberOfSeasons, setNumberOfSeasons] = useState(0);
+  const [numberOfEpisodes, setNumberOfEpisodes] = useState(0);
+
   // -- Details --
   const [notes, setNotes] = useState("");
-  const [quotes, setQuotes] = useState("");
   // const [acquisitionDate, setAcquisitionDate] = useState(""); // Removed
 
   // -- Ratings --
@@ -37,8 +49,8 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
   const [ratings, setRatings] = useState({
       story: 0,
       acting: 0,
-      visuals: 0,
-      audio: 0
+      ending: 0,
+      enjoyment: 0
   });
   
   const [error, setError] = useState("");
@@ -51,42 +63,57 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
   }, [isOpen]);
 
   const resetForm = () => {
+    // UI Reset
     setActiveTab("main");
     setInputVal("");
     setDirectorInput("");
     setPreview(null);
     setSearchResults([]);
-    setAvailability([]);
+    setError("");
+
+    // Data Reset
+    setType("movie");
     setTitle("");
     setDirector([]);
     setCoverUrl("");
     setReleaseDate("");
+    setTmdbId(null);
+    setImdbId("");
+    setVoteAverage(0);
     setAvailability([]);
-    setDirectorInput("");
+    
+    setCast([]);
+    setGenres([]);
+    setRuntime(0);
+    setOverview("");
+    
     setInWatchlist(true);
     setTimesWatched(0);
     setStoredTimesWatched(1);
-    
+    setTvStatus("Watching");
+    setNumberOfSeasons(0);
+    setNumberOfEpisodes(0);
+            
     // Reset details
     setNotes("");
-    setQuotes("");
-    // setAcquisitionDate("");
     
     setOverallRating(0);
     setRatings({
         story: 0,
         acting: 0,
-        visuals: 0,
-        audio: 0
+        ending: 0,
+        enjoyment: 0
     });
-    
-    setError("");
   };
 
   // Sync state when preview changes
   useEffect(() => {
     if (preview) {
+      setImdbId(preview.imdbId || "");
+      setVoteAverage(preview.voteAverage || 0);
+      setTmdbId(preview.tmdbId);
       setTitle(preview.title || "");
+      setType(preview.type || "movie");
       if (Array.isArray(preview.director)) {
           setDirector(preview.director);
       } else {
@@ -94,6 +121,13 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
       }
       setCoverUrl(preview.coverUrl || "");
       setReleaseDate(preview.releaseDate || "");
+      setCast(preview.cast || []);
+      setGenres(preview.genres || []);
+      setRuntime(preview.runtime || 0);
+      setOverview(preview.overview || "");
+      setAvailability(preview.availability || []);
+      setNumberOfSeasons(preview.numberOfSeasons || 0);
+      setNumberOfEpisodes(preview.numberOfEpisodes || 0);
     }
   }, [preview]);
 
@@ -115,7 +149,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
     setError("");
     
     try {
-      const results = await searchMovies(val);
+      const results = await searchMedia(val);
       setSearchResults(results);
     } catch (err) {
       console.error(err);
@@ -128,7 +162,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
   const handleSelectMovie = async (item) => {
     setLoading(true);
     try {
-        const fullData = await fetchMovieMetadata(item.tmdbId);
+        const fullData = await fetchMediaMetadata(item.tmdbId, item.type);
         setPreview(fullData);
         setSearchResults([]);
         setInputVal(""); // Clear search input
@@ -158,17 +192,25 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
     }
 
     onAdd({
+      imdbId,
+      voteAverage,
+      tmdbId,
+      type,
+      cast,
+      genres,
+      runtime,
+      overview,
       title,
       director: finalDirectors,
       coverUrl,
       releaseDate,
       availability,
-      status: timesWatched > 0 ? "Watched" : "Watchlist", // Backward compatibility
+      status: type === 'tv' ? tvStatus : (timesWatched > 0 ? "Watched" : "Watchlist"),
       inWatchlist,
       timesWatched,
       notes,
-      quotes,
-      // acquisitionDate,
+      number_of_episodes: numberOfEpisodes,
+      number_of_seasons: numberOfSeasons,
       ratings: {
           ...ratings,
           overall: overallRating
@@ -354,6 +396,21 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
                              <div>
                                 <label className="block text-xs font-medium text-neutral-400 uppercase tracking-wider mb-2">Progress & Status</label>
                                     <div className="space-y-3">
+                                        <div className="flex bg-neutral-800 p-1 rounded-lg border border-neutral-700">
+                                            {['movie', 'tv'].map(t => (
+                                                <button
+                                                    key={t}
+                                                    type="button"
+                                                    onClick={() => setType(t)}
+                                                    className={`flex-1 py-1.5 text-xs font-bold uppercase rounded transition-colors ${type === t ? 'bg-blue-600 text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+                                                >
+                                                    {t === 'movie' ? 'Movie' : 'TV Show'}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {type === 'movie' ? (
+                                        <>
                                         <div className="flex items-center justify-between bg-neutral-800 p-3 rounded-lg border border-neutral-700">
                                             <label className="text-sm font-medium text-white flex items-center gap-2 cursor-pointer select-none">
                                                 <Library size={16} className={inWatchlist ? "text-blue-500" : "text-neutral-500"} />
@@ -422,6 +479,25 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
                                                 </div>
                                             )}
                                         </div>
+                                        </>
+                                        ) : (
+                                            <div className="bg-neutral-800 p-3 rounded-lg border border-neutral-700 space-y-3">
+                                                 <div className="flex flex-col gap-2">
+                                                    <label className="text-xs font-bold text-neutral-400 uppercase">Status</label>
+                                                    <select 
+                                                        className="bg-neutral-900 border border-neutral-700 text-white p-2 rounded text-sm focus:outline-none focus:border-blue-500"
+                                                        value={tvStatus}
+                                                        onChange={(e) => setTvStatus(e.target.value)}
+                                                    >
+                                                        <option value="Watching">Watching</option>
+                                                        <option value="Plan to Watch">Plan to Watch</option>
+                                                        <option value="Completed">Completed</option>
+                                                        <option value="Dropped">Dropped</option>
+                                                        <option value="On Hold">On Hold</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                              </div>
 
@@ -434,10 +510,22 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
                                         'Disney+',
                                         'Hulu',
                                         'Max',
-                                        'Apple TV+'
+                                        'Apple TV+',
+                                        'Paramount+',
+                                        'Fubo'
                                     ].map(id => {
                                         const isSelected = availability.includes(id);
-                                        const style = getServiceStyle(id);
+                                        const map = {
+                                            'Netflix': '/icons/netflix.svg',
+                                            'Prime Video': '/icons/primevideo.svg',
+                                            'Disney+': '/icons/disneyplus.svg',
+                                            'Hulu': '/icons/hulu.svg',
+                                            'Max': '/icons/max.svg',
+                                            'Apple TV+': '/icons/appletv.svg',
+                                            'Paramount+': '/icons/paramountplus.svg',
+                                            'Fubo': '/icons/fubo.svg'
+                                        };
+                                        const src = map[id];
                                         return (
                                             <button
                                               key={id}
@@ -445,11 +533,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
                                               onClick={() => toggleAvailability(id)}
                                               className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${isSelected ? 'bg-neutral-100 text-neutral-900 border-white font-medium' : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:border-neutral-600'}`}
                                             >
-                                                <div 
-                                                    className={`h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-bold shadow-sm ${style.color}`}
-                                                >
-                                                    {style.short}
-                                                </div>
+                                                {src ? <img src={src} className="h-5 w-5 rounded-full object-cover" /> : <div className="h-5 w-5 rounded-full bg-neutral-700 flex items-center justify-center text-[8px] text-white font-bold">{id.substring(0,2)}</div>}
                                                 {id}
                                             </button>
                                         )
@@ -499,10 +583,74 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
                             </div>
                         </div>
 
+                        {/* Overview & Metadata */}
+                        <div className="space-y-4">
+                             <div>
+                                <label className="block text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">Metadata</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                     <div>
+                                        <label className="text-[10px] text-neutral-500 uppercase font-bold mb-1 block">Runtime (mins)</label>
+                                        <input 
+                                            type="number"
+                                            className="w-full bg-neutral-800 border border-neutral-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                            value={runtime}
+                                            onChange={(e) => setRuntime(parseInt(e.target.value) || 0)}
+                                        />
+                                     </div>
+                                </div>
+                             </div>
+
+                             <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">IMDb ID</label>
+                                    <div className="relative">
+                                        <input 
+                                            className="w-full bg-neutral-800 border border-neutral-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-mono placeholder:text-neutral-600 pr-10"
+                                            value={imdbId}
+                                            onChange={(e) => setImdbId(e.target.value)}
+                                            placeholder="tt1234567"
+                                        />
+                                        {imdbId && (
+                                            <a 
+                                                href={`https://www.imdb.com/title/${imdbId}/`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white p-1"
+                                            >
+                                                <Link size={16} />
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">Public Rating</label>
+                                    <input 
+                                        type="number"
+                                        step="0.1"
+                                        max="10"
+                                        className="w-full bg-neutral-800 border border-neutral-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-mono"
+                                        value={voteAverage}
+                                        onChange={(e) => setVoteAverage(parseFloat(e.target.value))}
+                                    />
+                                </div>
+                             </div>
+                             
+                             </div>
+                             
+                             <div>
+                                <label className="block text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">Overview</label>
+                                <textarea 
+                                    className="w-full bg-neutral-800 border border-neutral-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-25 text-sm"
+                                    value={overview}
+                                    onChange={(e) => setOverview(e.target.value)}
+                                    placeholder="Plot summary..."
+                                />
+                             </div>
+
                         <div>
                             <label className="block text-xs font-medium text-neutral-400 uppercase tracking-wider mb-1">Personal Notes</label>
                             <textarea 
-                                className="w-full bg-neutral-800 border border-neutral-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-[80px]"
+                                className="w-full bg-neutral-800 border border-neutral-700 text-white px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-20"
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 placeholder="Personal thoughts..."

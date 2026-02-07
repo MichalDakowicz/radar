@@ -1,11 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { useMovies } from "../hooks/useMovies";
 import { useToast } from "../components/ui/Toast";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import MovieCard from "../features/movies/MovieCard";
 import MovieRow from "../features/movies/MovieRow";
-import EditMovieModal from "../features/movies/EditMovieModal";
 import RandomPickModal from "../features/movies/RandomPickModal";
 import { FilterPanel } from "../components/FilterPanel";
 import { Navbar } from "../components/layout/Navbar";
@@ -101,6 +101,7 @@ function usePersistedState(key, defaultValue) {
 
 export default function Home() {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const { movies, loading, addMovie, updateMovie, removeMovie } = useMovies();
     const { toast } = useToast();
 
@@ -108,7 +109,6 @@ export default function Home() {
     const [gridSize] = usePersistedState("mt_gridSize", "normal");
     const [groupBy, setGroupBy] = usePersistedState("mt_groupBy", "none");
     const [isPickModalOpen, setIsPickModalOpen] = useState(false);
-    const [editingMovie, setEditingMovie] = useState(null);
 
     const gridClasses = useMemo(() => {
         switch (gridSize) {
@@ -594,7 +594,7 @@ export default function Home() {
                                                     key={movie.id}
                                                     movie={movie}
                                                     onClick={() =>
-                                                        setEditingMovie(movie)
+                                                        navigate("/edit/" + movie.id)
                                                     }
                                                     isHighlighted={
                                                         highlightedMovieId ===
@@ -623,7 +623,7 @@ export default function Home() {
                                                     key={movie.id}
                                                     movie={movie}
                                                     onClick={() =>
-                                                        setEditingMovie(movie)
+                                                        navigate("/edit/" + movie.id)
                                                     }
                                                     isHighlighted={
                                                         highlightedMovieId ===
@@ -667,7 +667,7 @@ export default function Home() {
                                             movie={movie}
                                             viewMode="grid"
                                             onClick={() =>
-                                                setEditingMovie(movie)
+                                                navigate("/edit/" + movie.id)
                                             }
                                             isHighlighted={
                                                 highlightedMovieId === movie.id
@@ -692,7 +692,7 @@ export default function Home() {
                                             movie={movie}
                                             viewMode="list"
                                             onClick={() =>
-                                                setEditingMovie(movie)
+                                                navigate("/edit/" + movie.id)
                                             }
                                             isHighlighted={
                                                 highlightedMovieId === movie.id
@@ -741,14 +741,6 @@ export default function Home() {
                     </DragOverlay>
                 </DndContext>
             </main>
-
-            <EditMovieModal
-                isOpen={!!editingMovie}
-                onClose={() => setEditingMovie(null)}
-                movie={editingMovie}
-                onUpdate={updateMovie}
-                onDelete={removeMovie}
-            />
 
             <RandomPickModal
                 isOpen={isPickModalOpen}

@@ -9,6 +9,8 @@ import Stats from "./pages/Stats";
 import PublicFriends from "./pages/PublicFriends";
 import Settings from "./pages/Settings";
 import Friends from "./pages/Friends";
+import Browse from "./pages/Browse";
+import EditMovie from "./pages/EditMovie";
 import AppUrlListener from "./components/AppUrlListener";
 import FriendRequestListener from "./features/friends/FriendRequestListener";
 import SwipeNavigator from "./components/layout/SwipeNavigator";
@@ -38,11 +40,27 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/edit/:movieId"
+              element={
+                <ProtectedRoute>
+                  <EditMovie />
+                </ProtectedRoute>
+              }
+            />
              <Route
               path="/friends"
               element={
                 <ProtectedRoute>
                   <Friends />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/browse"
+              element={
+                <ProtectedRoute>
+                  <Browse />
                 </ProtectedRoute>
               }
             />

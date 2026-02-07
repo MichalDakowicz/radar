@@ -61,7 +61,7 @@ export default function SwipeNavigator() {
          if (duration > SWIPE_TIMEOUT) return;
 
         // Internal app routes matching Navbar order
-        const appRoutes = ['/', '/stats', '/friends', '/settings'];
+        const appRoutes = ['/', '/browse', '/stats', '/friends', '/settings'];
         const appIndex = appRoutes.indexOf(location.pathname);
         
         // Public routes configuration

@@ -13,6 +13,10 @@ import {
     Clapperboard,
     Film,
     FileVideo,
+    Clock,
+    CheckCircle2,
+    Activity,
+    Monitor
 } from "lucide-react";
 import { useMovies } from "../hooks/useMovies";
 import { usePublicMovies } from "../hooks/usePublicMovies";
@@ -22,6 +26,7 @@ import { Navbar } from "../components/layout/Navbar";
 import { PublicBottomNav } from "../components/layout/PublicBottomNav";
 import { PublicHeader } from "../components/layout/PublicHeader";
 import { useAuth } from "../features/auth/AuthContext";
+import { normalizeServiceName } from "../lib/services"; // Import normalize helper
 
 export default function Stats() {
     const { userId } = useParams();
@@ -53,30 +58,101 @@ export default function Stats() {
         const allMovies = movies; 
         const totalMovies = allMovies.length;
 
-        // Formats Breakdown (Flattening array formats)
-        const formatCounts = {};
+        // Status Breakdown
+        const statusCounts = {
+            "Watchlist": 0,
+            "Watching": 0,
+            "Completed": 0,
+            "Dropped": 0,
+            "Plan to Watch": 0,
+            "On Hold": 0,
+            "Watched": 0 // Legacy/Movie specific
+        };
+        
+        // Type Breakdown
+        const typeCounts = {
+            "movie": 0,
+            "tv": 0
+        };
+
+        let totalRuntimeMinutes = 0;
+        let totalEpisodes = 0;
+
+        // Availability (Streaming Services)
+        const availabilityCounts = {};
+
         allMovies.forEach((movie) => {
-            let raw = movie.format;
-            let fmts = Array.isArray(raw) ? raw : [raw || "Digital"];
+             // Type
+             const t = movie.type || "movie";
+             typeCounts[t] = (typeCounts[t] || 0) + 1;
 
-            const unique = new Set(
-                fmts.map((f) => (f ? String(f).trim() : "Digital")),
-            );
+             // Status
+             // Normalize status:
+             // Movies often use 'status' as 'Watchlist' or 'Watched' or implicit from 'timesWatched'
+             let s = movie.status;
+             if (!s) {
+                 s = movie.timesWatched > 0 ? "Completed" : "Watchlist";
+             }
+             // Map legacy/movie statuses to standard set
+             if (s === "Watched") s = "Completed";
+             
+             statusCounts[s] = (statusCounts[s] || 0) + 1;
 
-            unique.forEach((f) => {
-                formatCounts[f] = (formatCounts[f] || 0) + 1;
-            });
+             // Runtime
+             const runtime = movie.runtime || 0;
+             if (t === 'movie') {
+                if (movie.timesWatched > 0) {
+                    totalRuntimeMinutes += runtime * movie.timesWatched;
+                }
+             } else if (t === 'tv') {
+                 let minutes = 0;
+                 // 1. Precise episode tracking
+                 if (movie.episodesWatched) {
+                     // Count true values
+                     const count = Object.values(movie.episodesWatched).filter(Boolean).length;
+                     minutes += count * runtime;
+                 }
+                 
+                 // 2. Full rewatches (if marked)
+                 if (movie.timesWatched > 0) {
+                      // Estimate total duration
+                      // Use number_of_episodes if known, else estimate 10 per season
+                      const totalEps = movie.number_of_episodes || ((movie.number_of_seasons || 1) * 10);
+                      minutes += (movie.timesWatched * totalEps * runtime);
+                 }
+                 
+                 totalRuntimeMinutes += minutes;
+             }
+
+             // Availability
+             if (Array.isArray(movie.availability)) {
+                 const seenServices = new Set();
+                 movie.availability.forEach(svc => {
+                     const normalized = normalizeServiceName(svc);
+                     if (normalized && !seenServices.has(normalized)) {
+                        seenServices.add(normalized);
+                        availabilityCounts[normalized] = (availabilityCounts[normalized] || 0) + 1;
+                     }
+                 });
+             } else if (movie.format && !['Digital', 'Blu-ray', 'DVD', 'VHS', 'Physical'].includes(movie.format)) {
+                 // Legacy format usage for streaming services?
+                 availabilityCounts[movie.format] = (availabilityCounts[movie.format] || 0) + 1;
+             }
         });
-        const sortedFormats = Object.entries(formatCounts)
+
+        const sortedStatus = Object.entries(statusCounts)
+            .filter(([_, count]) => count > 0)
             .sort((a, b) => b[1] - a[1])
-            .map(([name, count]) => ({
-                name,
-                count,
-                percent:
-                    totalMovies > 0
-                        ? Math.round((count / totalMovies) * 100)
-                        : 0,
-            }));
+            .map(([name, count]) => ({ name, count, percent: Math.round((count / totalMovies) * 100) }));
+
+        const sortedAvailability = Object.entries(availabilityCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ name, count, percent: Math.round((count / totalMovies) * 100) }));
+        
+        const totalHours = Math.round(totalRuntimeMinutes / 60);
+
+        // Formats Breakdown (Legacy Physical + Digital) - Keep as is but maybe rename to "Media Type" or "Source"?
+        // Actually, let's keep the existing logic for Format if users still use it, but prioritize Availability if available.
 
         // Directors
         const directorCounts = {};
@@ -167,7 +243,11 @@ export default function Stats() {
 
         return {
             totalMovies,
-            sortedFormats,
+            // sortedFormats, // Deprecated in favor of availability? Let's keep both if needed, but return new ones
+            sortedStatus,
+            sortedAvailability,
+            totalHours,
+            typeCounts,
             topDirectors,
             uniqueDirectorCount,
             sortedDecades,
@@ -234,6 +314,21 @@ export default function Stats() {
                         )}
                         <div className="flex-1 min-w-35">
                             <StatCard
+                                label="Total Watched"
+                                value={`${stats.totalHours} hrs`}
+                                icon={<Clock size={20} />}
+                                subtext="Lifetime"
+                            />
+                        </div>
+                        <div className="flex-1 min-w-35">
+                            <StatCard
+                                label="Completed"
+                                value={stats.sortedStatus.find(s => s.name === 'Completed')?.count || 0}
+                                icon={<CheckCircle2 size={20} />}
+                            />
+                        </div>
+                        <div className="flex-1 min-w-35">
+                            <StatCard
                                 label="Unique Directors"
                                 value={stats.uniqueDirectorCount}
                                 icon={<Trophy size={20} />}
@@ -241,13 +336,13 @@ export default function Stats() {
                         </div>
                         <div className="flex-1 min-w-35">
                             <StatCard
-                                label="Top Format"
-                                value={stats.sortedFormats[0]?.name || "N/A"}
+                                label="Top Genre"
+                                value={stats.topGenres[0]?.name || "N/A"}
                                 subtext={
-                                    stats.sortedFormats[0] &&
-                                    `${stats.sortedFormats[0].count} movies`
+                                    stats.topGenres[0] &&
+                                    `${stats.topGenres[0].count} titles`
                                 }
-                                icon={<PieChart size={20} />}
+                                icon={<Tags size={20} />}
                             />
                         </div>
                         <div className="flex-1 min-w-35">
@@ -265,14 +360,14 @@ export default function Stats() {
 
                     {/* Charts Row 1 */}
                     <div className="grid md:grid-cols-2 gap-8">
-                        {/* Format Breakdown */}
+                        {/* Status Breakdown */}
                         <div className="bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors">
                             <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <FileVideo size={20} className="text-blue-500" />{" "}
-                                Format Breakdown
+                                <Activity size={20} className="text-green-500" />{" "}
+                                Status Breakdown
                             </h3>
                             <div className="space-y-4">
-                                {stats.sortedFormats.map((item) => (
+                                {stats.sortedStatus.map((item) => (
                                     <div
                                         key={item.name}
                                         className="relative group"
@@ -287,7 +382,12 @@ export default function Stats() {
                                         </div>
                                         <div className="h-3 w-full bg-neutral-800 rounded-full overflow-hidden">
                                             <div
-                                                className="h-full bg-linear-to-r from-blue-600 to-blue-400 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                                                className={`h-full rounded-full shadow-[0_0_10px_rgba(34,197,94,0.3)] ${
+                                                    item.name === 'Completed' ? 'bg-green-500' :
+                                                    item.name === 'Watching' ? 'bg-blue-500' :
+                                                    item.name === 'Dropped' ? 'bg-red-500' :
+                                                    'bg-neutral-500'
+                                                }`}
                                                 style={{
                                                     width: `${item.percent}%`,
                                                 }}
@@ -297,6 +397,47 @@ export default function Stats() {
                                 ))}
                             </div>
                         </div>
+
+                         {/* Availability Breakdown */}
+                         <div className="bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors">
+                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                <Monitor size={20} className="text-purple-500" />{" "}
+                                Streaming Availability
+                            </h3>
+                            {stats.sortedAvailability.length > 0 ? (
+                                <div className="space-y-4">
+                                    {stats.sortedAvailability.slice(0, 6).map((item) => (
+                                        <div
+                                            key={item.name}
+                                            className="relative group"
+                                        >
+                                            <div className="flex justify-between text-sm mb-2">
+                                                <span className="text-white font-medium">
+                                                    {item.name}
+                                                </span>
+                                                <span className="text-neutral-400 group-hover:text-white transition-colors">
+                                                    {item.count}
+                                                </span>
+                                            </div>
+                                            <div className="h-3 w-full bg-neutral-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-linear-to-r from-purple-600 to-purple-400 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+                                                    style={{
+                                                        width: `${item.percent}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center h-48 text-neutral-500 gap-2">
+                                    <Monitor size={32} opacity={0.5} />
+                                    <span>No streaming data available</span>
+                                </div>
+                            )}
+                        </div>
+
 
                         {/* Top Directors */}
                         <div className="bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors">
@@ -340,6 +481,47 @@ export default function Stats() {
                                             <div className="h-3 w-full bg-neutral-800 rounded-full overflow-hidden">
                                                 <div
                                                     className="h-full bg-linear-to-r from-blue-600 to-blue-400 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                                                    style={{
+                                                        width: `${percent}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                         {/* Type Breakdown */}
+                         <div className="bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors">
+                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                <Film size={20} className="text-yellow-500" />{" "}
+                                Type Breakdown
+                            </h3>
+                            <div className="space-y-4">
+                                {Object.entries(stats.typeCounts).map(([type, count]) => {
+                                    if(count === 0) return null;
+                                    const percent = Math.round((count / stats.totalMovies) * 100);
+                                    return (
+                                        <div
+                                            key={type}
+                                            className="relative group"
+                                        >
+                                            <div className="flex justify-between text-sm mb-2">
+                                                <span className="text-white font-medium capitalize">
+                                                    {type === 'movie' ? 'Movies' : 'TV Shows'}
+                                                </span>
+                                                <span className="text-neutral-400 group-hover:text-white transition-colors">
+                                                    {count}
+                                                </span>
+                                            </div>
+                                            <div className="h-3 w-full bg-neutral-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full shadow-[0_0_10px_rgba(255,255,255,0.2)] ${
+                                                        type === 'movie' 
+                                                        ? 'bg-linear-to-r from-pink-600 to-pink-400 shadow-[0_0_10px_rgba(236,72,153,0.5)]' 
+                                                        : 'bg-linear-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.5)]'
+                                                    }`}
                                                     style={{
                                                         width: `${percent}%`,
                                                     }}
