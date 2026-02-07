@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { X, Download, Upload, Loader2, CheckCircle, AlertCircle, FileJson, FileSpreadsheet } from 'lucide-react';
-import { fetchMovieMetadata } from '../../services/tmdb';
 
 export default function ImportExportModal({ isOpen, onClose, movies, addMovie, removeMovie }) {
   const [activeTab, setActiveTab] = useState('export'); // 'export' | 'import'
