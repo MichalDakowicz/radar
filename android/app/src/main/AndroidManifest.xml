@@ -8,7 +8,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
@@ -26,7 +26,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="sonar-tracker.firebaseapp.com"
+                    android:host="radar-watchlist.firebaseapp.com"
                     android:pathPrefix="/__/auth/handler"
                 />
             </intent-filter>
@@ -36,8 +36,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="sonar-tracker.web.app" android:pathPrefix="/u/" />
-                <data android:scheme="https" android:host="sonar-tracker.firebaseapp.com" android:pathPrefix="/u/" />
+                <data android:scheme="https" android:host="radar-watchlist.web.app" android:pathPrefix="/u/" />
+                <data android:scheme="https" android:host="radar-watchlist.firebaseapp.com" android:pathPrefix="/u/" />
             </intent-filter>
         </activity>
 

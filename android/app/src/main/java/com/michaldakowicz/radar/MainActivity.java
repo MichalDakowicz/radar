@@ -1,4 +1,4 @@
-package com.michaldakowicz.sonar;
+package com.michaldakowicz.radar;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

@@ -1,8 +1,9 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.michaldakowicz.radar"
-    compileSdk = rootProject.ext.compileSdkVersion
+    namespace "com.michaldakowicz.radar"
+    compileSdk rootProject.ext.compileSdkVersion
+    buildToolsVersion "35.0.0"
     defaultConfig {
         applicationId "com.michaldakowicz.radar"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -13,7 +14,7 @@ android {
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
-            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
     buildTypes {
@@ -25,8 +26,9 @@ android {
 }
 
 repositories {
-    google()
-    mavenCentral()
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
 }
 
 dependencies {
