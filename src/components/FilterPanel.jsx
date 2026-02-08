@@ -30,7 +30,7 @@ export function FilterPanel({
     filterStatus !== "All"
   ].filter(Boolean).length;
 
-  const availabilityOptions = ["Netflix", "Prime Video", "Disney+", "Hulu", "Max", "Apple TV+", "All"];
+  const availabilityOptions = ["Netflix", "Prime Video", "Disney+", "Hulu", "Max", "Apple TV+", "Paramount+", "Fubo", "Criterion Channel", "All"];
 
   return (
     <Popover>

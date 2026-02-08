@@ -7,6 +7,7 @@ import { getServiceStyle, normalizeServiceName } from "../lib/services";
 import { searchMedia, fetchMediaMetadata, fetchSeasonDetails } from "../services/tmdb";
 import { Navbar } from "../components/layout/Navbar";
 import SwipeNavigator from "../components/layout/SwipeNavigator";
+import ConfirmationModal from "../components/ui/ConfirmationModal";
 
 export default function EditMovie() {
   const { movieId } = useParams();
@@ -72,6 +73,7 @@ export default function EditMovie() {
   const [numberOfEpisodes, setNumberOfEpisodes] = useState(0);
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     if (movie) {
@@ -274,12 +276,19 @@ export default function EditMovie() {
     }
   };
 
-  const handleDelete = async () => {
-    if (confirm("Are you sure you want to remove this movie?")) {
-        setIsProcessing(true);
+  const confirmDelete = async () => {
+    setIsProcessing(true);
+    try {
         await removeMovie(movie.id);
         navigate("/");
+    } catch (error) {
+        console.error("Delete failed", error);
+        setIsProcessing(false);
     }
+  };
+
+  const handleDelete = () => {
+    setIsDeleteModalOpen(true);
   };
 
   if (moviesLoading) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
@@ -294,7 +303,8 @@ export default function EditMovie() {
           'Max': '/icons/max.svg',
           'Apple TV+': '/icons/appletv.svg',
           'Paramount+': '/icons/paramountplus.svg',
-          'Fubo': '/icons/fubo.svg'
+          'Fubo': '/icons/fubo.svg',
+          'Criterion Channel': '/icons/criterion.svg'
       };
       const src = map[id];
       if (!src) return <div className="h-6 w-6 rounded-full bg-neutral-700 font-bold text-[10px] flex items-center justify-center text-white">{id.substring(0,2)}</div>;
@@ -304,10 +314,21 @@ export default function EditMovie() {
   return (
     <div className="min-h-screen bg-black pb-32 font-sans text-neutral-200">
       <Navbar /> 
+
+      <ConfirmationModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Remove Movie"
+        description={`Are you sure you want to remove "${title}" from your library? This action cannot be undone.`}
+        confirmText="Remove"
+        isDestructive={true}
+        isLoading={isProcessing}
+      />
       
       <div className="w-full max-w-5xl mx-auto px-4 pt-1">
         {/* Tabs */}
-        <div className="flex bg-neutral-900/90 p-1 rounded-xl mb-6 sticky top-[60px] sm:top-2 z-30 backdrop-blur-md border border-neutral-800 shadow-xl overflow-x-auto">
+        <div className="flex bg-neutral-900/90 p-1 rounded-xl mb-6 sticky top-15 sm:top-2 z-30 backdrop-blur-md border border-neutral-800 shadow-xl overflow-x-auto">
             {(type === 'tv' ? ['main', 'episodes', 'details', 'rating'] : ['main', 'details', 'rating']).map(tab => (
                 <button
                     key={tab}
@@ -559,7 +580,8 @@ export default function EditMovie() {
                                 'Max',
                                 'Apple TV+',
                                 'Paramount+',
-                                'Fubo'
+                                'Fubo',
+                                'Criterion Channel'
                             ].map(id => {
                                 const isSelected = availability.includes(id);
                                 return (

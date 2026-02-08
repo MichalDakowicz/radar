@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Search, Loader2, Plus, Check, Flame, X, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Loader2, Plus, Check, Flame, X, Trash2, Star } from "lucide-react";
 import { searchMedia, fetchMediaMetadata, getTrending } from "../services/tmdb";
 import { useMovies } from "../hooks/useMovies";
 import { useToast } from "../components/ui/Toast";
 import { Navbar } from "../components/layout/Navbar";
 import { BottomNav } from "../components/layout/BottomNav";
 
-function MediaGrid({ items, onAdd, onRemove, addingId, removingId, isAdded }) {
+function MediaGrid({ items, onAdd, onRemove, onSelect, addingId, removingId, isAdded }) {
     if (!items || items.length === 0) return null;
 
     return (
@@ -14,7 +15,11 @@ function MediaGrid({ items, onAdd, onRemove, addingId, removingId, isAdded }) {
             {items.map((item) => {
                 const added = isAdded(item.tmdbId);
                 return (
-                    <div key={item.tmdbId} className="group relative bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800 hover:border-neutral-700 transition-colors">
+                    <div 
+                        key={item.tmdbId} 
+                        onClick={() => onSelect(item)}
+                        className={`group relative bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800 hover:border-neutral-700 transition-colors cursor-pointer ${added ? 'opacity-50 grayscale' : ''}`}
+                    >
                         <div className="aspect-2/3 relative">
                             {item.coverUrl ? (
                                 <img 
@@ -28,11 +33,57 @@ function MediaGrid({ items, onAdd, onRemove, addingId, removingId, isAdded }) {
                                     <span className="text-xs text-center p-2">{item.title}</span>
                                 </div>
                             )}
-                            
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+
+                            {/* Rating Badge */}
+                            {item.voteAverage > 0 && (
+                                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded flex items-center gap-1 z-10">
+                                    <Star size={12} className="text-yellow-500 fill-yellow-500" />
+                                    <span className="text-xs font-medium text-white">{item.voteAverage?.toFixed(1)}</span>
+                                </div>
+                            )}
+
+                             {/* Mobile Actions (Visible on small screens) */}
+                             <div className="absolute top-2 right-2 md:hidden z-10">
                                 {added ? (
                                     <button
-                                        onClick={() => onRemove(item)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRemove(item);
+                                        }}
+                                        disabled={removingId === item.tmdbId}
+                                        className="bg-red-500/80 hover:bg-red-500 text-white p-1.5 rounded-full backdrop-blur-md transition-colors"
+                                    >
+                                        {removingId === item.tmdbId ? (
+                                             <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                            <Trash2 size={16} />
+                                        )}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onAdd(item);
+                                        }}
+                                        disabled={addingId === item.tmdbId}
+                                        className="bg-blue-600/80 hover:bg-blue-500 text-white p-1.5 rounded-full backdrop-blur-md transition-colors"
+                                    >
+                                        {addingId === item.tmdbId ? (
+                                            <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                            <Plus size={16} />
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                            
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
+                                {added ? (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRemove(item);
+                                        }}
                                         disabled={removingId === item.tmdbId}
                                         className="bg-red-500/20 hover:bg-red-500/40 text-red-500 px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-md transition-all border border-red-500/30 hover:border-red-500/50"
                                     >
@@ -45,7 +96,10 @@ function MediaGrid({ items, onAdd, onRemove, addingId, removingId, isAdded }) {
                                     </button>
                                 ) : (
                                     <button
-                                        onClick={() => onAdd(item)}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onAdd(item);
+                                        }}
                                         disabled={addingId === item.tmdbId}
                                         className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
@@ -81,6 +135,7 @@ export default function Browse() {
     const [loading, setLoading] = useState(false);
     const [addingId, setAddingId] = useState(null); // ID of movie currently being added
     const [removingId, setRemovingId] = useState(null);
+    const navigate = useNavigate();
 
     const { addMovie, removeMovie, movies } = useMovies();
     const { toast } = useToast();
@@ -194,7 +249,11 @@ export default function Browse() {
     };
 
     const isAdded = (tmdbId) => {
-        return movies.some(m => m.tmdbId === tmdbId);
+        return movies.some(m => m.tmdbId == tmdbId);
+    };
+
+    const handleViewDetails = (item) => {
+        navigate(`/movie/${item.tmdbId}/${item.type}`);
     };
 
     return (
@@ -230,6 +289,7 @@ export default function Browse() {
                                 items={results} 
                                 onAdd={handleQuickAdd} 
                                 onRemove={handleRemove}
+                                onSelect={handleViewDetails}
                                 addingId={addingId} 
                                 removingId={removingId}
                                 isAdded={isAdded} 
@@ -249,6 +309,7 @@ export default function Browse() {
                             items={trending} 
                             onAdd={handleQuickAdd} 
                             onRemove={handleRemove}
+                            onSelect={handleViewDetails}
                             addingId={addingId} 
                             removingId={removingId}
                             isAdded={isAdded} 

@@ -80,7 +80,7 @@ export default function MovieCard({
                     alt={movie.title}
                     className={`absolute inset-0 h-full w-full object-cover transition-all duration-500 ${
                         isHighlighted ? "scale-110" : "group-hover:scale-110"
-                    } ${movie.status === 'Watchlist' ? 'grayscale opacity-70' : ''}`}
+                    } ${movie.status === 'Watchlist' || movie.status === 'Plan to Watch' || movie.inWatchlist ? 'grayscale opacity-70' : ''}`}
                     loading="lazy"
                 />
             ) : (
@@ -178,7 +178,8 @@ export default function MovieCard({
                                         'Max': '/icons/max.svg',
                                         'Apple TV+': '/icons/appletv.svg',
                                         'Paramount+': '/icons/paramountplus.svg',
-                                        'Fubo': '/icons/fubo.svg'
+                                        'Fubo': '/icons/fubo.svg',
+                                        'Criterion Channel': '/icons/criterion.svg'
                                     };
                                     const src = map[svc];
 

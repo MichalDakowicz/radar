@@ -33,6 +33,7 @@ export async function searchMedia(query) {
         releaseDate: item.release_date || item.first_air_date,
         coverUrl: item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : null,
         overview: item.overview,
+        voteAverage: item.vote_average,
       }));
   } catch (error) {
     console.error("TMDB Search Error:", error);
@@ -117,7 +118,12 @@ export async function fetchMediaMetadata(tmdbId, type = 'movie') {
       number_of_episodes: data.number_of_episodes || null,
       status: data.status || null,
       voteAverage: data.vote_average || 0,
-      imdbId: data.external_ids?.imdb_id || null
+      imdbId: data.external_ids?.imdb_id || null,
+      budget: data.budget || 0,
+      revenue: data.revenue || 0,
+      tagline: data.tagline || "",
+      productionCompanies: data.production_companies ? data.production_companies.map(c => ({ name: c.name, logo: c.logo_path ? `${IMAGE_BASE_URL}${c.logo_path}` : null })) : [],
+      voteCount: data.vote_count || 0
     };
   } catch (error) {
     console.error("TMDB Metadata Error:", error);

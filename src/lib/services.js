@@ -9,6 +9,7 @@ export const SERVICE_CONFIG = {
   'Peacock': { color: 'bg-yellow-400 text-black', short: 'Pc' },
   'Paramount+': { color: 'bg-blue-700 text-white', short: 'P+' },
   'Fubo': { color: 'bg-orange-500 text-white', short: 'Fu' },
+  'Criterion Channel': { color: 'bg-neutral-800 text-white', short: 'CC' },
 };
 
 export const normalizeServiceName = (name) => {
@@ -24,6 +25,7 @@ export const normalizeServiceName = (name) => {
   if (n.includes('peacock')) return 'Peacock';
   if (n.includes('paramount')) return 'Paramount+';
   if (n.includes('fubo')) return 'Fubo';
+  if (n.includes('criterion')) return 'Criterion Channel';
   
   return name;
 };

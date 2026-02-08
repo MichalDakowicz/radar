@@ -10,6 +10,7 @@ import PublicFriends from "./pages/PublicFriends";
 import Settings from "./pages/Settings";
 import Friends from "./pages/Friends";
 import Browse from "./pages/Browse";
+import MovieDetails from "./pages/MovieDetails";
 import EditMovie from "./pages/EditMovie";
 import AppUrlListener from "./components/AppUrlListener";
 import FriendRequestListener from "./features/friends/FriendRequestListener";
@@ -45,6 +46,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EditMovie />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/movie/:tmdbId/:type"
+              element={
+                <ProtectedRoute>
+                  <MovieDetails />
                 </ProtectedRoute>
               }
             />
