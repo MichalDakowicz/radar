@@ -3,6 +3,7 @@ const ACCESS_TOKEN = import.meta.env.VITE_TMDB_ACCESS_TOKEN;
 
 const BASE_URL = "https://api.themoviedb.org/3";
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
+const IMAGE_ORIGINAL_URL = "https://image.tmdb.org/t/p/original";
 
 const headers = {
   Authorization: `Bearer ${ACCESS_TOKEN}`,
@@ -160,11 +161,59 @@ export async function getTrending() {
                 director: [],
                 releaseDate: item.release_date || item.first_air_date,
                 coverUrl: item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : null,
+                backdropUrl: item.backdrop_path ? `${IMAGE_ORIGINAL_URL}${item.backdrop_path}` : null,
                 overview: item.overview,
-                voteAverage: item.vote_average
+                voteAverage: item.vote_average,
+                voteCount: item.vote_count 
             }));
     } catch (error) {
         console.error("TMDB Trending Error:", error);
+        return [];
+    }
+}
+
+export async function getMovies(category = 'popular') {
+    try {
+        const res = await fetch(`${BASE_URL}/movie/${category}`, { headers });
+        if (!res.ok) throw new Error(`Failed to fetch movies: ${category}`);
+        const data = await res.json();
+        
+        return data.results.map(item => ({
+            tmdbId: item.id,
+            type: 'movie',
+            title: item.title,
+            releaseDate: item.release_date,
+            coverUrl: item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : null,
+            backdropUrl: item.backdrop_path ? `${IMAGE_ORIGINAL_URL}${item.backdrop_path}` : null,
+            overview: item.overview,
+            voteAverage: item.vote_average,
+            voteCount: item.vote_count
+        }));
+    } catch (error) {
+        console.error(`TMDB Get Movies Error (${category}):`, error);
+        return [];
+    }
+}
+
+export async function getTVShows(category = 'popular') {
+    try {
+        const res = await fetch(`${BASE_URL}/tv/${category}`, { headers });
+        if (!res.ok) throw new Error(`Failed to fetch TV shows: ${category}`);
+        const data = await res.json();
+        
+        return data.results.map(item => ({
+            tmdbId: item.id,
+            type: 'tv',
+            title: item.name,
+            releaseDate: item.first_air_date,
+            coverUrl: item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : null,
+            backdropUrl: item.backdrop_path ? `${IMAGE_ORIGINAL_URL}${item.backdrop_path}` : null,
+            overview: item.overview,
+            voteAverage: item.vote_average,
+            voteCount: item.vote_count
+        }));
+    } catch (error) {
+        console.error(`TMDB Get TV Error (${category}):`, error);
         return [];
     }
 }

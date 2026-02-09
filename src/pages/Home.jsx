@@ -235,9 +235,15 @@ export default function Home() {
         // Filter by Status
         if (filterStatus !== "All") {
             if (filterStatus === "Watchlist") {
-                result = result.filter((m) => m.inWatchlist === true || (m.status || "Watchlist") === "Watchlist");
+                result = result.filter((m) => {
+                     const s = m.status || "Watchlist";
+                     return s === "Watchlist" || s === "Plan to Watch";
+                });
             } else if (filterStatus === "Watched") {
-                result = result.filter((m) => (m.timesWatched > 0) || (m.status === "Watched"));
+                result = result.filter((m) => {
+                     const s = m.status || "Watchlist";
+                     return s === "Watched" || s === "Completed" || (m.timesWatched > 0 && s !== "Watching" && s !== "Dropped" && s !== "On Hold");
+                });
             } else {
                 result = result.filter((m) => (m.status || "Watchlist") === filterStatus);
             }

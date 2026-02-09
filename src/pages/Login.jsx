@@ -11,7 +11,7 @@ export default function Login() {
     <div className="flex h-screen w-full flex-col items-center justify-center bg-neutral-950 text-neutral-200">
       <div className="mb-8 flex flex-col items-center gap-4">
         <Logo className="h-20 w-20 text-blue-500" />
-        <h1 className="text-4xl font-bold tracking-tight">Sonar</h1>
+        <h1 className="text-4xl font-bold tracking-tight">Radar</h1>
         <p className="text-neutral-500">Curate and track your movie watchlist.</p>
       </div>
       

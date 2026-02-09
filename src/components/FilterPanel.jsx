@@ -92,7 +92,7 @@ export function FilterPanel({
                  <div className="space-y-1.5 col-span-2">
                     <label className="text-xs font-medium text-neutral-500 uppercase">Status</label>
                     <FilterCombobox
-                        options={["Watchlist", "Watched", "All"]}
+                        options={["Watchlist", "Watched", "Watching", "Dropped", "On Hold", "All"]}
                         value={filterStatus}
                         onChange={setFilterStatus}
                         placeholder="All Status"

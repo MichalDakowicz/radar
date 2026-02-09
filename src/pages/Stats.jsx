@@ -44,16 +44,6 @@ export default function Stats() {
 
     const stats = useMemo(() => {
         if (!movies || movies.length === 0) return null;
-
-        // Filter to only include items in the Collection or Watched (exclude plain Watchlist?)
-        // Or include everything for stats? Usually "Watchlist" shouldn't count towards value/ownership stats?
-        // Let's include everything except maybe wishlists if we had that, but here default is Watchlist...
-        // Sonar filtered: (!a.status || a.status === "Collection") - meaning exclude Wishlist/Preorder.
-        // Radar: Let's exclude 'Watchlist' from "Ownership" stats? Or maybe count all?
-        // Let's count everything for now, or filter 'Watchlist' out of some?
-        // Actually, let's include all for generalized stats, but maybe breakdown by status elsewhere.
-        // Let's assume 'Collection' and 'Did Watch' are "Owned" or "Processed".
-        // For now, I will include ALL movies in stats for simplicity, as watchlist items are movies 'on radar'.
         
         const allMovies = movies; 
         const totalMovies = allMovies.length;

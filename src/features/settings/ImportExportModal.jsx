@@ -245,12 +245,12 @@ export default function ImportExportModal({ isOpen, onClose, movies, addMovie, r
                         <h3 className="text-lg font-semibold text-white mb-2">Import Data</h3>
                         <p className="text-sm text-neutral-400 mb-4">
                             Paste JSON data or CSV content below. Supported formats:
-                            <br /> • Radar/Sonar JSON Backup
+                            <br /> • Radar JSON Backup
                             <br /> • Simple text list "Title - Director"
                         </p>
                     </div>
 
-                    <div className="relative flex-1 min-h-[200px]">
+                    <div className="relative flex-1 min-h-50">
                         <textarea
                             value={importText}
                             onChange={(e) => setImportText(e.target.value)}

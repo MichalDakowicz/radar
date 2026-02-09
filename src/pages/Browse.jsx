@@ -1,49 +1,73 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Loader2, Plus, Check, Flame, X, Trash2, Star } from "lucide-react";
-import { searchMedia, fetchMediaMetadata, getTrending } from "../services/tmdb";
+import { Search, Loader2 } from "lucide-react";
+import {
+    searchMedia,
+    fetchMediaMetadata,
+    getTrending,
+    getMovies,
+    getTVShows,
+} from "../services/tmdb";
 import { useMovies } from "../hooks/useMovies";
 import { useToast } from "../components/ui/Toast";
 import { Navbar } from "../components/layout/Navbar";
 import { BottomNav } from "../components/layout/BottomNav";
+import HeroCarousel from "../features/movies/HeroCarousel";
+import ScrollingRow from "../features/movies/ScrollingRow";
+import { Plus, Trash2, Star, Check } from "lucide-react";
 
-function MediaGrid({ items, onAdd, onRemove, onSelect, addingId, removingId, isAdded }) {
+function SearchResultsGrid({
+    items,
+    onAdd,
+    onRemove,
+    onSelect,
+    addingId,
+    removingId,
+    isAdded,
+}) {
     if (!items || items.length === 0) return null;
 
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4 md:px-12 pt-8">
             {items.map((item) => {
                 const added = isAdded(item.tmdbId);
                 return (
-                    <div 
-                        key={item.tmdbId} 
+                    <div
+                        key={item.tmdbId}
                         onClick={() => onSelect(item)}
-                        className={`group relative bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800 hover:border-neutral-700 transition-colors cursor-pointer ${added ? 'opacity-50 grayscale' : ''}`}
+                        className={`group relative bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800 hover:border-neutral-700 transition-colors cursor-pointer ${
+                            added ? "opacity-50 grayscale" : ""
+                        }`}
                     >
                         <div className="aspect-2/3 relative">
                             {item.coverUrl ? (
-                                <img 
-                                    src={item.coverUrl} 
-                                    alt={item.title} 
+                                <img
+                                    src={item.coverUrl}
+                                    alt={item.title}
                                     className="w-full h-full object-cover"
                                     loading="lazy"
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-neutral-800 text-neutral-600">
-                                    <span className="text-xs text-center p-2">{item.title}</span>
+                                    <span className="text-xs text-center p-2">
+                                        {item.title}
+                                    </span>
                                 </div>
                             )}
 
-                            {/* Rating Badge */}
                             {item.voteAverage > 0 && (
                                 <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded flex items-center gap-1 z-10">
-                                    <Star size={12} className="text-yellow-500 fill-yellow-500" />
-                                    <span className="text-xs font-medium text-white">{item.voteAverage?.toFixed(1)}</span>
+                                    <Star
+                                        size={12}
+                                        className="text-yellow-500 fill-yellow-500"
+                                    />
+                                    <span className="text-xs font-medium text-white">
+                                        {item.voteAverage?.toFixed(1)}
+                                    </span>
                                 </div>
                             )}
 
-                             {/* Mobile Actions (Visible on small screens) */}
-                             <div className="absolute top-2 right-2 md:hidden z-10">
+                            <div className="absolute top-2 right-2 md:hidden z-10">
                                 {added ? (
                                     <button
                                         onClick={(e) => {
@@ -51,13 +75,9 @@ function MediaGrid({ items, onAdd, onRemove, onSelect, addingId, removingId, isA
                                             onRemove(item);
                                         }}
                                         disabled={removingId === item.tmdbId}
-                                        className="bg-red-500/80 hover:bg-red-500 text-white p-1.5 rounded-full backdrop-blur-md transition-colors"
+                                        className="bg-red-500/80 text-white p-1.5 rounded-full"
                                     >
-                                        {removingId === item.tmdbId ? (
-                                             <Loader2 size={16} className="animate-spin" />
-                                        ) : (
-                                            <Trash2 size={16} />
-                                        )}
+                                        <Trash2 size={16} />
                                     </button>
                                 ) : (
                                     <button
@@ -66,17 +86,13 @@ function MediaGrid({ items, onAdd, onRemove, onSelect, addingId, removingId, isA
                                             onAdd(item);
                                         }}
                                         disabled={addingId === item.tmdbId}
-                                        className="bg-blue-600/80 hover:bg-blue-500 text-white p-1.5 rounded-full backdrop-blur-md transition-colors"
+                                        className="bg-blue-600/80 text-white p-1.5 rounded-full"
                                     >
-                                        {addingId === item.tmdbId ? (
-                                            <Loader2 size={16} className="animate-spin" />
-                                        ) : (
-                                            <Plus size={16} />
-                                        )}
+                                        <Plus size={16} />
                                     </button>
                                 )}
                             </div>
-                            
+
                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
                                 {added ? (
                                     <button
@@ -84,15 +100,9 @@ function MediaGrid({ items, onAdd, onRemove, onSelect, addingId, removingId, isA
                                             e.stopPropagation();
                                             onRemove(item);
                                         }}
-                                        disabled={removingId === item.tmdbId}
-                                        className="bg-red-500/20 hover:bg-red-500/40 text-red-500 px-3 py-1.5 rounded-full flex items-center gap-2 backdrop-blur-md transition-all border border-red-500/30 hover:border-red-500/50"
+                                        className="bg-red-500/80 p-2 rounded-full"
                                     >
-                                        {removingId === item.tmdbId ? (
-                                             <Loader2 size={16} className="animate-spin" />
-                                        ) : (
-                                            <Trash2 size={16} />
-                                        )}
-                                        <span className="text-xs font-bold">Remove</span>
+                                        <Trash2 size={20} />
                                     </button>
                                 ) : (
                                     <button
@@ -100,26 +110,20 @@ function MediaGrid({ items, onAdd, onRemove, onSelect, addingId, removingId, isA
                                             e.stopPropagation();
                                             onAdd(item);
                                         }}
-                                        disabled={addingId === item.tmdbId}
-                                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full flex items-center gap-2 transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="bg-blue-600 p-2 rounded-full"
                                     >
-                                        {addingId === item.tmdbId ? (
-                                            <Loader2 size={16} className="animate-spin" />
-                                        ) : (
-                                            <Plus size={16} />
-                                        )}
-                                        <span className="text-sm font-bold">Add</span>
+                                        <Plus size={20} />
                                     </button>
                                 )}
                             </div>
                         </div>
-                        
                         <div className="p-3">
-                            <h3 className="text-sm font-medium text-white line-clamp-1" title={item.title}>{item.title}</h3>
-                            <div className="flex items-center justify-between mt-1">
-                                <span className="text-xs text-neutral-500 uppercase">{item.type === 'movie' ? 'Movie' : 'TV Show'}</span>
-                                <span className="text-xs text-neutral-500">{item.releaseDate?.substring(0, 4)}</span>
-                            </div>
+                            <h3 className="text-sm font-medium text-white line-clamp-1">
+                                {item.title}
+                            </h3>
+                            <span className="text-xs text-neutral-500">
+                                {item.releaseDate?.substring(0, 4)}
+                            </span>
                         </div>
                     </div>
                 );
@@ -131,18 +135,67 @@ function MediaGrid({ items, onAdd, onRemove, onSelect, addingId, removingId, isA
 export default function Browse() {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
-    const [trending, setTrending] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [addingId, setAddingId] = useState(null); // ID of movie currently being added
-    const [removingId, setRemovingId] = useState(null);
-    const navigate = useNavigate();
 
+    // Tab State
+    const [activeTab, setActiveTab] = useState("movies"); // 'movies', 'tv', 'picks'
+
+    // Data State
+    const [heroContent, setHeroContent] = useState([]);
+    const [trending, setTrending] = useState([]); // Used for rows
+    const [upcoming, setUpcoming] = useState([]);
+    const [topRated, setTopRated] = useState([]);
+    const [tvPopular, setTvPopular] = useState([]);
+    const [tvTopRated, setTvTopRated] = useState([]);
+
+    const [addingId, setAddingId] = useState(null);
+    const [removingId, setRemovingId] = useState(null);
+
+    const navigate = useNavigate();
     const { addMovie, removeMovie, movies } = useMovies();
     const { toast } = useToast();
 
+    // Fetch Initial Data
     useEffect(() => {
-        getTrending().then(setTrending).catch(console.error);
+        const loadDiscoverData = async () => {
+            // Parallel fetching for speed
+            const [trend, upc, top, tvPop, tvTop] = await Promise.all([
+                getTrending(),
+                getMovies("upcoming"),
+                getMovies("top_rated"),
+                getTVShows("popular"),
+                getTVShows("top_rated"),
+            ]);
+
+            setTrending(trend);
+            setUpcoming(upc);
+            setTopRated(top);
+            setTvPopular(tvPop);
+            setTvTopRated(tvTop);
+
+            // Set Hero Content initially to Trending (or mix)
+            setHeroContent(trend.slice(0, 8));
+        };
+        loadDiscoverData();
     }, []);
+
+    // Update Hero based on Tab
+    useEffect(() => {
+        if (activeTab === "movies") {
+            setHeroContent(
+                trending.filter((i) => i.type === "movie").slice(0, 6),
+            );
+        } else if (activeTab === "tv") {
+            setHeroContent(tvPopular.slice(0, 6));
+        } else {
+            // Editor Picks -> Maybe Top Rated Mixed
+            setHeroContent(
+                [...topRated, ...tvTopRated]
+                    .sort(() => 0.5 - Math.random())
+                    .slice(0, 6),
+            );
+        }
+    }, [activeTab, trending, tvPopular, topRated, tvTopRated]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -152,7 +205,6 @@ export default function Browse() {
                 setResults([]);
             }
         }, 500);
-
         return () => clearTimeout(timer);
     }, [query]);
 
@@ -163,11 +215,6 @@ export default function Browse() {
             setResults(data);
         } catch (error) {
             console.error(error);
-            toast({
-                title: "Error",
-                description: "Failed to search movies",
-                variant: "destructive",
-            });
         } finally {
             setLoading(false);
         }
@@ -176,23 +223,18 @@ export default function Browse() {
     const handleQuickAdd = async (item) => {
         setAddingId(item.tmdbId);
         try {
-            // Check if already in library
-            const existing = movies.find(m => m.tmdbId === item.tmdbId);
+            const existing = movies.find((m) => m.tmdbId === item.tmdbId);
             if (existing) {
                 toast({
                     title: "Already in Library",
-                    description: `"${item.title}" is already in your library.`,
-                    variant: "default",
+                    description: "This item is already in your library.",
                 });
                 return;
             }
-
             const fullData = await fetchMediaMetadata(item.tmdbId, item.type);
-            
-            // Default data for quick add
-            const movieData = {
+            await addMovie({
                 ...fullData,
-                status: "Plan to Watch", // Default status
+                status: "Plan to Watch",
                 inWatchlist: true,
                 timesWatched: 0,
                 addedAt: Date.now(),
@@ -201,22 +243,18 @@ export default function Browse() {
                     acting: 0,
                     ending: 0,
                     enjoyment: 0,
-                    overall: 0
-                }
-            };
-
-            await addMovie(movieData);
-            
+                    overall: 0,
+                },
+            });
             toast({
-                title: "Added to Library",
-                description: `"${item.title}" added to your Plan to Watch list.`,
-                variant: "success", // Assuming success variant exists, otherwise default
+                title: "Added",
+                description: "Added to Plan to Watch.",
+                variant: "success",
             });
         } catch (error) {
-            console.error("Quick Add Error:", error);
             toast({
                 title: "Error",
-                description: "Failed to add movie to library",
+                description: "Failed to add.",
                 variant: "destructive",
             });
         } finally {
@@ -227,97 +265,193 @@ export default function Browse() {
     const handleRemove = async (item) => {
         setRemovingId(item.tmdbId);
         try {
-            const movieToRemove = movies.find(m => m.tmdbId === item.tmdbId);
-            if (movieToRemove) {
-                await removeMovie(movieToRemove.id);
-                toast({
-                    title: "Removed",
-                    description: `"${item.title}" removed from your library.`,
-                    variant: "default",
-                });
-            }
-        } catch (error) {
-           console.error("Remove Error:", error);
-           toast({
-               title: "Error",
-               description: "Failed to remove movie",
-               variant: "destructive",
-           });
+            const movieToRemove = movies.find((m) => m.tmdbId === item.tmdbId);
+            if (movieToRemove) await removeMovie(movieToRemove.id);
         } finally {
             setRemovingId(null);
         }
-    };
-
-    const isAdded = (tmdbId) => {
-        return movies.some(m => m.tmdbId == tmdbId);
     };
 
     const handleViewDetails = (item) => {
         navigate(`/movie/${item.tmdbId}/${item.type}`);
     };
 
-    return (
-        <div className="min-h-screen bg-black pb-24">
-            <Navbar />
-            
-            <div className="max-w-screen-2xl mx-auto p-4 sm:p-6 space-y-6">
-                <div className="flex flex-col gap-2">
-                    <h2 className="text-2xl font-bold text-white">Browse</h2>
-                    <p className="text-neutral-400">Search for movies and TV shows to add to your library.</p>
-                </div>
+    const isAdded = (tmdbId) => movies.some((m) => m.tmdbId == tmdbId);
 
-                <div className="relative max-w-xl">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={20} />
-                    <input
-                        className="w-full bg-neutral-900 border border-neutral-800 text-white pl-12 pr-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder:text-neutral-500"
-                        placeholder="Search movies & TV shows..."
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        autoFocus
+    // Render Content based on Tab
+    const renderTabContent = () => {
+        if (activeTab === "movies") {
+            return (
+                <div className="animate-in fade-in duration-500">
+                    <ScrollingRow
+                        title="Trending Now"
+                        items={trending.filter((i) => i.type === "movie")}
+                        onMovieClick={handleViewDetails}
+                        onAdd={handleQuickAdd}
+                        isAdded={isAdded}
                     />
-                    {loading && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                            <Loader2 className="animate-spin text-neutral-400" size={20} />
-                        </div>
-                    )}
+                    <ScrollingRow
+                        title="Top Rated Movies"
+                        items={topRated}
+                        onMovieClick={handleViewDetails}
+                        onAdd={handleQuickAdd}
+                        isAdded={isAdded}
+                    />
                 </div>
+            );
+        } else if (activeTab === "tv") {
+            return (
+                <div className="animate-in fade-in duration-500">
+                    <ScrollingRow
+                        title="Popular TV Shows"
+                        items={tvPopular}
+                        onMovieClick={handleViewDetails}
+                        onAdd={handleQuickAdd}
+                        isAdded={isAdded}
+                    />
+                    <ScrollingRow
+                        title="Top Rated TV"
+                        items={tvTopRated}
+                        onMovieClick={handleViewDetails}
+                        onAdd={handleQuickAdd}
+                        isAdded={isAdded}
+                    />
+                    <ScrollingRow
+                        title="Trending This Week"
+                        items={trending.filter((i) => i.type === "tv")}
+                        onMovieClick={handleViewDetails}
+                        onAdd={handleQuickAdd}
+                        isAdded={isAdded}
+                    />
+                </div>
+            );
+        } else {
+            return (
+                <div className="animate-in fade-in duration-500">
+                    <div className="px-12 my-8">
+                        <p className="text-gray-400">
+                            Curated selections from our editors.
+                        </p>
+                    </div>
+                    <ScrollingRow
+                        title="Critically Acclaimed"
+                        items={[...topRated, ...tvTopRated]
+                            .sort((a, b) => b.voteAverage - a.voteAverage)
+                            .slice(0, 15)}
+                        onMovieClick={handleViewDetails}
+                        onAdd={handleQuickAdd}
+                        isAdded={isAdded}
+                    />
+                    <ScrollingRow
+                        title="Hidden Gems"
+                        items={[...upcoming, ...trending]
+                            .sort(() => 0.5 - Math.random())
+                            .slice(0, 15)}
+                        onMovieClick={handleViewDetails}
+                        onAdd={handleQuickAdd}
+                        isAdded={isAdded}
+                    />
+                </div>
+            );
+        }
+    };
 
-                 {query.trim() ? (
-                    <>
-                        {results.length > 0 ? (
-                            <MediaGrid 
-                                items={results} 
-                                onAdd={handleQuickAdd} 
-                                onRemove={handleRemove}
-                                onSelect={handleViewDetails}
-                                addingId={addingId} 
-                                removingId={removingId}
-                                isAdded={isAdded} 
+    return (
+        <div className="min-h-screen bg-black pb-24 font-sans text-white">
+            <Navbar />
+
+            {/* Content Container - if query exists, hide discover view */}
+            {!query.trim() && (
+                <>
+                    {/* Hero Section */}
+                    <HeroCarousel
+                        items={heroContent}
+                        onInfoClick={handleViewDetails}
+                        onAdd={handleQuickAdd}
+                        isAdded={isAdded}
+                    />
+
+                    {/* Search Bar */}
+                    <div className="px-4 md:px-12 max-w-xl mx-auto mt-6 relative z-10 mb-6">
+                        <div className="relative group shadow-black/50 shadow-lg rounded-full">
+                            <Search
+                                className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-white transition-colors"
+                                size={20}
                             />
-                        ) : !loading && (
-                            <div className="text-center py-12 text-neutral-500">
-                                No results found for "{query}"
-                            </div>
-                        )}
-                    </>
-                ) : (
-                    <div className="space-y-4">
-                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                            <Flame className="text-orange-500" /> Trending This Week
-                        </h3>
-                        <MediaGrid 
-                            items={trending} 
-                            onAdd={handleQuickAdd} 
+                            <input
+                                className="w-full bg-neutral-900/80 backdrop-blur-md border border-neutral-700 text-white pl-12 pr-4 py-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-neutral-900 transition-all placeholder:text-neutral-500"
+                                placeholder="Find movies & TV shows..."
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                            />
+                            {loading && (
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                    <Loader2
+                                        className="animate-spin text-neutral-400"
+                                        size={20}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="sticky top-15 z-40 bg-black/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
+                        <div className="flex justify-center gap-6 md:gap-8">
+                            {["movies", "tv", "picks"].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`text-lg md:text-xl font-bold px-4 py-2 rounded-full transition-all duration-300 ${
+                                        activeTab === tab
+                                            ? "text-white scale-110 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+                                            : "text-neutral-500 hover:text-neutral-300"
+                                    }`}
+                                >
+                                    {tab === "movies"
+                                        ? "Movies"
+                                        : tab === "tv"
+                                        ? "TV Shows"
+                                        : "Editor Picks"}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Main Content Area */}
+                    <div className="relative z-10 -mt-10 md:mt-0 pb-12 bg-linear-to-t from-black via-black to-transparent">
+                        {renderTabContent()}
+                    </div>
+                </>
+            )}
+
+            {/* Search Results Overlay */}
+            {query.trim() && (
+                <div className="animate-in fade-in slide-in-from-bottom-5 duration-300">
+                    {results.length > 0 ? (
+                        <SearchResultsGrid
+                            items={results}
+                            onAdd={handleQuickAdd}
                             onRemove={handleRemove}
                             onSelect={handleViewDetails}
-                            addingId={addingId} 
+                            addingId={addingId}
                             removingId={removingId}
-                            isAdded={isAdded} 
+                            isAdded={isAdded}
                         />
-                    </div>
-                )}
-            </div>
-            
+                    ) : (
+                        !loading && (
+                            <div className="text-center py-24 text-neutral-500">
+                                <Search
+                                    size={48}
+                                    className="mx-auto mb-4 opacity-50"
+                                />
+                                <p>No results found for "{query}"</p>
+                            </div>
+                        )
+                    )}
+                </div>
+            )}
+
             <BottomNav />
         </div>
     );

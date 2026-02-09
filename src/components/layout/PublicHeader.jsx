@@ -52,7 +52,7 @@ export function PublicHeader() {
                                 ) : (
                                     <div className="flex items-center gap-3">
                                         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                                            Sonar
+                                            Radar
                                         </h1>
                                         <div className="h-6 w-px bg-neutral-800" />
                                         <span className="text-blue-500 font-medium">
