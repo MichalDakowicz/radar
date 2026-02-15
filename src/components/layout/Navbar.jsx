@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from "../ui/Logo";
 import {
     BarChart3,
@@ -14,16 +14,13 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../features/auth/AuthContext";
 import { useToast } from "../ui/Toast";
-import { useMovies } from "../../hooks/useMovies";
-import AddMovieModal from "../../features/movies/AddMovieModal";
 import { BottomNav } from "./BottomNav";
 
 export function Navbar({ onPickRandom }) {
     const { user } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
     const { toast } = useToast();
-    const { addMovie } = useMovies();
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     const isActive = (path) => location.pathname === path;
 
@@ -64,7 +61,7 @@ export function Navbar({ onPickRandom }) {
                             )}
 
                             <button
-                                onClick={() => setIsAddModalOpen(true)}
+                                onClick={() => navigate("/add")}
                                 className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-bold text-black hover:bg-neutral-200 transition-colors cursor-pointer mr-2"
                             >
                                 <Plus size={16} />
@@ -143,12 +140,6 @@ export function Navbar({ onPickRandom }) {
                     )}
                 </div>
             </header>
-
-            <AddMovieModal
-                isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
-                onAdd={addMovie}
-            />
 
             <BottomNav />
         </>

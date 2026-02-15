@@ -35,6 +35,10 @@ export default function EditMovieMainTab({
     setTimesWatched,
     storedTimesWatched,
     setStoredTimesWatched,
+    inProgress,
+    setInProgress,
+    lastWatchedPosition,
+    setLastWatchedPosition,
     handleDelete,
 }) {
     return (
@@ -62,6 +66,12 @@ export default function EditMovieMainTab({
                     setTimesWatched={setTimesWatched}
                     storedTimesWatched={storedTimesWatched}
                     setStoredTimesWatched={setStoredTimesWatched}
+                    inProgress={inProgress}
+                    setInProgress={setInProgress}
+                    lastWatchedPosition={lastWatchedPosition}
+                    setLastWatchedPosition={setLastWatchedPosition}
+                    tvStatus={tvStatus}
+                    setTvStatus={setTvStatus}
                 />
             </div>
 

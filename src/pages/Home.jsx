@@ -3,18 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { useMovies } from "../hooks/useMovies";
 import { useToast } from "../components/ui/Toast";
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "../components/ui/popover";
 import MovieCard from "../features/movies/MovieCard";
 import MovieRow from "../features/movies/MovieRow";
 import RandomPickModal from "../features/movies/RandomPickModal";
 import { FilterPanel } from "../components/FilterPanel";
 import { Navbar } from "../components/layout/Navbar";
-import {
-    LayoutGrid,
-    List as ListIcon,
-    Search,
-    Layers,
-} from "lucide-react";
+import { LayoutGrid, List as ListIcon, Search, Layers } from "lucide-react";
 import {
     DndContext,
     closestCenter,
@@ -176,9 +175,13 @@ export default function Home() {
                 movieDirectors = movie.director;
             } else if (typeof movie.director === "string") {
                 if (movie.director.includes(",")) {
-                    movieDirectors = movie.director.split(",").map((d) => d.trim());
+                    movieDirectors = movie.director
+                        .split(",")
+                        .map((d) => d.trim());
                 } else if (movie.director.includes(";")) {
-                    movieDirectors = movie.director.split(";").map((d) => d.trim());
+                    movieDirectors = movie.director
+                        .split(";")
+                        .map((d) => d.trim());
                 } else {
                     movieDirectors = [movie.director];
                 }
@@ -236,16 +239,25 @@ export default function Home() {
         if (filterStatus !== "All") {
             if (filterStatus === "Watchlist") {
                 result = result.filter((m) => {
-                     const s = m.status || "Watchlist";
-                     return s === "Watchlist" || s === "Plan to Watch";
+                    const s = m.status || "Watchlist";
+                    return s === "Watchlist" || s === "Plan to Watch";
                 });
             } else if (filterStatus === "Watched") {
                 result = result.filter((m) => {
-                     const s = m.status || "Watchlist";
-                     return s === "Watched" || s === "Completed" || (m.timesWatched > 0 && s !== "Watching" && s !== "Dropped" && s !== "On Hold");
+                    const s = m.status || "Watchlist";
+                    return (
+                        s === "Watched" ||
+                        s === "Completed" ||
+                        (m.timesWatched > 0 &&
+                            s !== "Watching" &&
+                            s !== "Dropped" &&
+                            s !== "On Hold")
+                    );
                 });
             } else {
-                result = result.filter((m) => (m.status || "Watchlist") === filterStatus);
+                result = result.filter(
+                    (m) => (m.status || "Watchlist") === filterStatus,
+                );
             }
         }
 
@@ -257,9 +269,13 @@ export default function Home() {
                     movieDirectors = m.director;
                 } else if (typeof m.director === "string") {
                     if (m.director.includes(",")) {
-                        movieDirectors = m.director.split(",").map((d) => d.trim());
+                        movieDirectors = m.director
+                            .split(",")
+                            .map((d) => d.trim());
                     } else if (m.director.includes(";")) {
-                        movieDirectors = m.director.split(";").map((d) => d.trim());
+                        movieDirectors = m.director
+                            .split(";")
+                            .map((d) => d.trim());
                     } else {
                         movieDirectors = [m.director];
                     }
@@ -295,8 +311,13 @@ export default function Home() {
             if (sortBy === "rating") {
                 const getRating = (m) => {
                     if (m.ratings) {
-                        const vals = Object.values(m.ratings).filter(v => v > 0);
-                        if (vals.length > 0) return vals.reduce((x, y) => x + y, 0) / vals.length;
+                        const vals = Object.values(m.ratings).filter(
+                            (v) => v > 0,
+                        );
+                        if (vals.length > 0)
+                            return (
+                                vals.reduce((x, y) => x + y, 0) / vals.length
+                            );
                     }
                     return m.rating || 0;
                 };
@@ -334,9 +355,11 @@ export default function Home() {
     // Movies eligible for random spin
     const validPickMovies = useMemo(() => {
         if (filterStatus !== "All") {
-             return filteredMovies;
+            return filteredMovies;
         }
-        return filteredMovies.filter(m => !m.status || m.status === 'Watchlist');
+        return filteredMovies.filter(
+            (m) => !m.status || m.status === "Watchlist",
+        );
     }, [filteredMovies, filterStatus]);
 
     // Derived state for grouped movies
@@ -344,26 +367,33 @@ export default function Home() {
         if (groupBy === "none") return null;
 
         const groups = {};
-        
+
         filteredMovies.forEach((movie) => {
             let key = "Other";
 
             if (groupBy === "director") {
-                const primary = Array.isArray(movie.director) 
-                    ? movie.director[0] 
+                const primary = Array.isArray(movie.director)
+                    ? movie.director[0]
                     : movie.director;
                 key = primary || "Unknown Director";
             } else if (groupBy === "year") {
-                key = movie.releaseDate 
-                    ? movie.releaseDate.substring(0, 4) 
+                key = movie.releaseDate
+                    ? movie.releaseDate.substring(0, 4)
                     : "Unknown Year";
             } else if (groupBy === "genre") {
-                 key = (movie.genres && movie.genres.length > 0) ? movie.genres[0] : "No Genre";
+                key =
+                    movie.genres && movie.genres.length > 0
+                        ? movie.genres[0]
+                        : "No Genre";
             } else if (groupBy === "availability") {
-                 const avail = Array.isArray(movie.availability) ? movie.availability : (movie.format ? [movie.format] : []);
-                 key = (avail.length > 0 ? avail[0] : "Unknown");
+                const avail = Array.isArray(movie.availability)
+                    ? movie.availability
+                    : movie.format
+                    ? [movie.format]
+                    : [];
+                key = avail.length > 0 ? avail[0] : "Unknown";
             } else if (groupBy === "status") {
-                 key = movie.status || "Collection";
+                key = movie.status || "Collection";
             }
 
             if (!groups[key]) groups[key] = [];
@@ -372,7 +402,7 @@ export default function Home() {
 
         // Sort keys
         let sortedKeys = Object.keys(groups).sort();
-        
+
         // Reverse sort for years (newest first)
         if (groupBy === "year") {
             sortedKeys = sortedKeys.reverse();
@@ -418,7 +448,7 @@ export default function Home() {
                     a.customOrder !== undefined ? a.customOrder : -a.addedAt;
 
                 let newOrder;
-                
+
                 if (!prevItem) {
                     newOrder = getOrder(nextItem) - 100000;
                 } else if (!nextItem) {
@@ -448,18 +478,18 @@ export default function Home() {
 
     const handleRandomPick = () => {
         if (validPickMovies.length === 0) {
-             toast({ 
-                title: "No Movies to Pick", 
-                description: "No movies match your current filters.", 
-                variant: "destructive" 
-             });
-             return;
+            toast({
+                title: "No Movies to Pick",
+                description: "No movies match your current filters.",
+                variant: "destructive",
+            });
+            return;
         }
         setIsPickModalOpen(true);
     };
 
     const handleClearFilters = () => {
-        setFilterFormat("All");
+        setFilterAvailability("All");
         setFilterDirector("All");
         setFilterYear("All");
         setFilterGenre("All");
@@ -518,27 +548,48 @@ export default function Home() {
                         </div>
 
                         <div className="flex h-10 items-center rounded-lg border border-neutral-800 bg-neutral-900 p-1 shrink-0">
-                             <Popover>
+                            <Popover>
                                 <PopoverTrigger asChild>
-                                    <button className={`flex items-center gap-2 rounded px-2 py-1 text-sm font-medium transition-colors cursor-pointer ${
-                                        groupBy !== "none" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-neutral-300"
-                                    }`}>
+                                    <button
+                                        className={`flex items-center gap-2 rounded px-2 py-1 text-sm font-medium transition-colors cursor-pointer ${
+                                            groupBy !== "none"
+                                                ? "bg-neutral-800 text-white"
+                                                : "text-neutral-500 hover:text-neutral-300"
+                                        }`}
+                                    >
                                         <Layers size={16} />
-                                        <span className="hidden sm:inline">Group</span>
+                                        <span className="hidden sm:inline">
+                                            Group
+                                        </span>
                                     </button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-48 p-2 bg-neutral-900 border-neutral-800" align="end">
+                                <PopoverContent
+                                    className="w-48 p-2 bg-neutral-900 border-neutral-800"
+                                    align="end"
+                                >
                                     <div className="grid gap-1">
-                                        <h4 className="font-medium text-xs text-neutral-500 mb-2 px-2 uppercase">Group By</h4>
-                                        {["none", "director", "year", "genre", "availability", "status"].map(opt => (
+                                        <h4 className="font-medium text-xs text-neutral-500 mb-2 px-2 uppercase">
+                                            Group By
+                                        </h4>
+                                        {[
+                                            "none",
+                                            "director",
+                                            "year",
+                                            "genre",
+                                            "availability",
+                                            "status",
+                                        ].map((opt) => (
                                             <button
                                                 key={opt}
                                                 onClick={() => setGroupBy(opt)}
                                                 className={`w-full text-left px-2 py-1.5 rounded text-sm transition-colors ${
-                                                    groupBy === opt ? "bg-blue-500/10 text-blue-500" : "text-neutral-300 hover:bg-neutral-800"
+                                                    groupBy === opt
+                                                        ? "bg-blue-500/10 text-blue-500"
+                                                        : "text-neutral-300 hover:bg-neutral-800"
                                                 }`}
                                             >
-                                                {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                                                {opt.charAt(0).toUpperCase() +
+                                                    opt.slice(1)}
                                             </button>
                                         ))}
                                     </div>
@@ -549,14 +600,22 @@ export default function Home() {
                         <div className="flex h-10 items-center rounded-lg border border-neutral-800 bg-neutral-900 p-1 shrink-0">
                             <button
                                 onClick={() => setViewMode("grid")}
-                                className={`rounded p-1.5 transition-colors cursor-pointer ${viewMode === "grid" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-neutral-300"}`}
+                                className={`rounded p-1.5 transition-colors cursor-pointer ${
+                                    viewMode === "grid"
+                                        ? "bg-neutral-800 text-white"
+                                        : "text-neutral-500 hover:text-neutral-300"
+                                }`}
                                 title="Grid View"
                             >
                                 <LayoutGrid size={18} />
                             </button>
                             <button
                                 onClick={() => setViewMode("list")}
-                                className={`rounded p-1.5 transition-colors cursor-pointer ${viewMode === "list" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-neutral-300"}`}
+                                className={`rounded p-1.5 transition-colors cursor-pointer ${
+                                    viewMode === "list"
+                                        ? "bg-neutral-800 text-white"
+                                        : "text-neutral-500 hover:text-neutral-300"
+                                }`}
                                 title="List View"
                             >
                                 <ListIcon size={18} />
@@ -580,7 +639,10 @@ export default function Home() {
                     ) : filteredMovies.length === 0 ? (
                         <div className="flex h-64 flex-col items-center justify-center border-2 border-dashed border-neutral-800 rounded-xl bg-neutral-900/50 text-neutral-500">
                             <p className="mb-4">No movies found.</p>
-                            <p className="text-sm">Use the "Add Movie" button in the header to get started.</p>
+                            <p className="text-sm">
+                                Use the "Add Movie" button in the header to get
+                                started.
+                            </p>
                         </div>
                     ) : groupedMovies ? (
                         <div className="flex flex-col gap-8 pb-20">
@@ -600,7 +662,9 @@ export default function Home() {
                                                     key={movie.id}
                                                     movie={movie}
                                                     onClick={() =>
-                                                        navigate("/edit/" + movie.id)
+                                                        navigate(
+                                                            "/edit/" + movie.id,
+                                                        )
                                                     }
                                                     isHighlighted={
                                                         highlightedMovieId ===
@@ -629,7 +693,9 @@ export default function Home() {
                                                     key={movie.id}
                                                     movie={movie}
                                                     onClick={() =>
-                                                        navigate("/edit/" + movie.id)
+                                                        navigate(
+                                                            "/edit/" + movie.id,
+                                                        )
                                                     }
                                                     isHighlighted={
                                                         highlightedMovieId ===

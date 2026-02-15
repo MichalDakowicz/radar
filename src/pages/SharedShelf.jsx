@@ -55,9 +55,13 @@ export default function SharedShelf() {
                 movieDirectors = movie.director;
             } else if (typeof movie.director === "string") {
                 if (movie.director.includes(",")) {
-                    movieDirectors = movie.director.split(",").map((d) => d.trim());
+                    movieDirectors = movie.director
+                        .split(",")
+                        .map((d) => d.trim());
                 } else if (movie.director.includes(";")) {
-                    movieDirectors = movie.director.split(";").map((d) => d.trim());
+                    movieDirectors = movie.director
+                        .split(";")
+                        .map((d) => d.trim());
                 } else {
                     movieDirectors = [movie.director];
                 }
@@ -127,9 +131,13 @@ export default function SharedShelf() {
                     movieDirectors = m.director;
                 } else if (typeof m.director === "string") {
                     if (m.director.includes(",")) {
-                        movieDirectors = m.director.split(",").map((d) => d.trim());
+                        movieDirectors = m.director
+                            .split(",")
+                            .map((d) => d.trim());
                     } else if (m.director.includes(";")) {
-                        movieDirectors = m.director.split(";").map((d) => d.trim());
+                        movieDirectors = m.director
+                            .split(";")
+                            .map((d) => d.trim());
                     } else {
                         movieDirectors = [m.director];
                     }
@@ -184,7 +192,7 @@ export default function SharedShelf() {
     }, [
         movies,
         searchQuery,
-        filterFormat,
+        filterAvailability,
         filterDirector,
         filterYear,
         filterGenre,
@@ -290,7 +298,7 @@ export default function SharedShelf() {
                             <FilterPanel
                                 filterAvailability={filterAvailability}
                                 setFilterAvailability={setFilterAvailability}
-                                filterDirector={filterDirector} 
+                                filterDirector={filterDirector}
                                 setFilterDirector={setFilterDirector}
                                 filterGenre={filterGenre}
                                 setFilterGenre={setFilterGenre}
@@ -300,11 +308,11 @@ export default function SharedShelf() {
                                 setFilterStatus={setFilterStatus}
                                 sortBy={sortBy}
                                 setSortBy={setSortBy}
-                                uniqueDirectors={uniqueDirectors} 
+                                uniqueDirectors={uniqueDirectors}
                                 uniqueGenres={uniqueGenres}
                                 uniqueYears={uniqueYears}
                                 onClearAll={handleClearFilters}
-                                isMovieMode={true} 
+                                isMovieMode={true}
                             />
                         </div>
 
@@ -361,13 +369,21 @@ export default function SharedShelf() {
                         <div className="flex h-10 items-center rounded-lg border border-neutral-800 bg-neutral-900 p-1 shrink-0">
                             <button
                                 onClick={() => setViewMode("grid")}
-                                className={`rounded p-1.5 transition-colors cursor-pointer ${viewMode === "grid" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-neutral-300"}`}
+                                className={`rounded p-1.5 transition-colors cursor-pointer ${
+                                    viewMode === "grid"
+                                        ? "bg-neutral-800 text-white"
+                                        : "text-neutral-500 hover:text-neutral-300"
+                                }`}
                             >
                                 <LayoutGrid size={18} />
                             </button>
                             <button
                                 onClick={() => setViewMode("list")}
-                                className={`rounded p-1.5 transition-colors cursor-pointer ${viewMode === "list" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-neutral-300"}`}
+                                className={`rounded p-1.5 transition-colors cursor-pointer ${
+                                    viewMode === "list"
+                                        ? "bg-neutral-800 text-white"
+                                        : "text-neutral-500 hover:text-neutral-300"
+                                }`}
                             >
                                 <ListIcon size={18} />
                             </button>
@@ -381,7 +397,7 @@ export default function SharedShelf() {
                         <Logo className="h-12 w-12 mb-4 opacity-20" />
                         <p>No movies found in this collection.</p>
                         {(searchQuery ||
-                            filterFormat !== "All" ||
+                            filterAvailability !== "All" ||
                             filterDirector !== "All") && (
                             <button
                                 onClick={handleClearFilters}

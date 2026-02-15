@@ -12,6 +12,7 @@ import Friends from "./pages/Friends";
 import Browse from "./pages/Browse";
 import MovieDetails from "./pages/MovieDetails";
 import EditMovie from "./pages/EditMovie";
+import AddMovie from "./pages/AddMovie";
 import AppUrlListener from "./components/AppUrlListener";
 import FriendRequestListener from "./features/friends/FriendRequestListener";
 import SwipeNavigator from "./components/layout/SwipeNavigator";
@@ -20,82 +21,99 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const queryClient = new QueryClient();
 
 function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ToastProvider>
-        <BrowserRouter>
-          <AppUrlListener />
-          <FriendRequestListener />
-          <SwipeNavigator />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/u/:userId" element={<SharedShelf />} />
-            <Route path="/u/:userId/stats" element={<Stats />} />
-            <Route path="/u/:userId/friends" element={<PublicFriends />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/edit/:movieId"
-              element={
-                <ProtectedRoute>
-                  <EditMovie />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/movie/:tmdbId/:type"
-              element={
-                <ProtectedRoute>
-                  <MovieDetails />
-                </ProtectedRoute>
-              }
-            />
-             <Route
-              path="/friends"
-              element={
-                <ProtectedRoute>
-                  <Friends />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/browse"
-              element={
-                <ProtectedRoute>
-                  <Browse />
-                </ProtectedRoute>
-              }
-            />
-             <Route
-              path="/stats"
-              element={
-                <ProtectedRoute>
-                  <Stats />
-                </ProtectedRoute>
-              }
-            />
-             <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-        </BrowserRouter>
-        </ToastProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  );
+    return (
+        <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+                <ToastProvider>
+                    <BrowserRouter>
+                        <AppUrlListener />
+                        <FriendRequestListener />
+                        <SwipeNavigator />
+                        <Routes>
+                            <Route path="/login" element={<Login />} />
+                            <Route
+                                path="/u/:userId"
+                                element={<SharedShelf />}
+                            />
+                            <Route
+                                path="/u/:userId/stats"
+                                element={<Stats />}
+                            />
+                            <Route
+                                path="/u/:userId/friends"
+                                element={<PublicFriends />}
+                            />
+                            <Route
+                                path="/"
+                                element={
+                                    <ProtectedRoute>
+                                        <Home />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/edit/:movieId"
+                                element={
+                                    <ProtectedRoute>
+                                        <EditMovie />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/add"
+                                element={
+                                    <ProtectedRoute>
+                                        <AddMovie />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/movie/:tmdbId/:type"
+                                element={
+                                    <ProtectedRoute>
+                                        <MovieDetails />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/friends"
+                                element={
+                                    <ProtectedRoute>
+                                        <Friends />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/browse"
+                                element={
+                                    <ProtectedRoute>
+                                        <Browse />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/stats"
+                                element={
+                                    <ProtectedRoute>
+                                        <Stats />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/settings"
+                                element={
+                                    <ProtectedRoute>
+                                        <Settings />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route path="*" element={<Navigate to="/" />} />
+                        </Routes>
+                    </BrowserRouter>
+                </ToastProvider>
+            </AuthProvider>
+        </QueryClientProvider>
+    );
 }
 
 export default App;

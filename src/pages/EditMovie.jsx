@@ -47,6 +47,8 @@ export default function EditMovie() {
     const [inWatchlist, setInWatchlist] = useState(true);
     const [timesWatched, setTimesWatched] = useState(0);
     const [storedTimesWatched, setStoredTimesWatched] = useState(1);
+    const [inProgress, setInProgress] = useState(false);
+    const [lastWatchedPosition, setLastWatchedPosition] = useState("");
     const [movieUrl, setMovieUrl] = useState("");
     const [notes, setNotes] = useState("");
     const [overallRating, setOverallRating] = useState(0);
@@ -111,6 +113,8 @@ export default function EditMovie() {
                     ? movie.inWatchlist
                     : movie.status === "Watchlist",
             );
+            setInProgress(movie.inProgress || false);
+            setLastWatchedPosition(movie.lastWatchedPosition || "");
             const seenCount =
                 movie.timesWatched ?? (movie.status === "Watched" ? 1 : 0);
             setTimesWatched(seenCount);
@@ -260,6 +264,8 @@ export default function EditMovie() {
                         : "Watchlist",
                 inWatchlist:
                     type === "tv" ? tvStatus === "Plan to Watch" : inWatchlist,
+                inProgress,
+                lastWatchedPosition,
                 imdbId,
                 voteAverage,
                 timesWatched,
@@ -389,6 +395,10 @@ export default function EditMovie() {
                             setTimesWatched={setTimesWatched}
                             storedTimesWatched={storedTimesWatched}
                             setStoredTimesWatched={setStoredTimesWatched}
+                            inProgress={inProgress}
+                            setInProgress={setInProgress}
+                            lastWatchedPosition={lastWatchedPosition}
+                            setLastWatchedPosition={setLastWatchedPosition}
                             coverUrl={coverUrl}
                             setCoverUrl={setCoverUrl}
                             handleDelete={handleDelete}
