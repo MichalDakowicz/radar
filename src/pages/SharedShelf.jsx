@@ -1,15 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import Logo from "../components/ui/Logo";
-import { useAuth } from "../features/auth/AuthContext";
 import { usePublicMovies } from "../hooks/usePublicMovies";
-import { useUserProfile } from "../hooks/useUserProfile";
 import { PublicBottomNav } from "../components/layout/PublicBottomNav";
 import { PublicHeader } from "../components/layout/PublicHeader";
 import MovieCard from "../features/movies/MovieCard";
 import MovieRow from "../features/movies/MovieRow";
 import MovieDetailsModal from "../features/movies/MovieDetailsModal";
 import { FilterPanel } from "../components/FilterPanel";
+import { useRestoredState, useSaveScrollPosition } from "../hooks/usePageState";
 import {
     Popover,
     PopoverContent,
@@ -25,22 +24,38 @@ import {
 
 export default function SharedShelf() {
     const { userId } = useParams();
-    const { user } = useAuth();
     const { movies, loading } = usePublicMovies(userId);
-    const { profile, loading: profileLoading } = useUserProfile(userId);
 
-    const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
-    const [searchQuery, setSearchQuery] = useState("");
+    // Restore state from navigation
+    const restoredState = useRestoredState(`sharedShelf_${userId}`, null);
+
+    const [viewMode, setViewMode] = useState(restoredState?.viewMode || "grid"); // "grid" | "list"
+    const [searchQuery, setSearchQuery] = useState(
+        restoredState?.searchQuery || "",
+    );
     const [selectedMovie, setSelectedMovie] = useState(null);
 
     // Filters & Sorting State
-    const [filterAvailability, setFilterAvailability] = useState("All");
-    const [filterDirector, setFilterDirector] = useState("All");
-    const [filterYear, setFilterYear] = useState("All");
-    const [filterGenre, setFilterGenre] = useState("All");
-    const [filterStatus, setFilterStatus] = useState("All");
-    const [sortBy, setSortBy] = useState("custom");
-    const [groupBy, setGroupBy] = useState("none");
+    const [filterAvailability, setFilterAvailability] = useState(
+        restoredState?.filterAvailability || "All",
+    );
+    const [filterDirector, setFilterDirector] = useState(
+        restoredState?.filterDirector || "All",
+    );
+    const [filterYear, setFilterYear] = useState(
+        restoredState?.filterYear || "All",
+    );
+    const [filterGenre, setFilterGenre] = useState(
+        restoredState?.filterGenre || "All",
+    );
+    const [filterStatus, setFilterStatus] = useState(
+        restoredState?.filterStatus || "All",
+    );
+    const [sortBy, setSortBy] = useState(restoredState?.sortBy || "custom");
+    const [groupBy, setGroupBy] = useState(restoredState?.groupBy || "none");
+
+    // Save scroll position continuously
+    useSaveScrollPosition(`sharedShelf_${userId}`);
 
     // Extract unique values for filters
     const { uniqueDirectors, uniqueYears, uniqueGenres } = useMemo(() => {
@@ -256,6 +271,52 @@ export default function SharedShelf() {
         setFilterStatus("All");
         setSearchQuery("");
     };
+
+    // Save current state to sessionStorage
+    useEffect(() => {
+        const currentState = {
+            viewMode,
+            searchQuery,
+            filterAvailability,
+            filterDirector,
+            filterYear,
+            filterGenre,
+            filterStatus,
+            sortBy,
+            groupBy,
+            scrollPosition: window.scrollY,
+        };
+
+        try {
+            sessionStorage.setItem(
+                `pageState_sharedShelf_${userId}`,
+                JSON.stringify(currentState),
+            );
+        } catch (error) {
+            console.warn("Error saving page state:", error);
+        }
+    }, [
+        viewMode,
+        searchQuery,
+        filterAvailability,
+        filterDirector,
+        filterYear,
+        filterGenre,
+        filterStatus,
+        sortBy,
+        groupBy,
+        userId,
+    ]);
+
+    // Restore scroll position on mount if we have restored state
+    useEffect(() => {
+        if (restoredState?.scrollPosition) {
+            setTimeout(() => {
+                window.scrollTo(0, restoredState.scrollPosition);
+            }, 100);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     if (loading) {
         return (

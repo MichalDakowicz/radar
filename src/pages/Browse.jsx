@@ -15,6 +15,7 @@ import { BottomNav } from "../components/layout/BottomNav";
 import HeroCarousel from "../features/movies/HeroCarousel";
 import ScrollingRow from "../features/movies/ScrollingRow";
 import { Plus, Trash2, Star, Check } from "lucide-react";
+import { useRestoredState, useSaveScrollPosition } from "../hooks/usePageState";
 
 function SearchResultsGrid({
     items,
@@ -133,12 +134,16 @@ function SearchResultsGrid({
 }
 
 export default function Browse() {
-    const [query, setQuery] = useState("");
+    const restoredState = useRestoredState("browse", null);
+
+    const [query, setQuery] = useState(restoredState?.query || "");
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
 
     // Tab State
-    const [activeTab, setActiveTab] = useState("movies"); // 'movies', 'tv', 'picks'
+    const [activeTab, setActiveTab] = useState(
+        restoredState?.activeTab || "movies",
+    ); // 'movies', 'tv', 'picks'
 
     // Data State
     const [heroContent, setHeroContent] = useState([]);
@@ -154,6 +159,9 @@ export default function Browse() {
     const navigate = useNavigate();
     const { addMovie, removeMovie, movies } = useMovies();
     const { toast } = useToast();
+
+    // Save scroll position continuously
+    useSaveScrollPosition("browse");
 
     // Fetch Initial Data
     useEffect(() => {
@@ -251,7 +259,7 @@ export default function Browse() {
                 description: "Added to Plan to Watch.",
                 variant: "success",
             });
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "Failed to add.",
@@ -273,10 +281,43 @@ export default function Browse() {
     };
 
     const handleViewDetails = (item) => {
-        navigate(`/movie/${item.tmdbId}/${item.type}`);
+        const existingMovie = movies.find((m) => m.tmdbId === item.tmdbId);
+        if (existingMovie) {
+            navigate(`/edit/${existingMovie.id}`);
+        } else {
+            navigate(`/movie/${item.tmdbId}/${item.type}`);
+        }
     };
 
     const isAdded = (tmdbId) => movies.some((m) => m.tmdbId == tmdbId);
+
+    // Save current state to sessionStorage
+    useEffect(() => {
+        const currentState = {
+            query,
+            activeTab,
+            scrollPosition: window.scrollY,
+        };
+
+        try {
+            sessionStorage.setItem(
+                "pageState_browse",
+                JSON.stringify(currentState),
+            );
+        } catch (error) {
+            console.warn("Error saving page state:", error);
+        }
+    }, [query, activeTab]);
+
+    // Restore scroll position on mount if we have restored state
+    useEffect(() => {
+        if (restoredState?.scrollPosition) {
+            setTimeout(() => {
+                window.scrollTo(0, restoredState.scrollPosition);
+            }, 100);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Render Content based on Tab
     const renderTabContent = () => {

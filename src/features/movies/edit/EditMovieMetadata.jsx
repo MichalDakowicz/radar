@@ -11,6 +11,7 @@ export default function EditMovieMetadata({
     setTvStatus,
     timesWatched,
     voteAverage,
+    tmdbId,
 }) {
     return (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -18,12 +19,18 @@ export default function EditMovieMetadata({
                 <div className="text-xs text-neutral-500 uppercase font-bold mb-2">
                     Release Date
                 </div>
-                <input
-                    type="date"
-                    className="w-full bg-transparent border-none text-white focus:outline-none text-sm"
-                    value={releaseDate}
-                    onChange={(e) => setReleaseDate(e.target.value)}
-                />
+                {tmdbId ? (
+                    <div className="text-white text-sm py-1">
+                        {releaseDate || "N/A"}
+                    </div>
+                ) : (
+                    <input
+                        type="date"
+                        className="w-full bg-transparent border-none text-white focus:outline-none text-sm"
+                        value={releaseDate}
+                        onChange={(e) => setReleaseDate(e.target.value)}
+                    />
+                )}
             </div>
 
             <div className="bg-neutral-900 rounded-lg p-4 border border-neutral-800">
@@ -32,16 +39,31 @@ export default function EditMovieMetadata({
                 </div>
                 <div className="flex items-center gap-2">
                     <Clock size={18} className="text-purple-500" />
-                    <input
-                        type="number"
-                        className="w-full bg-transparent border-none text-white focus:outline-none font-mono text-sm"
-                        value={runtime}
-                        onChange={(e) =>
-                            setRuntime(parseInt(e.target.value) || 0)
-                        }
-                        placeholder="0"
-                    />
-                    <span className="text-neutral-600 text-xs">min</span>
+                    {tmdbId ? (
+                        <>
+                            <span className="text-white font-mono text-sm">
+                                {runtime}
+                            </span>
+                            <span className="text-neutral-600 text-xs">
+                                min
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <input
+                                type="number"
+                                className="w-full bg-transparent border-none text-white focus:outline-none font-mono text-sm"
+                                value={runtime}
+                                onChange={(e) =>
+                                    setRuntime(parseInt(e.target.value) || 0)
+                                }
+                                placeholder="0"
+                            />
+                            <span className="text-neutral-600 text-xs">
+                                min
+                            </span>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -93,18 +115,24 @@ export default function EditMovieMetadata({
                 </div>
                 <div className="flex items-center gap-2 text-white">
                     <Monitor size={18} className="text-orange-500" />
-                    <select
-                        className="w-full bg-transparent border-none text-white focus:outline-none text-sm appearance-none capitalize"
-                        value={type}
-                        onChange={(e) => setType(e.target.value)}
-                    >
-                        <option value="movie" className="bg-neutral-900">
-                            Movie
-                        </option>
-                        <option value="tv" className="bg-neutral-900">
-                            TV Show
-                        </option>
-                    </select>
+                    {tmdbId ? (
+                        <span className="text-sm capitalize">
+                            {type === "tv" ? "TV Show" : "Movie"}
+                        </span>
+                    ) : (
+                        <select
+                            className="w-full bg-transparent border-none text-white focus:outline-none text-sm appearance-none capitalize"
+                            value={type}
+                            onChange={(e) => setType(e.target.value)}
+                        >
+                            <option value="movie" className="bg-neutral-900">
+                                Movie
+                            </option>
+                            <option value="tv" className="bg-neutral-900">
+                                TV Show
+                            </option>
+                        </select>
+                    )}
                 </div>
             </div>
 

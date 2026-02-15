@@ -337,6 +337,7 @@ export default function EditMovie() {
                 overview={overview}
                 director={director}
                 releaseDate={releaseDate}
+                tmdbId={tmdbId}
             />
             <div className="w-full max-w-5xl mx-auto px-4 pt-6">
                 <div className="flex bg-neutral-900/90 p-1 rounded-xl mb-6 sticky top-15 sm:top-2 z-30 backdrop-blur-md border border-neutral-800 shadow-xl overflow-x-auto">
@@ -425,38 +426,44 @@ export default function EditMovie() {
                                             className="bg-neutral-800 text-neutral-300 text-sm px-3 py-1.5 rounded-full flex items-center gap-2 border border-neutral-700"
                                         >
                                             {g}
-                                            <button
-                                                onClick={() => removeGenre(i)}
-                                                className="hover:text-red-400"
-                                            >
-                                                <X size={14} />
-                                            </button>
+                                            {!tmdbId && (
+                                                <button
+                                                    onClick={() =>
+                                                        removeGenre(i)
+                                                    }
+                                                    className="hover:text-red-400"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            )}
                                         </span>
                                     ))}
                                 </div>
-                                <div className="flex gap-2">
-                                    <input
-                                        className="flex-1 bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
-                                        value={genreInput}
-                                        onChange={(e) =>
-                                            setGenreInput(e.target.value)
-                                        }
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                addGenre();
+                                {!tmdbId && (
+                                    <div className="flex gap-2">
+                                        <input
+                                            className="flex-1 bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                                            value={genreInput}
+                                            onChange={(e) =>
+                                                setGenreInput(e.target.value)
                                             }
-                                        }}
-                                        placeholder="Add genre..."
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={addGenre}
-                                        className="bg-neutral-800 hover:bg-neutral-700 text-white px-4 rounded-xl border border-neutral-800"
-                                    >
-                                        <Check size={20} />
-                                    </button>
-                                </div>
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    addGenre();
+                                                }
+                                            }}
+                                            placeholder="Add genre..."
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={addGenre}
+                                            className="bg-neutral-800 hover:bg-neutral-700 text-white px-4 rounded-xl border border-neutral-800"
+                                        >
+                                            <Check size={20} />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
@@ -469,50 +476,62 @@ export default function EditMovie() {
                                             className="bg-neutral-800 text-neutral-300 text-sm px-3 py-1.5 rounded-full flex items-center gap-2 border border-neutral-700"
                                         >
                                             {c}
-                                            <button
-                                                onClick={() => removeCast(i)}
-                                                className="hover:text-red-400"
-                                            >
-                                                <X size={14} />
-                                            </button>
+                                            {!tmdbId && (
+                                                <button
+                                                    onClick={() =>
+                                                        removeCast(i)
+                                                    }
+                                                    className="hover:text-red-400"
+                                                >
+                                                    <X size={14} />
+                                                </button>
+                                            )}
                                         </span>
                                     ))}
                                 </div>
-                                <div className="flex gap-2">
-                                    <input
-                                        className="flex-1 bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
-                                        value={castInput}
-                                        onChange={(e) =>
-                                            setCastInput(e.target.value)
-                                        }
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                addCast();
+                                {!tmdbId && (
+                                    <div className="flex gap-2">
+                                        <input
+                                            className="flex-1 bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                                            value={castInput}
+                                            onChange={(e) =>
+                                                setCastInput(e.target.value)
                                             }
-                                        }}
-                                        placeholder="Add actor..."
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={addCast}
-                                        className="bg-neutral-800 hover:bg-neutral-700 text-white px-4 rounded-xl border border-neutral-800"
-                                    >
-                                        <Check size={20} />
-                                    </button>
-                                </div>
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    addCast();
+                                                }
+                                            }}
+                                            placeholder="Add actor..."
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={addCast}
+                                            className="bg-neutral-800 hover:bg-neutral-700 text-white px-4 rounded-xl border border-neutral-800"
+                                        >
+                                            <Check size={20} />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
                                     Overview
                                 </label>
-                                <textarea
-                                    className="w-full bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-37.5 text-base leading-relaxed"
-                                    value={overview}
-                                    onChange={(e) =>
-                                        setOverview(e.target.value)
-                                    }
-                                />
+                                {tmdbId ? (
+                                    <div className="w-full bg-neutral-900/50 border border-neutral-800 text-white px-4 py-3 rounded-xl min-h-37.5 text-base leading-relaxed">
+                                        {overview || "No overview available"}
+                                    </div>
+                                ) : (
+                                    <textarea
+                                        className="w-full bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-37.5 text-base leading-relaxed"
+                                        value={overview}
+                                        onChange={(e) =>
+                                            setOverview(e.target.value)
+                                        }
+                                    />
+                                )}
                             </div>
                         </div>
                     )}

@@ -87,6 +87,7 @@ export default function EditMovieMainTab({
                 setTvStatus={setTvStatus}
                 timesWatched={timesWatched}
                 voteAverage={voteAverage}
+                tmdbId={tmdbId}
             />
 
             {/* Cast & Crew */}
@@ -98,6 +99,7 @@ export default function EditMovieMainTab({
                 removeDirector={removeDirector}
                 cast={cast}
                 genres={genres}
+                tmdbId={tmdbId}
             />
 
             {/* Availability */}

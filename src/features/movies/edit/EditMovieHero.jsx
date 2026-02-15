@@ -8,6 +8,7 @@ export default function EditMovieHero({
     overview,
     director,
     releaseDate,
+    tmdbId,
 }) {
     return (
         <div className="relative">
@@ -38,15 +39,19 @@ export default function EditMovieHero({
                                 <Clapperboard size={32} />
                             </div>
                         )}
-                        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                            <input
-                                className="w-full bg-neutral-800 border border-neutral-700 text-white px-3 py-2 rounded-lg text-xs"
-                                value={coverUrl}
-                                onChange={(e) => setCoverUrl(e.target.value)}
-                                placeholder="Cover URL..."
-                                onClick={(e) => e.stopPropagation()}
-                            />
-                        </div>
+                        {!tmdbId && (
+                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
+                                <input
+                                    className="w-full bg-neutral-800 border border-neutral-700 text-white px-3 py-2 rounded-lg text-xs"
+                                    value={coverUrl}
+                                    onChange={(e) =>
+                                        setCoverUrl(e.target.value)
+                                    }
+                                    placeholder="Cover URL..."
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {/* Poster - Mobile (smaller, left side) */}
@@ -62,24 +67,34 @@ export default function EditMovieHero({
                                 <Clapperboard size={20} />
                             </div>
                         )}
-                        <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
-                            <input
-                                className="w-full bg-neutral-800 border border-neutral-700 text-white px-2 py-1 rounded text-xs"
-                                value={coverUrl}
-                                onChange={(e) => setCoverUrl(e.target.value)}
-                                placeholder="URL..."
-                                onClick={(e) => e.stopPropagation()}
-                            />
-                        </div>
+                        {!tmdbId && (
+                            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                                <input
+                                    className="w-full bg-neutral-800 border border-neutral-700 text-white px-2 py-1 rounded text-xs"
+                                    value={coverUrl}
+                                    onChange={(e) =>
+                                        setCoverUrl(e.target.value)
+                                    }
+                                    placeholder="URL..."
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex-1 min-w-0 space-y-2 mb-2 w-full">
-                        <input
-                            className="w-full bg-transparent border-b-2 border-neutral-700 focus:border-blue-500 text-white px-0 py-2 focus:outline-none text-3xl sm:text-4xl md:text-5xl font-bold placeholder:text-neutral-800 transition-colors"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Movie Title"
-                        />
+                        {tmdbId ? (
+                            <h1 className="w-full text-white px-0 py-2 text-3xl sm:text-4xl md:text-5xl font-bold">
+                                {title}
+                            </h1>
+                        ) : (
+                            <input
+                                className="w-full bg-transparent border-b-2 border-neutral-700 focus:border-blue-500 text-white px-0 py-2 focus:outline-none text-3xl sm:text-4xl md:text-5xl font-bold placeholder:text-neutral-800 transition-colors"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Movie Title"
+                            />
+                        )}
 
                         {overview && (
                             <p className="text-sm sm:text-base text-neutral-300 italic flex items-start gap-2 line-clamp-2">

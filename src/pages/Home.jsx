@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../features/auth/AuthContext";
 import { useMovies } from "../hooks/useMovies";
 import { useToast } from "../components/ui/Toast";
+import { useRestoredState, useSaveScrollPosition } from "../hooks/usePageState";
 import {
     Popover,
     PopoverContent,
@@ -90,23 +90,73 @@ function usePersistedState(key, defaultValue) {
     useEffect(() => {
         try {
             localStorage.setItem(key, JSON.stringify(state));
+            // Dispatch custom event for same-page updates
+            window.dispatchEvent(
+                new CustomEvent("localStorageChange", {
+                    detail: { key, value: state },
+                }),
+            );
         } catch (error) {
             console.warn(`Error setting localStorage key "${key}":`, error);
         }
     }, [key, state]);
 
+    // Listen for storage changes from other tabs and same-page updates
+    useEffect(() => {
+        const handleStorageChange = (e) => {
+            if (e.key === key && e.newValue !== null) {
+                try {
+                    setState(JSON.parse(e.newValue));
+                } catch (error) {
+                    console.warn(
+                        `Error parsing storage change for key "${key}":`,
+                        error,
+                    );
+                }
+            }
+        };
+
+        const handleCustomStorageChange = (e) => {
+            if (e.detail.key === key) {
+                setState(e.detail.value);
+            }
+        };
+
+        window.addEventListener("storage", handleStorageChange);
+        window.addEventListener(
+            "localStorageChange",
+            handleCustomStorageChange,
+        );
+
+        return () => {
+            window.removeEventListener("storage", handleStorageChange);
+            window.removeEventListener(
+                "localStorageChange",
+                handleCustomStorageChange,
+            );
+        };
+    }, [key]);
+
     return [state, setState];
 }
 
 export default function Home() {
-    const { user } = useAuth();
     const navigate = useNavigate();
-    const { movies, loading, addMovie, updateMovie, removeMovie } = useMovies();
+    const { movies, loading, updateMovie } = useMovies();
     const { toast } = useToast();
 
-    const [viewMode, setViewMode] = usePersistedState("mt_viewMode", "grid");
+    // Try to restore state from navigation
+    const restoredState = useRestoredState("home", null);
+
+    const [viewMode, setViewMode] = usePersistedState(
+        "mt_viewMode",
+        restoredState?.viewMode || "grid",
+    );
     const [gridSize] = usePersistedState("mt_gridSize", "normal");
-    const [groupBy, setGroupBy] = usePersistedState("mt_groupBy", "none");
+    const [groupBy, setGroupBy] = usePersistedState(
+        "mt_groupBy",
+        restoredState?.groupBy || "none",
+    );
     const [isPickModalOpen, setIsPickModalOpen] = useState(false);
 
     const gridClasses = useMemo(() => {
@@ -119,34 +169,42 @@ export default function Home() {
                 return "grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 p-2";
         }
     }, [gridSize]);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(
+        restoredState?.searchQuery || "",
+    );
 
     const [filterAvailability, setFilterAvailability] = usePersistedState(
         "mt_filterAvailability",
-        "All",
+        restoredState?.filterAvailability || "All",
     );
     const [filterDirector, setFilterDirector] = usePersistedState(
         "mt_filterDirector",
-        "All",
+        restoredState?.filterDirector || "All",
     );
     const [filterYear, setFilterYear] = usePersistedState(
         "mt_filterYear",
-        "All",
+        restoredState?.filterYear || "All",
     );
     const [filterGenre, setFilterGenre] = usePersistedState(
         "mt_filterGenre",
-        "All",
+        restoredState?.filterGenre || "All",
     );
     const [filterStatus, setFilterStatus] = usePersistedState(
         "mt_filterStatus_v2",
-        "All",
+        restoredState?.filterStatus || "All",
     );
-    const [sortBy, setSortBy] = usePersistedState("mt_sortBy", "custom");
+    const [sortBy, setSortBy] = usePersistedState(
+        "mt_sortBy",
+        restoredState?.sortBy || "custom",
+    );
 
     const [highlightedMovieId, setHighlightedMovieId] = useState(null);
 
     // Dnd States
     const [activeId, setActiveId] = useState(null);
+
+    // Save scroll position continuously
+    useSaveScrollPosition("home");
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -475,6 +533,52 @@ export default function Home() {
             }
         }
     }, [highlightedMovieId]);
+
+    // Save current state to sessionStorage before navigation
+    useEffect(() => {
+        const currentState = {
+            viewMode,
+            groupBy,
+            searchQuery,
+            filterAvailability,
+            filterDirector,
+            filterYear,
+            filterGenre,
+            filterStatus,
+            sortBy,
+            scrollPosition: window.scrollY,
+        };
+
+        try {
+            sessionStorage.setItem(
+                "pageState_home",
+                JSON.stringify(currentState),
+            );
+        } catch (error) {
+            console.warn("Error saving page state:", error);
+        }
+    }, [
+        viewMode,
+        groupBy,
+        searchQuery,
+        filterAvailability,
+        filterDirector,
+        filterYear,
+        filterGenre,
+        filterStatus,
+        sortBy,
+    ]);
+
+    // Restore scroll position on mount if we have restored state
+    useEffect(() => {
+        if (restoredState?.scrollPosition) {
+            // Use setTimeout to ensure DOM is ready
+            setTimeout(() => {
+                window.scrollTo(0, restoredState.scrollPosition);
+            }, 100);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleRandomPick = () => {
         if (validPickMovies.length === 0) {

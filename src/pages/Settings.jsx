@@ -50,6 +50,12 @@ export default function Settings() {
     const handleGridSizeChange = (newSize) => {
         setGridSize(newSize);
         localStorage.setItem("mt_gridSize", JSON.stringify(newSize));
+        // Dispatch custom event for same-page updates
+        window.dispatchEvent(
+            new CustomEvent("localStorageChange", {
+                detail: { key: "mt_gridSize", value: newSize },
+            }),
+        );
         toast({
             title: "Grid Size Updated",
             description: `Layout set to ${newSize} mode.`,

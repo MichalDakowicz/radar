@@ -87,13 +87,22 @@ export default function HeroCarousel({ items, onInfoClick, onAdd, isAdded }) {
                     </p>
 
                     <div className="flex items-center gap-2 md:gap-4 pt-2 md:pt-4">
-                        <button className="bg-white text-black px-4 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-200 transition-colors text-sm md:text-base">
+                        <a
+                            href={
+                                currentItem.type === "tv"
+                                    ? `https://pstream.mov/media/tmdb-tv-${currentItem.tmdbId}`
+                                    : `https://pstream.mov/media/tmdb-movie-${currentItem.tmdbId}`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="bg-white text-black px-4 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-200 transition-colors text-sm md:text-base"
+                        >
                             <Play
                                 size={18}
                                 className="fill-black md:w-5 md:h-5"
                             />
                             <span className="hidden sm:inline">Play</span>
-                        </button>
+                        </a>
                         <button
                             onClick={() => onAdd(currentItem)}
                             className="bg-neutral-500/50 backdrop-blur-md text-white px-4 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-500/70 transition-colors text-sm md:text-base"

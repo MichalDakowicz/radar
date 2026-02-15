@@ -8,6 +8,7 @@ export default function EditMovieCastCrew({
     removeDirector,
     cast,
     genres,
+    tmdbId,
 }) {
     return (
         <div className="space-y-6">
@@ -23,36 +24,40 @@ export default function EditMovieCastCrew({
                             className="bg-neutral-900 border border-neutral-800 rounded-full px-4 py-2 text-white flex items-center gap-2"
                         >
                             <span className="font-medium">{d}</span>
-                            <button
-                                onClick={() => removeDirector(i)}
-                                className="hover:text-red-400"
-                            >
-                                <X size={14} />
-                            </button>
+                            {!tmdbId && (
+                                <button
+                                    onClick={() => removeDirector(i)}
+                                    className="hover:text-red-400"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>
-                <div className="flex gap-2">
-                    <input
-                        className="flex-1 bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
-                        value={directorInput}
-                        onChange={(e) => setDirectorInput(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                                e.preventDefault();
-                                addDirector();
-                            }
-                        }}
-                        placeholder="Add director..."
-                    />
-                    <button
-                        type="button"
-                        onClick={addDirector}
-                        className="bg-neutral-800 hover:bg-neutral-700 text-white px-4 rounded-xl border border-neutral-800"
-                    >
-                        <Check size={20} />
-                    </button>
-                </div>
+                {!tmdbId && (
+                    <div className="flex gap-2">
+                        <input
+                            className="flex-1 bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                            value={directorInput}
+                            onChange={(e) => setDirectorInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    addDirector();
+                                }
+                            }}
+                            placeholder="Add director..."
+                        />
+                        <button
+                            type="button"
+                            onClick={addDirector}
+                            className="bg-neutral-800 hover:bg-neutral-700 text-white px-4 rounded-xl border border-neutral-800"
+                        >
+                            <Check size={20} />
+                        </button>
+                    </div>
+                )}
             </div>
 
             {cast.length > 0 && (
