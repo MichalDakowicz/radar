@@ -102,11 +102,12 @@ export default function ScrollingRow({
 
                 <div
                     ref={rowRef}
+                    data-scrollable="true"
                     className="flex gap-4 overflow-x-auto scrollbar-hide px-6 md:px-16 pb-4 pt-4 snap-x snap-mandatory w-full"
                     style={{
                         scrollbarWidth: "none",
                         msOverflowStyle: "none",
-                        touchAction: "pan-x", // Only allow horizontal panning
+                        touchAction: "pan-y pan-x", // Allow both horizontal and vertical panning
                         WebkitOverflowScrolling: "touch", // Smooth scrolling on iOS
                         overscrollBehavior: "contain", // Prevent scroll chaining
                     }}
