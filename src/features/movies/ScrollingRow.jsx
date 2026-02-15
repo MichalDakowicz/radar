@@ -76,7 +76,7 @@ export default function ScrollingRow({
     if (!items || items.length === 0) return null;
 
     return (
-        <div className="space-y-3 my-8 w-full group/row">
+        <div className="space-y-3 my-8 w-full group/row pt-6">
             <h2 className="text-xl md:text-2xl font-semibold text-white/90 hover:text-white transition-colors cursor-pointer inline-flex items-center gap-2 group-hover:text-blue-400 pl-6 md:pl-16">
                 {title}
             </h2>

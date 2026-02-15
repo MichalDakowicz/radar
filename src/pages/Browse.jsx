@@ -328,11 +328,6 @@ export default function Browse() {
         } else {
             return (
                 <div className="animate-in fade-in duration-500">
-                    <div className="px-12 my-8">
-                        <p className="text-gray-400">
-                            Curated selections from our editors.
-                        </p>
-                    </div>
                     <ScrollingRow
                         title="Critically Acclaimed"
                         items={[...topRated, ...tvTopRated]
@@ -357,44 +352,47 @@ export default function Browse() {
     };
 
     return (
-        <div className="min-h-screen bg-black pb-24 font-sans text-white">
+        <div className="min-h-screen bg-black pb-12 font-sans text-white">
             <Navbar />
+
+            {/* Hero Section - only show when not searching */}
+            {!query.trim() && (
+                <HeroCarousel
+                    items={heroContent}
+                    onInfoClick={handleViewDetails}
+                    onAdd={handleQuickAdd}
+                    isAdded={isAdded}
+                />
+            )}
+
+            {/* Search Bar - always visible */}
+            <div className="px-4 md:px-12 relative z-10 pt-8">
+                <div className="relative max-w-xl mx-auto">
+                    <Search
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"
+                        size={18}
+                    />
+                    <input
+                        type="text"
+                        className="w-full h-10 rounded-lg bg-neutral-900 border border-neutral-800 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder="Find movies & TV shows..."
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                    />
+                    {loading && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <Loader2
+                                className="animate-spin text-neutral-400"
+                                size={18}
+                            />
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Content Container - if query exists, hide discover view */}
             {!query.trim() && (
                 <>
-                    {/* Hero Section */}
-                    <HeroCarousel
-                        items={heroContent}
-                        onInfoClick={handleViewDetails}
-                        onAdd={handleQuickAdd}
-                        isAdded={isAdded}
-                    />
-
-                    {/* Search Bar */}
-                    <div className="px-4 md:px-12 max-w-xl mx-auto mt-6 relative z-10 mb-6">
-                        <div className="relative group shadow-black/50 shadow-lg rounded-full">
-                            <Search
-                                className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 group-focus-within:text-white transition-colors"
-                                size={20}
-                            />
-                            <input
-                                className="w-full bg-neutral-900/80 backdrop-blur-md border border-neutral-700 text-white pl-12 pr-4 py-3 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-neutral-900 transition-all placeholder:text-neutral-500"
-                                placeholder="Find movies & TV shows..."
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                            />
-                            {loading && (
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                    <Loader2
-                                        className="animate-spin text-neutral-400"
-                                        size={20}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
                     {/* Tabs */}
                     <div className="sticky top-15 z-40 bg-black/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
                         <div className="flex justify-center gap-6 md:gap-8">

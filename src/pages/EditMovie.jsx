@@ -1,38 +1,18 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-    X,
-    Check,
-    Trash2,
-    Library,
-    Play,
-    Minus,
-    Plus,
-    DownloadCloud,
-    ArrowLeft,
-    Save,
-    Calculator,
-    Monitor,
-    Clapperboard,
-    Film,
-    FileVideo,
-    Disc,
-    Disc3,
-    ExternalLink,
-    List,
-    CheckCircle,
-} from "lucide-react";
+import { X, Check, Save, Calculator, CheckCircle } from "lucide-react";
 import { useMovies } from "../hooks/useMovies";
 import { StarRating } from "../features/movies/StarRating";
-import { getServiceStyle, normalizeServiceName } from "../lib/services";
+import { normalizeServiceName } from "../lib/services";
 import {
     searchMedia,
     fetchMediaMetadata,
     fetchSeasonDetails,
 } from "../services/tmdb";
 import { Navbar } from "../components/layout/Navbar";
-import SwipeNavigator from "../components/layout/SwipeNavigator";
 import ConfirmationModal from "../components/ui/ConfirmationModal";
+import EditMovieHero from "../features/movies/edit/EditMovieHero";
+import EditMovieMainTab from "../features/movies/edit/EditMovieMainTab";
 
 export default function EditMovie() {
     const { movieId } = useParams();
@@ -43,64 +23,32 @@ export default function EditMovie() {
         removeMovie,
         loading: moviesLoading,
     } = useMovies();
-
     const movie = movies.find((m) => m.id === movieId);
 
-    const [activeTab, setActiveTab] = useState("main"); // "main" | "details" | "rating"
-
-    // -- Main Fields --
+    const [activeTab, setActiveTab] = useState("main");
     const [availability, setAvailability] = useState([]);
     const [title, setTitle] = useState("");
     const [director, setDirector] = useState([]);
     const [directorInput, setDirectorInput] = useState("");
     const [coverUrl, setCoverUrl] = useState("");
     const [releaseDate, setReleaseDate] = useState("");
-
-    const [status, setStatus] = useState("Watchlist"); // Watchlist, Watched
+    const [status, setStatus] = useState("Watchlist");
     const [type, setType] = useState("movie");
     const [tmdbId, setTmdbId] = useState(null);
     const [imdbId, setImdbId] = useState("");
-    const [voteAverage, setVoteAverage] = useState(0); // Public Rating
+    const [voteAverage, setVoteAverage] = useState(0);
     const [tvStatus, setTvStatus] = useState("Watching");
-
     const [cast, setCast] = useState([]);
     const [genres, setGenres] = useState([]);
     const [runtime, setRuntime] = useState(0);
     const [overview, setOverview] = useState("");
-
-    // Helpers for tags
     const [genreInput, setGenreInput] = useState("");
     const [castInput, setCastInput] = useState("");
-
-    const addGenre = () => {
-        if (genreInput.trim()) {
-            setGenres((p) => [...p, genreInput.trim()]);
-            setGenreInput("");
-        }
-    };
-    const removeGenre = (i) => {
-        setGenres((p) => p.filter((_, idx) => idx !== i));
-    };
-
-    const addCast = () => {
-        if (castInput.trim()) {
-            setCast((p) => [...p, castInput.trim()]);
-            setCastInput("");
-        }
-    };
-    const removeCast = (i) => {
-        setCast((p) => p.filter((_, idx) => idx !== i));
-    };
-
     const [inWatchlist, setInWatchlist] = useState(true);
     const [timesWatched, setTimesWatched] = useState(0);
     const [storedTimesWatched, setStoredTimesWatched] = useState(1);
     const [movieUrl, setMovieUrl] = useState("");
-
-    // -- Details Fields --
     const [notes, setNotes] = useState("");
-
-    // -- Ratings --
     const [overallRating, setOverallRating] = useState(0);
     const [ratings, setRatings] = useState({
         story: 0,
@@ -108,16 +56,29 @@ export default function EditMovie() {
         ending: 0,
         enjoyment: 0,
     });
-
-    // -- Episode Tracking --
     const [numberOfSeasons, setNumberOfSeasons] = useState(0);
     const [selectedSeason, setSelectedSeason] = useState(1);
     const [seasonData, setSeasonData] = useState(null);
-    const [episodesWatched, setEpisodesWatched] = useState({}); // keys like "s1e1"
+    const [episodesWatched, setEpisodesWatched] = useState({});
     const [numberOfEpisodes, setNumberOfEpisodes] = useState(0);
-
     const [isProcessing, setIsProcessing] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    const addGenre = () => {
+        if (genreInput.trim()) {
+            setGenres((p) => [...p, genreInput.trim()]);
+            setGenreInput("");
+        }
+    };
+    const removeGenre = (i) =>
+        setGenres((p) => p.filter((_, idx) => idx !== i));
+    const addCast = () => {
+        if (castInput.trim()) {
+            setCast((p) => [...p, castInput.trim()]);
+            setCastInput("");
+        }
+    };
+    const removeCast = (i) => setCast((p) => p.filter((_, idx) => idx !== i));
 
     useEffect(() => {
         if (movie) {
@@ -144,38 +105,25 @@ export default function EditMovie() {
             setGenres(movie.genres || []);
             setRuntime(movie.runtime || 0);
             setOverview(movie.overview || "");
-
-            // Status Logic
             setStatus(movie.status || "Watchlist");
             setInWatchlist(
                 movie.inWatchlist !== undefined
                     ? movie.inWatchlist
                     : movie.status === "Watchlist",
             );
-
             const seenCount =
                 movie.timesWatched ?? (movie.status === "Watched" ? 1 : 0);
             setTimesWatched(seenCount);
             setStoredTimesWatched(seenCount > 0 ? seenCount : 1);
-
             setMovieUrl(movie.url || "");
-
-            // Director Logic
-            if (Array.isArray(movie.director)) {
-                setDirector(movie.director);
-            } else if (typeof movie.director === "string") {
+            if (Array.isArray(movie.director)) setDirector(movie.director);
+            else if (typeof movie.director === "string")
                 setDirector([movie.director]);
-            } else if (Array.isArray(movie.artist)) {
-                setDirector(movie.artist);
-            } else {
-                setDirector([]);
-            }
-
+            else if (Array.isArray(movie.artist)) setDirector(movie.artist);
+            else setDirector([]);
             setCoverUrl(movie.coverUrl || "");
             setReleaseDate(movie.releaseDate || "");
-
             setNotes(movie.notes || "");
-
             const r = movie.ratings || {};
             setOverallRating(r.overall || 0);
             setRatings({
@@ -184,14 +132,12 @@ export default function EditMovie() {
                 ending: r.ending || 0,
                 enjoyment: r.enjoyment || 0,
             });
-
             setNumberOfSeasons(movie.number_of_seasons || 0);
             setNumberOfEpisodes(movie.number_of_episodes || 0);
             setEpisodesWatched(movie.episodesWatched || {});
         }
     }, [movie]);
 
-    // Load season data when tab/season changes
     useEffect(() => {
         if (activeTab === "episodes" && type === "tv" && tmdbId) {
             setIsProcessing(true);
@@ -205,17 +151,12 @@ export default function EditMovie() {
     }, [activeTab, selectedSeason, tmdbId, type]);
 
     const toggleEpisodeWatched = (seasonWithType, episodeNum) => {
-        // Key format: s1e1
         const key = `s${seasonWithType}e${episodeNum}`;
-        setEpisodesWatched((prev) => ({
-            ...prev,
-            [key]: !prev[key],
-        }));
+        setEpisodesWatched((prev) => ({ ...prev, [key]: !prev[key] }));
     };
 
     const handleMarkSeasonComplete = () => {
         if (!seasonData?.episodes) return;
-
         const newWatched = { ...episodesWatched };
         seasonData.episodes.forEach((ep) => {
             newWatched[`s${selectedSeason}e${ep.episode_number}`] = true;
@@ -246,7 +187,6 @@ export default function EditMovie() {
                     data = await fetchMediaMetadata(match.tmdbId, match.type);
                 }
             }
-
             if (data) {
                 setTmdbId(data.tmdbId);
                 setImdbId(data.imdbId || "");
@@ -272,10 +212,8 @@ export default function EditMovie() {
                 );
                 setNumberOfSeasons(data.numberOfSeasons || 0);
                 setNumberOfEpisodes(data.numberOfEpisodes || 0);
-
-                if (data.type === "movie" && data.director.length > 0) {
+                if (data.type === "movie" && data.director.length > 0)
                     setDirector(data.director);
-                }
             }
         } catch (err) {
             console.error("Auto-fill failed", err);
@@ -292,18 +230,15 @@ export default function EditMovie() {
         }
     };
 
-    const removeDirector = (index) => {
+    const removeDirector = (index) =>
         setDirector((prev) => prev.filter((_, i) => i !== index));
-    };
 
     const toggleAvailability = (f) => {
         setAvailability((prev) => {
             const isSelected = prev.includes(f);
-            if (isSelected) {
-                return prev.filter((item) => item !== f);
-            } else {
-                return [...prev, f];
-            }
+            return isSelected
+                ? prev.filter((item) => item !== f)
+                : [...prev, f];
         });
     };
 
@@ -335,10 +270,7 @@ export default function EditMovie() {
                 runtime,
                 overview,
                 notes,
-                ratings: {
-                    ...ratings,
-                    overall: overallRating,
-                },
+                ratings: { ...ratings, overall: overallRating },
                 number_of_seasons: numberOfSeasons,
                 number_of_episodes: numberOfEpisodes,
                 episodesWatched,
@@ -363,9 +295,7 @@ export default function EditMovie() {
         }
     };
 
-    const handleDelete = () => {
-        setIsDeleteModalOpen(true);
-    };
+    const handleDelete = () => setIsDeleteModalOpen(true);
 
     if (moviesLoading)
         return (
@@ -380,32 +310,9 @@ export default function EditMovie() {
             </div>
         );
 
-    const ServiceIcon = ({ id }) => {
-        const map = {
-            Netflix: "/icons/netflix.svg",
-            "Prime Video": "/icons/primevideo.svg",
-            "Disney+": "/icons/disneyplus.svg",
-            Hulu: "/icons/hulu.svg",
-            Max: "/icons/max.svg",
-            "Apple TV+": "/icons/appletv.svg",
-            "Paramount+": "/icons/paramountplus.svg",
-            Fubo: "/icons/fubo.svg",
-            "Criterion Channel": "/icons/criterion.svg",
-        };
-        const src = map[id];
-        if (!src)
-            return (
-                <div className="h-6 w-6 rounded-full bg-neutral-700 font-bold text-[10px] flex items-center justify-center text-white">
-                    {id.substring(0, 2)}
-                </div>
-            );
-        return <img src={src} className="h-6 w-6 rounded-full object-cover" />;
-    };
-
     return (
         <div className="min-h-screen bg-black pb-32 font-sans text-neutral-200">
             <Navbar />
-
             <ConfirmationModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
@@ -416,9 +323,16 @@ export default function EditMovie() {
                 isDestructive={true}
                 isLoading={isProcessing}
             />
-
-            <div className="w-full max-w-5xl mx-auto px-4 pt-1">
-                {/* Tabs */}
+            <EditMovieHero
+                coverUrl={coverUrl}
+                setCoverUrl={setCoverUrl}
+                title={title}
+                setTitle={setTitle}
+                overview={overview}
+                director={director}
+                releaseDate={releaseDate}
+            />
+            <div className="w-full max-w-5xl mx-auto px-4 pt-6">
                 <div className="flex bg-neutral-900/90 p-1 rounded-xl mb-6 sticky top-15 sm:top-2 z-30 backdrop-blur-md border border-neutral-800 shadow-xl overflow-x-auto">
                     {(type === "tv"
                         ? ["main", "episodes", "details", "rating"]
@@ -443,562 +357,45 @@ export default function EditMovie() {
                         </button>
                     ))}
                 </div>
-
-                {/* Content */}
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
                     {activeTab === "main" && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <div className="lg:col-span-1 space-y-6">
-                                {/* Cover Art */}
-                                <div className="relative group rounded-xl overflow-hidden shadow-2xl border border-neutral-800 aspect-2/3">
-                                    {coverUrl ? (
-                                        <img
-                                            src={coverUrl}
-                                            className="w-full h-full object-cover"
-                                            alt="Cover"
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full bg-neutral-900 flex items-center justify-center text-neutral-600">
-                                            <Film size={48} />
-                                        </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                                        <input
-                                            className="w-full bg-neutral-800 border border-neutral-700 text-white px-3 py-2 rounded-lg text-xs"
-                                            value={coverUrl}
-                                            onChange={(e) =>
-                                                setCoverUrl(e.target.value)
-                                            }
-                                            placeholder="Cover URL..."
-                                            onClick={(e) => e.stopPropagation()}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Auto Fill */}
-                                <button
-                                    type="button"
-                                    onClick={handleSmartFill}
-                                    disabled={isProcessing || !title}
-                                    className="w-full text-xs flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 transition-colors px-4 py-3 bg-blue-500/10 rounded-xl border border-blue-500/20 font-medium"
-                                >
-                                    <DownloadCloud size={16} /> Auto-fill from
-                                    TMDB
-                                </button>
-
-                                {tmdbId && (
-                                    <a
-                                        href={
-                                            type === "tv"
-                                                ? `https://pstream.mov/media/tmdb-tv-${tmdbId}`
-                                                : `https://pstream.mov/media/tmdb-movie-${tmdbId}`
-                                        }
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="w-full text-xs flex items-center justify-center gap-2 text-white hover:text-white/80 transition-colors px-4 py-3 bg-neutral-800 rounded-xl border border-neutral-700 font-medium"
-                                    >
-                                        <span className="text-lg">
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                width="1em"
-                                                height="1em"
-                                                viewBox="0 0 20.927 20.927"
-                                                preserveAspectRatio="xMidYMid meet"
-                                            >
-                                                <g
-                                                    transform="translate(0,20.927) scale(0.003333,-0.003333)"
-                                                    fill="currentColor"
-                                                    stroke="none"
-                                                >
-                                                    <path d="M3910 5527 c-33 -4 -145 -17 -250 -28 -645 -73 -900 -187 -900 -405 l0 -89 154 -2 c209 -2 225 -17 381 -354 186 -399 337 -491 557 -341 103 70 176 67 252 -9 143 -142 -15 -342 -320 -404 l-123 -25 185 -393 c101 -217 189 -396 194 -398 6 -3 87 6 182 20 499 71 1160 -296 972 -541 -77 -101 -183 -100 -307 2 -186 154 -407 223 -610 188 -123 -21 -119 -9 -80 -274 40 -273 18 -701 -48 -916 -25 -82 252 -99 463 -28 655 220 1146 748 1330 1430 44 165 46 201 53 1206 l8 1035 -67 66 c-185 183 -1376 336 -2026 260z m1078 -1219 c118 -81 204 -84 312 -10 239 163 453 -73 240 -265 -241 -218 -703 -178 -832 71 -93 179 105 323 280 204z"></path>
-                                                    <path d="M2410 4591 c-950 -201 -2404 -1015 -2409 -1348 -1 -69 771 -1707 885 -1878 422 -633 1185 -984 1924 -886 221 29 293 68 482 264 575 594 727 1466 390 2232 -231 525 -749 1600 -785 1630 -57 48 -214 44 -487 -14z m579 -1122 c114 -54 145 -188 64 -281 -48 -56 -60 -58 -265 -47 -102 6 -177 -42 -229 -143 -95 -187 -339 -145 -339 57 0 291 482 550 769 414z m-1319 -630 c215 -106 85 -350 -173 -326 -144 13 -209 -21 -270 -140 -102 -197 -381 -119 -339 94 59 295 506 508 782 372z m1472 -577 c216 -217 -287 -789 -786 -895 -473 -100 -909 127 -654 341 71 60 93 62 226 22 348 -106 739 77 903 423 83 177 201 218 311 109z"></path>
-                                                </g>
-                                            </svg>
-                                        </span>
-                                        <span>Watch on P-Stream</span>
-                                    </a>
-                                )}
-
-                                {/* Runtime & IMDb moved here */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-[10px] font-medium text-neutral-500 uppercase tracking-wider mb-2">
-                                            Runtime
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="number"
-                                                className="w-full bg-neutral-900 border border-neutral-800 text-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-mono"
-                                                value={runtime}
-                                                onChange={(e) =>
-                                                    setRuntime(
-                                                        parseInt(
-                                                            e.target.value,
-                                                        ) || 0,
-                                                    )
-                                                }
-                                            />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 text-[10px]">
-                                                min
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-[10px] font-medium text-neutral-500 uppercase tracking-wider mb-2">
-                                            IMDb
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                className="w-full bg-neutral-900 border border-neutral-800 text-white px-3 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm font-mono placeholder:text-neutral-700 pr-9"
-                                                value={imdbId}
-                                                onChange={(e) =>
-                                                    setImdbId(e.target.value)
-                                                }
-                                                placeholder="tt..."
-                                            />
-                                            {imdbId && (
-                                                <a
-                                                    href={`https://www.imdb.com/title/${imdbId}/`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-blue-400 p-1 transition-colors"
-                                                    title="Open styles in IMDb"
-                                                >
-                                                    <ExternalLink size={14} />
-                                                </a>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="lg:col-span-2 space-y-6">
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
-                                        Title
-                                    </label>
-                                    <input
-                                        className="w-full bg-transparent border-b border-neutral-800 text-white px-0 py-2 focus:outline-none focus:border-blue-500 text-3xl font-bold placeholder:text-neutral-800 transition-colors"
-                                        value={title}
-                                        onChange={(e) =>
-                                            setTitle(e.target.value)
-                                        }
-                                        placeholder="Movie Title"
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
-                                            Release Date
-                                        </label>
-                                        <input
-                                            type="date"
-                                            className="w-full bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                            value={releaseDate}
-                                            onChange={(e) =>
-                                                setReleaseDate(e.target.value)
-                                            }
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
-                                            Director
-                                        </label>
-                                        <div className="space-y-2">
-                                            <div className="flex flex-wrap gap-2">
-                                                {director.map((d, i) => (
-                                                    <span
-                                                        key={i}
-                                                        className="bg-neutral-800 text-neutral-300 text-xs px-2 py-1 rounded-lg flex items-center gap-2 border border-neutral-700"
-                                                    >
-                                                        {d}
-                                                        <button
-                                                            onClick={() =>
-                                                                removeDirector(
-                                                                    i,
-                                                                )
-                                                            }
-                                                            className="hover:text-red-400"
-                                                        >
-                                                            <X size={12} />
-                                                        </button>
-                                                    </span>
-                                                ))}
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    className="w-full bg-neutral-900 border border-neutral-800 text-white px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm min-w-0"
-                                                    value={directorInput}
-                                                    onChange={(e) =>
-                                                        setDirectorInput(
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === "Enter") {
-                                                            e.preventDefault();
-                                                            addDirector();
-                                                        }
-                                                    }}
-                                                    placeholder="Add director..."
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={addDirector}
-                                                    className="shrink-0 bg-neutral-800 hover:bg-neutral-700 text-white px-3 rounded-xl border border-neutral-800"
-                                                >
-                                                    <Check size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Status & Progress */}
-                                <div className="pt-6 border-t border-neutral-800 space-y-6">
-                                    <div className="flex bg-neutral-900 p-1 rounded-xl border border-neutral-800 w-full sm:w-64">
-                                        {["movie", "tv"].map((t) => (
-                                            <button
-                                                key={t}
-                                                type="button"
-                                                onClick={() => setType(t)}
-                                                className={`flex-1 py-2 text-sm font-bold uppercase rounded-lg transition-all ${
-                                                    type === t
-                                                        ? "bg-blue-600 text-white shadow-md"
-                                                        : "text-neutral-500 hover:text-neutral-300"
-                                                }`}
-                                            >
-                                                {t === "movie"
-                                                    ? "Movie"
-                                                    : "TV Show"}
-                                            </button>
-                                        ))}
-                                    </div>
-
-                                    {type === "movie" ? (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div
-                                                onClick={() =>
-                                                    setInWatchlist(!inWatchlist)
-                                                }
-                                                className={`flex items-center justify-between p-4 rounded-xl border border-neutral-800 cursor-pointer transition-all ${
-                                                    inWatchlist
-                                                        ? "bg-blue-500/10 border-blue-500/30"
-                                                        : "bg-neutral-900/50"
-                                                }`}
-                                            >
-                                                <label
-                                                    className={`text-sm font-medium flex items-center gap-3 cursor-pointer select-none ${
-                                                        inWatchlist
-                                                            ? "text-blue-400"
-                                                            : "text-white"
-                                                    }`}
-                                                >
-                                                    <Library size={18} />
-                                                    In Watchlist
-                                                </label>
-                                                <div
-                                                    className={`w-10 h-6 rounded-full relative transition-colors ${
-                                                        inWatchlist
-                                                            ? "bg-blue-500"
-                                                            : "bg-neutral-700"
-                                                    }`}
-                                                >
-                                                    <div
-                                                        className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${
-                                                            inWatchlist
-                                                                ? "translate-x-4"
-                                                                : ""
-                                                        }`}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div
-                                                className={`p-4 rounded-xl border border-neutral-800 transition-all ${
-                                                    timesWatched > 0
-                                                        ? "bg-green-500/10 border-green-500/30"
-                                                        : "bg-neutral-900/50"
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <label
-                                                        className={`text-sm font-medium flex items-center gap-3 select-none ${
-                                                            timesWatched > 0
-                                                                ? "text-green-400"
-                                                                : "text-white"
-                                                        }`}
-                                                    >
-                                                        <Check size={18} />
-                                                        Watched
-                                                    </label>
-
-                                                    <div className="flex items-center gap-3">
-                                                        {timesWatched > 0 && (
-                                                            <div className="flex items-center bg-black/40 rounded-lg p-1">
-                                                                <button
-                                                                    onClick={() =>
-                                                                        setTimesWatched(
-                                                                            Math.max(
-                                                                                1,
-                                                                                timesWatched -
-                                                                                    1,
-                                                                            ),
-                                                                        )
-                                                                    }
-                                                                    className="p-1 hover:text-white text-neutral-500"
-                                                                >
-                                                                    <Minus
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                    />
-                                                                </button>
-                                                                <span className="w-6 text-center font-mono text-sm">
-                                                                    {
-                                                                        timesWatched
-                                                                    }
-                                                                </span>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        setTimesWatched(
-                                                                            timesWatched +
-                                                                                1,
-                                                                        )
-                                                                    }
-                                                                    className="p-1 hover:text-white text-neutral-500"
-                                                                >
-                                                                    <Plus
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                    />
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (
-                                                                    timesWatched >
-                                                                    0
-                                                                ) {
-                                                                    setStoredTimesWatched(
-                                                                        timesWatched,
-                                                                    );
-                                                                    setTimesWatched(
-                                                                        0,
-                                                                    );
-                                                                } else {
-                                                                    setTimesWatched(
-                                                                        storedTimesWatched,
-                                                                    );
-                                                                }
-                                                            }}
-                                                            className={`text-xs px-2 py-1 rounded border ${
-                                                                timesWatched > 0
-                                                                    ? "border-green-500/50 text-green-400"
-                                                                    : "border-neutral-700 text-neutral-500"
-                                                            }`}
-                                                        >
-                                                            {timesWatched > 0
-                                                                ? "Yes"
-                                                                : "No"}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-800">
-                                                <label className="text-xs font-medium text-neutral-500 uppercase block mb-2">
-                                                    Status
-                                                </label>
-                                                <select
-                                                    className="w-full bg-black border border-neutral-700 text-white p-2 rounded-lg text-sm focus:outline-none focus:border-blue-500 appearance-none"
-                                                    value={tvStatus}
-                                                    onChange={(e) =>
-                                                        setTvStatus(
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                >
-                                                    <option value="Watching">
-                                                        Watching
-                                                    </option>
-                                                    <option value="Plan to Watch">
-                                                        Plan to Watch
-                                                    </option>
-                                                    <option value="Completed">
-                                                        Completed
-                                                    </option>
-                                                    <option value="Dropped">
-                                                        Dropped
-                                                    </option>
-                                                    <option value="On Hold">
-                                                        On Hold
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div
-                                                className={`p-4 rounded-xl border border-neutral-800 transition-all ${
-                                                    timesWatched > 0
-                                                        ? "bg-green-500/10 border-green-500/30"
-                                                        : "bg-neutral-900/50"
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <label
-                                                        className={`text-sm font-medium flex items-center gap-3 select-none ${
-                                                            timesWatched > 0
-                                                                ? "text-green-400"
-                                                                : "text-white"
-                                                        }`}
-                                                    >
-                                                        <Check size={18} />
-                                                        Watched
-                                                    </label>
-
-                                                    <div className="flex items-center gap-3">
-                                                        {timesWatched > 0 && (
-                                                            <div className="flex items-center bg-black/40 rounded-lg p-1">
-                                                                <button
-                                                                    onClick={() =>
-                                                                        setTimesWatched(
-                                                                            Math.max(
-                                                                                1,
-                                                                                timesWatched -
-                                                                                    1,
-                                                                            ),
-                                                                        )
-                                                                    }
-                                                                    className="p-1 hover:text-white text-neutral-500"
-                                                                >
-                                                                    <Minus
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                    />
-                                                                </button>
-                                                                <span className="w-6 text-center font-mono text-sm">
-                                                                    {
-                                                                        timesWatched
-                                                                    }
-                                                                </span>
-                                                                <button
-                                                                    onClick={() =>
-                                                                        setTimesWatched(
-                                                                            timesWatched +
-                                                                                1,
-                                                                        )
-                                                                    }
-                                                                    className="p-1 hover:text-white text-neutral-500"
-                                                                >
-                                                                    <Plus
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                    />
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (
-                                                                    timesWatched >
-                                                                    0
-                                                                ) {
-                                                                    setStoredTimesWatched(
-                                                                        timesWatched,
-                                                                    );
-                                                                    setTimesWatched(
-                                                                        0,
-                                                                    );
-                                                                } else {
-                                                                    setTimesWatched(
-                                                                        storedTimesWatched,
-                                                                    );
-                                                                }
-                                                            }}
-                                                            className={`text-xs px-2 py-1 rounded border ${
-                                                                timesWatched > 0
-                                                                    ? "border-green-500/50 text-green-400"
-                                                                    : "border-neutral-700 text-neutral-500"
-                                                            }`}
-                                                        >
-                                                            {timesWatched > 0
-                                                                ? "Yes"
-                                                                : "No"}
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <p className="text-[10px] text-neutral-500 mt-2 text-right opacity-60">
-                                                    Full series watches
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Availability */}
-                                <div className="pt-6 border-t border-neutral-800">
-                                    <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-4">
-                                        Availability
-                                    </label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        {[
-                                            "Netflix",
-                                            "Prime Video",
-                                            "Disney+",
-                                            "Hulu",
-                                            "Max",
-                                            "Apple TV+",
-                                            "Paramount+",
-                                            "Fubo",
-                                            "Criterion Channel",
-                                        ].map((id) => {
-                                            const isSelected =
-                                                availability.includes(id);
-                                            return (
-                                                <button
-                                                    key={id}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        toggleAvailability(id)
-                                                    }
-                                                    className={`flex items-center gap-3 px-3 py-3 rounded-xl border text-sm transition-all text-left ${
-                                                        isSelected
-                                                            ? "bg-white/10 text-white border-white/40"
-                                                            : "bg-neutral-900/50 border-neutral-800 text-neutral-400 hover:border-neutral-700"
-                                                    }`}
-                                                >
-                                                    <ServiceIcon id={id} />
-                                                    <span className="font-medium truncate">
-                                                        {id}
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                <div className="pt-8 border-t border-neutral-800">
-                                    <button
-                                        onClick={handleDelete}
-                                        className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-400 hover:bg-red-500/5 py-4 rounded-xl transition-all font-medium border border-neutral-800 hover:border-red-500/20"
-                                    >
-                                        <Trash2 size={20} /> Remove from Library
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <EditMovieMainTab
+                            tmdbId={tmdbId}
+                            type={type}
+                            imdbId={imdbId}
+                            title={title}
+                            handleSmartFill={handleSmartFill}
+                            isProcessing={isProcessing}
+                            releaseDate={releaseDate}
+                            setReleaseDate={setReleaseDate}
+                            runtime={runtime}
+                            setRuntime={setRuntime}
+                            setType={setType}
+                            tvStatus={tvStatus}
+                            setTvStatus={setTvStatus}
+                            timesWatched={timesWatched}
+                            voteAverage={voteAverage}
+                            director={director}
+                            directorInput={directorInput}
+                            setDirectorInput={setDirectorInput}
+                            addDirector={addDirector}
+                            removeDirector={removeDirector}
+                            cast={cast}
+                            genres={genres}
+                            availability={availability}
+                            toggleAvailability={toggleAvailability}
+                            inWatchlist={inWatchlist}
+                            setInWatchlist={setInWatchlist}
+                            setTimesWatched={setTimesWatched}
+                            storedTimesWatched={storedTimesWatched}
+                            setStoredTimesWatched={setStoredTimesWatched}
+                            coverUrl={coverUrl}
+                            setCoverUrl={setCoverUrl}
+                            handleDelete={handleDelete}
+                        />
                     )}
-
                     {activeTab === "details" && (
                         <div className="space-y-8 max-w-3xl mx-auto">
-                            {/* Internal ID */}
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
                                     Internal ID
@@ -1007,8 +404,6 @@ export default function EditMovie() {
                                     {tmdbId || "N/A"}
                                 </div>
                             </div>
-
-                            {/* Genres */}
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
                                     Genres
@@ -1053,8 +448,6 @@ export default function EditMovie() {
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Cast */}
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
                                     Cast
@@ -1099,8 +492,6 @@ export default function EditMovie() {
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Overview */}
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
                                     Overview
@@ -1115,7 +506,6 @@ export default function EditMovie() {
                             </div>
                         </div>
                     )}
-
                     {activeTab === "rating" && (
                         <div className="space-y-8 max-w-3xl mx-auto">
                             <div>
@@ -1133,7 +523,6 @@ export default function EditMovie() {
                                     </div>
                                 </div>
                             </div>
-
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
                                     Overall Rating
@@ -1144,7 +533,7 @@ export default function EditMovie() {
                                         value={overallRating}
                                         onChange={(val) => {
                                             setOverallRating(val);
-                                            if (val === 0) {
+                                            if (val === 0)
                                                 setRatings((prev) =>
                                                     Object.keys(prev).reduce(
                                                         (acc, key) => ({
@@ -1154,7 +543,6 @@ export default function EditMovie() {
                                                         {},
                                                     ),
                                                 );
-                                            }
                                         }}
                                         showInput={true}
                                     />
@@ -1167,7 +555,6 @@ export default function EditMovie() {
                                     </button>
                                 </div>
                             </div>
-
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
                                     Category Breakdown
@@ -1195,7 +582,6 @@ export default function EditMovie() {
                                     )}
                                 </div>
                             </div>
-
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
                                     Personal Notes
@@ -1207,20 +593,10 @@ export default function EditMovie() {
                                     placeholder="Write your review or thoughts here..."
                                 />
                             </div>
-
-                            <div className="pt-12 border-t border-neutral-800">
-                                <button
-                                    onClick={handleDelete}
-                                    className="w-full flex items-center justify-center gap-2 text-red-500 hover:text-red-400 hover:bg-red-500/5 py-4 rounded-xl transition-all font-medium border border-neutral-800 hover:border-red-500/20"
-                                >
-                                    <Trash2 size={20} /> Delete Movie
-                                </button>
-                            </div>
                         </div>
                     )}
                     {activeTab === "episodes" && type === "tv" && (
                         <div className="space-y-6 max-w-3xl mx-auto">
-                            {/* Season Selector */}
                             <div className="flex items-center gap-2 overflow-x-auto pb-2 pl-1 no-scrollbar">
                                 {Array.from(
                                     { length: numberOfSeasons || 1 },
@@ -1239,8 +615,6 @@ export default function EditMovie() {
                                     </button>
                                 ))}
                             </div>
-
-                            {/* Progress for this season */}
                             {seasonData && seasonData.episodes && (
                                 <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-800">
                                     <div className="flex justify-between items-center mb-3">
@@ -1291,8 +665,6 @@ export default function EditMovie() {
                                     </div>
                                 </div>
                             )}
-
-                            {/* Episodes List */}
                             {isProcessing ? (
                                 <div className="flex flex-col items-center justify-center py-12 text-neutral-500">
                                     <div className="animate-spin h-6 w-6 border-2 border-neutral-600 border-t-transparent rounded-full mb-2"></div>
@@ -1379,8 +751,6 @@ export default function EditMovie() {
                         </div>
                     )}
                 </div>
-
-                {/* Floating Save Button */}
                 <div className="fixed bottom-24 right-6 sm:bottom-6 z-50">
                     <button
                         onClick={handleSave}

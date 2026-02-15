@@ -18,7 +18,7 @@ export default function HeroCarousel({ items, onInfoClick, onAdd, isAdded }) {
         if (isAnimating) return;
         setIsAnimating(true);
         setCurrentIndex((prev) => (prev + 1) % items.length);
-        setTimeout(() => setIsAnimating(false), 500); 
+        setTimeout(() => setIsAnimating(false), 500);
     };
 
     const handlePrev = () => {
@@ -28,7 +28,10 @@ export default function HeroCarousel({ items, onInfoClick, onAdd, isAdded }) {
         setTimeout(() => setIsAnimating(false), 500);
     };
 
-    if (!items || items.length === 0) return <div className="h-[50vh] bg-neutral-900 animate-pulse rounded-2xl mx-4 mt-4" />;
+    if (!items || items.length === 0)
+        return (
+            <div className="h-[50vh] bg-neutral-900 animate-pulse rounded-2xl mx-4 mt-4" />
+        );
 
     const currentItem = items[currentIndex];
 
@@ -53,56 +56,73 @@ export default function HeroCarousel({ items, onInfoClick, onAdd, isAdded }) {
             ))}
 
             {/* Content */}
-            <div className="absolute inset-0 z-20 container mx-auto px-4 md:px-16 flex items-end pb-24 md:pb-32">
-                <div className="max-w-2xl space-y-4 md:space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-700">
-                     <h1 className="text-4xl md:text-6xl font-black text-white leading-tight drop-shadow-2xl">
+            <div className="absolute inset-0 z-20 container mx-auto px-4 md:px-16 flex items-end pb-12 md:pb-32">
+                <div className="max-w-2xl space-y-3 md:space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-700">
+                    <h1 className="text-4xl md:text-6xl font-black text-white leading-tight drop-shadow-2xl">
                         {currentItem.title}
                     </h1>
 
                     <div className="flex items-center gap-4 text-sm md:text-base text-gray-200 font-medium">
                         <span className="text-green-400 font-bold">
-                            {currentItem.voteAverage ? Math.round(currentItem.voteAverage * 10) : 0}% Match
+                            {currentItem.voteAverage
+                                ? Math.round(currentItem.voteAverage * 10)
+                                : 0}
+                            % Match
                         </span>
                         <span>{currentItem.releaseDate?.substring(0, 4)}</span>
-                        {currentItem.type === 'tv' ? (
-                             <span className="border border-gray-500 px-1 rounded text-xs">TV-MA</span> 
+                        {currentItem.type === "tv" ? (
+                            <span className="border border-gray-500 px-1 rounded text-xs">
+                                TV-MA
+                            </span>
                         ) : (
-                             <span className="border border-gray-500 px-1 rounded text-xs">PG-13</span>
+                            <span className="border border-gray-500 px-1 rounded text-xs">
+                                PG-13
+                            </span>
                         )}
                         <span className="uppercase">{currentItem.type}</span>
                     </div>
 
-                    <p className="text-lg text-gray-300 line-clamp-3 md:line-clamp-4 max-w-xl shadow-black drop-shadow-md">
+                    <p className="text-base md:text-lg text-gray-300 line-clamp-2 md:line-clamp-4 max-w-xl shadow-black drop-shadow-md">
                         {currentItem.overview}
                     </p>
 
-                    <div className="flex items-center gap-4 pt-4">
-                        <button className="bg-white text-black px-6 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-200 transition-colors">
-                            <Play size={20} className="fill-black" />
-                            Play
+                    <div className="flex items-center gap-2 md:gap-4 pt-2 md:pt-4">
+                        <button className="bg-white text-black px-4 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-200 transition-colors text-sm md:text-base">
+                            <Play
+                                size={18}
+                                className="fill-black md:w-5 md:h-5"
+                            />
+                            <span className="hidden sm:inline">Play</span>
                         </button>
-                        <button 
+                        <button
                             onClick={() => onAdd(currentItem)}
-                            className="bg-neutral-500/50 backdrop-blur-md text-white px-6 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-500/70 transition-colors"
+                            className="bg-neutral-500/50 backdrop-blur-md text-white px-4 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-500/70 transition-colors text-sm md:text-base"
                         >
                             {isAdded && isAdded(currentItem.tmdbId) ? (
                                 <>
-                                    <Check size={20} />
-                                    <span>Added</span>
+                                    <Check
+                                        size={18}
+                                        className="md:w-5 md:h-5"
+                                    />
+                                    <span className="hidden sm:inline">
+                                        Added
+                                    </span>
                                 </>
                             ) : (
                                 <>
-                                    <Plus size={20} />
-                                    <span>Watchlist</span>
+                                    <Plus size={18} className="md:w-5 md:h-5" />
+                                    <span className="hidden sm:inline">
+                                        Watchlist
+                                    </span>
                                 </>
                             )}
                         </button>
-                        <button 
+                        <button
                             onClick={() => onInfoClick(currentItem)}
-                            className="bg-neutral-500/50 backdrop-blur-md text-white px-6 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-500/70 transition-colors"
+                            className="bg-neutral-500/50 backdrop-blur-md text-white px-4 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-500/70 transition-colors text-sm md:text-base"
                         >
-                            <Info size={20} />
-                            More Info
+                            <Info size={18} className="md:w-5 md:h-5" />
+                            <span className="hidden sm:inline">More Info</span>
                         </button>
                     </div>
                 </div>
@@ -115,15 +135,17 @@ export default function HeroCarousel({ items, onInfoClick, onAdd, isAdded }) {
                         key={index}
                         onClick={() => setCurrentIndex(index)}
                         className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all ${
-                            index === currentIndex ? "bg-white scale-125" : "bg-white/40 hover:bg-white/60"
+                            index === currentIndex
+                                ? "bg-white scale-125"
+                                : "bg-white/40 hover:bg-white/60"
                         }`}
                         aria-label={`Go to slide ${index + 1}`}
                     />
                 ))}
             </div>
-            
-             {/* Gradient Bottom Fade for transition needed for sections below */}
-             <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black to-transparent z-20 pointer-events-none" />
+
+            {/* Gradient Bottom Fade for transition needed for sections below */}
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black to-transparent z-20 pointer-events-none" />
         </div>
     );
 }
