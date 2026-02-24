@@ -53,7 +53,7 @@ export default function EditMovieMainTab({
                 isProcessing={isProcessing}
             />
             {/* Watch Status - TOP PRIORITY */}
-            <div className="bg-neutral-900/50 rounded-xl p-6 border border-neutral-800">
+            <div>
                 <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                     <Clapperboard className="text-blue-500" size={20} />
                     Watch Status

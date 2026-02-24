@@ -13,6 +13,7 @@ import Browse from "./pages/Browse";
 import MovieDetails from "./pages/MovieDetails";
 import EditMovie from "./pages/EditMovie";
 import AddMovie from "./pages/AddMovie";
+import ManageCompletions from "./pages/ManageCompletions";
 import AppUrlListener from "./components/AppUrlListener";
 import FriendRequestListener from "./features/friends/FriendRequestListener";
 import SwipeNavigator from "./components/layout/SwipeNavigator";
@@ -96,6 +97,14 @@ function App() {
                                 element={
                                     <ProtectedRoute>
                                         <Stats />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/manage-completions"
+                                element={
+                                    <ProtectedRoute>
+                                        <ManageCompletions />
                                     </ProtectedRoute>
                                 }
                             />

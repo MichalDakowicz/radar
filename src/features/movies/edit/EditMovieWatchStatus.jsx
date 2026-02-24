@@ -16,75 +16,64 @@ export default function EditMovieWatchStatus({
     setTvStatus,
 }) {
     if (type === "movie") {
+        const handleStatusToggle = (newStatus) => {
+            if (newStatus === "watchlist") {
+                setInWatchlist(true);
+                setInProgress(false);
+            } else if (newStatus === "progress") {
+                setInWatchlist(false);
+                setInProgress(true);
+            }
+        };
+
         return (
             <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div
-                        onClick={() => setInWatchlist(!inWatchlist)}
-                        className={`flex items-center justify-between p-4 rounded-xl border border-neutral-800 cursor-pointer transition-all ${
-                            inWatchlist
-                                ? "bg-blue-500/10 border-blue-500/30"
-                                : "bg-neutral-900/50"
-                        }`}
-                    >
-                        <label
-                            className={`text-sm font-medium flex items-center gap-3 cursor-pointer select-none ${
-                                inWatchlist ? "text-blue-400" : "text-white"
-                            }`}
-                        >
-                            <Library size={18} />
-                            In Watchlist
-                        </label>
-                        <div
-                            className={`w-10 h-6 rounded-full relative transition-colors ${
-                                inWatchlist ? "bg-blue-500" : "bg-neutral-700"
-                            }`}
-                        >
-                            <div
-                                className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${
-                                    inWatchlist ? "translate-x-4" : ""
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* 2-Way Switch: Watchlist vs In Progress */}
+                    <div>
+                        <div className="flex gap-4">
+                            <button
+                                type="button"
+                                onClick={() => handleStatusToggle("watchlist")}
+                                className={`flex-1 flex items-center justify-center gap-2 px-8 py-6 rounded-lg border transition-all ${
+                                    inWatchlist
+                                        ? "bg-blue-500/20 border-blue-500/50 text-blue-400"
+                                        : "bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:border-neutral-600"
                                 }`}
-                            />
+                            >
+                                <Library size={18} />
+                                <span className="text-md font-medium">
+                                    Watchlist
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleStatusToggle("progress")}
+                                className={`flex-1 flex items-center justify-center gap-2 px-8 py-6 rounded-lg border transition-all ${
+                                    inProgress
+                                        ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-400"
+                                        : "bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:border-neutral-600"
+                                }`}
+                            >
+                                <PlayCircle size={18} />
+                                <span className="text-md font-medium">
+                                    In Progress
+                                </span>
+                            </button>
                         </div>
                     </div>
+
+                    {/* Watched Counter */}
                     <div
-                        onClick={() => setInProgress(!inProgress)}
-                        className={`flex items-center justify-between p-4 rounded-xl border border-neutral-800 cursor-pointer transition-all ${
-                            inProgress
-                                ? "bg-yellow-500/10 border-yellow-500/30"
-                                : "bg-neutral-900/50"
-                        }`}
-                    >
-                        <label
-                            className={`text-sm font-medium flex items-center gap-3 cursor-pointer select-none ${
-                                inProgress ? "text-yellow-400" : "text-white"
-                            }`}
-                        >
-                            <PlayCircle size={18} />
-                            In Progress
-                        </label>
-                        <div
-                            className={`w-10 h-6 rounded-full relative transition-colors ${
-                                inProgress ? "bg-yellow-500" : "bg-neutral-700"
-                            }`}
-                        >
-                            <div
-                                className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm ${
-                                    inProgress ? "translate-x-4" : ""
-                                }`}
-                            />
-                        </div>
-                    </div>
-                    <div
-                        className={`p-4 rounded-xl border border-neutral-800 transition-all ${
+                        className={`p-4 rounded-xl border border-neutral-800 transition-all flex items-center ${
                             timesWatched > 0
                                 ? "bg-green-500/10 border-green-500/30"
                                 : "bg-neutral-900/50"
                         }`}
                     >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between w-full">
                             <label
-                                className={`text-sm font-medium flex items-center gap-3 select-none ${
+                                className={`text-md font-medium flex items-center gap-3 select-none ${
                                     timesWatched > 0
                                         ? "text-green-400"
                                         : "text-white"

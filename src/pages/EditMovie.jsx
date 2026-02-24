@@ -257,7 +257,7 @@ export default function EditMovie() {
                 // For TV shows, use tvStatus
                 if (tvStatus === "Completed") {
                     statusFlags = {
-                        inWatchlist: false,
+                        inWatchlist: movie.inWatchlist || false, // Preserve watchlist status
                         inProgress: false,
                         watched: true,
                     };
@@ -267,9 +267,9 @@ export default function EditMovie() {
                     }
                 } else if (tvStatus === "Watching") {
                     statusFlags = {
-                        inWatchlist: false,
+                        inWatchlist: false, // Only inProgress removes watchlist
                         inProgress: true,
-                        watched: false,
+                        watched: false, // Not completed if watching
                     };
                     // Clear completedAt when unwatching
                     completedAt = null;
@@ -277,7 +277,7 @@ export default function EditMovie() {
                     statusFlags = {
                         inWatchlist: true,
                         inProgress: false,
-                        watched: false,
+                        watched: false, // Not completed if in watchlist
                     };
                     // Clear completedAt when unwatching
                     completedAt = null;
@@ -286,7 +286,7 @@ export default function EditMovie() {
                 // For movies, use timesWatched and inProgress/inWatchlist
                 if (timesWatched > 0) {
                     statusFlags = {
-                        inWatchlist: false,
+                        inWatchlist: movie.inWatchlist || false, // Preserve watchlist status
                         inProgress: false,
                         watched: true,
                     };
@@ -296,9 +296,9 @@ export default function EditMovie() {
                     }
                 } else if (inProgress) {
                     statusFlags = {
-                        inWatchlist: false,
+                        inWatchlist: false, // Only inProgress removes watchlist
                         inProgress: true,
-                        watched: false,
+                        watched: false, // Not watched if timesWatched is 0
                     };
                     // Clear completedAt when unwatching
                     completedAt = null;
@@ -306,7 +306,7 @@ export default function EditMovie() {
                     statusFlags = {
                         inWatchlist: true,
                         inProgress: false,
-                        watched: false,
+                        watched: false, // Not watched if timesWatched is 0
                     };
                     // Clear completedAt when unwatching
                     completedAt = null;

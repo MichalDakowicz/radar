@@ -8,6 +8,7 @@ import {
     Trophy,
     BarChart3,
     CheckCircle2,
+    Flame,
 } from "lucide-react";
 import { useMovies } from "../hooks/useMovies";
 import { usePublicMovies } from "../hooks/usePublicMovies";
@@ -491,7 +492,7 @@ export default function Stats() {
             <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-10 pb-24">
                 {/* Top Panel: Scrollable History */}
                 {stats.recentActivity.length > 0 && (
-                    <section className="mb-16">
+                    <section className="mb-8">
                         <div className="flex items-center gap-2 mb-5">
                             <History className="w-5 h-5 text-zinc-500" />
                             <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-400">
@@ -501,7 +502,11 @@ export default function Stats() {
 
                         <div className="flex gap-4 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                             {stats.recentActivity.map((item) => (
-                                <HistoryPill key={item.id} data={item} />
+                                <HistoryPill
+                                    key={item.id}
+                                    data={item}
+                                    userId={userId}
+                                />
                             ))}
                         </div>
                     </section>
@@ -547,7 +552,7 @@ export default function Stats() {
                     <QuickStat
                         value={stats.currentStreak || 0}
                         label="Day Streak"
-                        icon={<Trophy className="w-4 h-4" />}
+                        icon={<Flame className="w-4 h-4" />}
                     />
                 </section>
 
@@ -561,7 +566,7 @@ export default function Stats() {
                         </div>
                         <div className="text-xs text-zinc-500 flex items-center gap-1">
                             Current streak: {stats.currentStreak} days
-                            <Trophy className="w-3.5 h-3.5 text-blue-500" />
+                            <Flame className="w-3.5 h-3.5 text-orange-500" />
                         </div>
                     </div>
                     <StreakCalendar

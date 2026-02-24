@@ -1,6 +1,7 @@
 import { CheckCircle2, PlayCircle, Bookmark } from "lucide-react";
+import { Link } from "react-router-dom";
 
-export function HistoryPill({ data }) {
+export function HistoryPill({ data, userId }) {
     const getIcon = () => {
         if (data.status === "Completed") return CheckCircle2;
         if (data.status === "Watching") return PlayCircle;
@@ -40,8 +41,15 @@ export function HistoryPill({ data }) {
         return `${Math.floor(days / 30)}mo ago`;
     };
 
+    const detailsPath = userId
+        ? `/u/${userId}/${data.type}/${data.id}`
+        : `/edit/${data.id}`;
+
     return (
-        <div className="shrink-0 flex items-center gap-4 bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/60 rounded-full pr-8 pl-2 py-2 transition-colors cursor-default group">
+        <Link
+            to={detailsPath}
+            className="shrink-0 flex items-center gap-4 bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/60 rounded-full pr-8 pl-2 py-2 transition-colors cursor-pointer group"
+        >
             <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center group-hover:bg-zinc-700 transition-colors">
                 <Icon className="w-4 h-4 text-zinc-300" />
             </div>
@@ -59,6 +67,6 @@ export function HistoryPill({ data }) {
                     </span>
                 </div>
             </div>
-        </div>
+        </Link>
     );
 }

@@ -9,8 +9,11 @@
  * - watched: Movie has been completed at least once
  *
  * Rules:
- * - inProgress and inWatchlist are mutually exclusive (can't be both true)
- * - watched can be true with either inWatchlist (want to rewatch) or standalone
+ * - ONLY inProgress and inWatchlist are mutually exclusive
+ * - Setting inProgress to true will set inWatchlist to false
+ * - Setting inWatchlist to true will set inProgress to false
+ * - watched status is independent and preserved across all changes
+ * - A movie can be both watched=true and inWatchlist=true (for rewatching)
  * - Default state: inWatchlist = true, inProgress = false, watched = false
  */
 
@@ -141,18 +144,18 @@ export function isWatched(movie) {
 export function setToWatchlist(movie = {}) {
     return {
         inWatchlist: true,
-        inProgress: false,
+        inProgress: false, // Only inProgress is mutually exclusive with watchlist
         watched: movie.watched || false, // Preserve watched status
         status: "Watchlist", // Keep for backward compatibility during migration
     };
 }
 
 /**
- * Set movie to in progress (keeps watched status if already watched)
+ * Set movie to in progress (removes watchlist, keeps watched status)
  */
 export function setToInProgress(movie = {}) {
     return {
-        inWatchlist: false,
+        inWatchlist: false, // Only inProgress removes watchlist
         inProgress: true,
         watched: movie.watched || false, // Preserve watched status
         status: "Watching", // Keep for backward compatibility during migration
@@ -160,11 +163,11 @@ export function setToInProgress(movie = {}) {
 }
 
 /**
- * Set movie to watched/completed
+ * Set movie to watched/completed (preserves watchlist status)
  */
-export function setToWatched(timesWatched = 1, keepInWatchlist = false) {
+export function setToWatched(movie = {}, timesWatched = 1) {
     return {
-        inWatchlist: keepInWatchlist, // Can keep in watchlist for rewatching
+        inWatchlist: movie.inWatchlist || false, // Preserve watchlist status
         inProgress: false,
         watched: true,
         timesWatched,
