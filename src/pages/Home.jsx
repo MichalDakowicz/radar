@@ -13,6 +13,7 @@ import MovieRow from "../features/movies/MovieRow";
 import RandomPickModal from "../features/movies/RandomPickModal";
 import { FilterPanel } from "../components/FilterPanel";
 import { Navbar } from "../components/layout/Navbar";
+import { getDisplayStatus, isInWatchlist, isWatched } from "../lib/movieStatus";
 import { LayoutGrid, List as ListIcon, Search, Layers } from "lucide-react";
 import {
     DndContext,
@@ -296,25 +297,12 @@ export default function Home() {
         // Filter by Status
         if (filterStatus !== "All") {
             if (filterStatus === "Watchlist") {
-                result = result.filter((m) => {
-                    const s = m.status || "Watchlist";
-                    return s === "Watchlist" || s === "Plan to Watch";
-                });
+                result = result.filter((m) => isInWatchlist(m));
             } else if (filterStatus === "Watched") {
-                result = result.filter((m) => {
-                    const s = m.status || "Watchlist";
-                    return (
-                        s === "Watched" ||
-                        s === "Completed" ||
-                        (m.timesWatched > 0 &&
-                            s !== "Watching" &&
-                            s !== "Dropped" &&
-                            s !== "On Hold")
-                    );
-                });
+                result = result.filter((m) => isWatched(m));
             } else {
                 result = result.filter(
-                    (m) => (m.status || "Watchlist") === filterStatus,
+                    (m) => getDisplayStatus(m) === filterStatus,
                 );
             }
         }
@@ -415,9 +403,7 @@ export default function Home() {
         if (filterStatus !== "All") {
             return filteredMovies;
         }
-        return filteredMovies.filter(
-            (m) => !m.status || m.status === "Watchlist",
-        );
+        return filteredMovies.filter((m) => isInWatchlist(m));
     }, [filteredMovies, filterStatus]);
 
     // Derived state for grouped movies

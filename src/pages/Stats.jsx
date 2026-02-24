@@ -1,22 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-    BarChart3,
-    PieChart,
-    Calendar,
-    Trophy,
-    Library,
-    DollarSign,
-    Tags,
-    Store,
-    TrendingUp,
-    Clapperboard,
+    Star,
+    History,
     Film,
-    FileVideo,
     Clock,
+    Trophy,
+    BarChart3,
     CheckCircle2,
-    Activity,
-    Monitor
 } from "lucide-react";
 import { useMovies } from "../hooks/useMovies";
 import { usePublicMovies } from "../hooks/usePublicMovies";
@@ -26,12 +17,20 @@ import { Navbar } from "../components/layout/Navbar";
 import { PublicBottomNav } from "../components/layout/PublicBottomNav";
 import { PublicHeader } from "../components/layout/PublicHeader";
 import { useAuth } from "../features/auth/AuthContext";
-import { normalizeServiceName } from "../lib/services"; // Import normalize helper
+import { ref, get } from "firebase/database";
+import { db } from "../lib/firebase";
+import { getDisplayStatus, isWatched } from "../lib/movieStatus";
+import { HistoryPill } from "../components/stats/HistoryPill";
+import { QuickStat } from "../components/stats/QuickStat";
+import { StreakCalendar } from "../components/stats/StreakCalendar";
+import { ThinProgressBar } from "../components/stats/ThinProgressBar";
+import { SmoothDecadeBar } from "../components/stats/SmoothDecadeBar";
+import { DirectorItem } from "../components/stats/DirectorItem";
+import { GenreTag } from "../components/stats/GenreTag";
 
 export default function Stats() {
     const { userId } = useParams();
     const { user } = useAuth();
-
 
     const { movies: userMovies, loading: userLoading } = useMovies();
     const { movies: publicMovies, loading: publicLoading } =
@@ -42,162 +41,125 @@ export default function Stats() {
     const movies = userId ? publicMovies : userMovies;
     const loading = userId ? publicLoading : userLoading;
 
+    // Streak settings
+    const [streakThreshold, setStreakThreshold] = useState(2); // Default: 2 movies per week
+
+    useEffect(() => {
+        const fetchStreakSettings = async () => {
+            if (!user && !userId) return;
+            const targetUserId = userId || user.uid;
+            const settingsRef = ref(
+                db,
+                `users/${targetUserId}/settings/stats/streakThreshold`,
+            );
+            const snapshot = await get(settingsRef);
+            if (snapshot.exists()) {
+                setStreakThreshold(snapshot.val());
+            }
+        };
+        fetchStreakSettings();
+    }, [user, userId]);
+
     const stats = useMemo(() => {
         if (!movies || movies.length === 0) return null;
-        
-        const allMovies = movies; 
+
+        const allMovies = movies;
         const totalMovies = allMovies.length;
 
         // Status Breakdown
         const statusCounts = {
-            "Watchlist": 0,
-            "Watching": 0,
-            "Completed": 0,
-            "Dropped": 0,
+            Watchlist: 0,
+            Watching: 0,
+            Completed: 0,
+            Dropped: 0,
             "Plan to Watch": 0,
             "On Hold": 0,
-            "Watched": 0 // Legacy/Movie specific
+            Watched: 0,
         };
-        
+
         // Type Breakdown
         const typeCounts = {
-            "movie": 0,
-            "tv": 0
+            movie: 0,
+            tv: 0,
         };
 
         let totalRuntimeMinutes = 0;
-        let totalEpisodes = 0;
-
-        // Availability (Streaming Services)
-        const availabilityCounts = {};
-
-        allMovies.forEach((movie) => {
-             // Type
-             const t = movie.type || "movie";
-             typeCounts[t] = (typeCounts[t] || 0) + 1;
-
-             // Status
-             // Normalize status:
-             // Movies often use 'status' as 'Watchlist' or 'Watched' or implicit from 'timesWatched'
-             let s = movie.status;
-             if (!s) {
-                 s = movie.timesWatched > 0 ? "Completed" : "Watchlist";
-             }
-             // Map legacy/movie statuses to standard set
-             if (s === "Watched") s = "Completed";
-             
-             statusCounts[s] = (statusCounts[s] || 0) + 1;
-
-             // Runtime
-             const runtime = movie.runtime || 0;
-             if (t === 'movie') {
-                if (movie.timesWatched > 0) {
-                    totalRuntimeMinutes += runtime * movie.timesWatched;
-                }
-             } else if (t === 'tv') {
-                 let minutes = 0;
-                 // 1. Precise episode tracking
-                 if (movie.episodesWatched) {
-                     // Count true values
-                     const count = Object.values(movie.episodesWatched).filter(Boolean).length;
-                     minutes += count * runtime;
-                 }
-                 
-                 // 2. Full rewatches (if marked)
-                 if (movie.timesWatched > 0) {
-                      // Estimate total duration
-                      // Use number_of_episodes if known, else estimate 10 per season
-                      const totalEps = movie.number_of_episodes || ((movie.number_of_seasons || 1) * 10);
-                      minutes += (movie.timesWatched * totalEps * runtime);
-                 }
-                 
-                 totalRuntimeMinutes += minutes;
-             }
-
-             // Availability
-             if (Array.isArray(movie.availability)) {
-                 const seenServices = new Set();
-                 movie.availability.forEach(svc => {
-                     const normalized = normalizeServiceName(svc);
-                     if (normalized && !seenServices.has(normalized)) {
-                        seenServices.add(normalized);
-                        availabilityCounts[normalized] = (availabilityCounts[normalized] || 0) + 1;
-                     }
-                 });
-             } else if (movie.format && !['Digital', 'Blu-ray', 'DVD', 'VHS', 'Physical'].includes(movie.format)) {
-                 // Legacy format usage for streaming services?
-                 availabilityCounts[movie.format] = (availabilityCounts[movie.format] || 0) + 1;
-             }
-        });
-
-        const sortedStatus = Object.entries(statusCounts)
-            .filter(([_, count]) => count > 0)
-            .sort((a, b) => b[1] - a[1])
-            .map(([name, count]) => ({ name, count, percent: Math.round((count / totalMovies) * 100) }));
-
-        const sortedAvailability = Object.entries(availabilityCounts)
-            .sort((a, b) => b[1] - a[1])
-            .map(([name, count]) => ({ name, count, percent: Math.round((count / totalMovies) * 100) }));
-        
-        const totalHours = Math.round(totalRuntimeMinutes / 60);
-
-        // Formats Breakdown (Legacy Physical + Digital) - Keep as is but maybe rename to "Media Type" or "Source"?
-        // Actually, let's keep the existing logic for Format if users still use it, but prioritize Availability if available.
+        let totalRatings = 0;
+        let ratingSum = 0;
 
         // Directors
         const directorCounts = {};
-        allMovies.forEach((movie) => {
-            // Directors
-            const dirs = Array.isArray(movie.director) 
-                ? movie.director 
-                : (Array.isArray(movie.artist) ? movie.artist : [movie.artist || movie.director]); // Fallback
-                
-            dirs.forEach((d) => {
-                if (d) {
-                    const cleanName = String(d).trim();
-                    if (cleanName) directorCounts[cleanName] = (directorCounts[cleanName] || 0) + 1;
-                }
-            });
-        });
-        const uniqueDirectorCount = Object.keys(directorCounts).length;
-
-        const topDirectors = Object.entries(directorCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
-            .map(([name, count]) => ({ name, count }));
-
-        // Decades
-        const decadeCounts = {};
-        allMovies.forEach((movie) => {
-            if (movie.releaseDate && movie.releaseDate.length >= 4) {
-                const year = parseInt(movie.releaseDate.substring(0, 4));
-                if (!isNaN(year)) {
-                    const decade = Math.floor(year / 10) * 10;
-                    decadeCounts[decade] = (decadeCounts[decade] || 0) + 1;
-                }
-            }
-        });
-        const sortedDecades = Object.entries(decadeCounts)
-            .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-            .map(([decade, count]) => ({ decade: `${decade}s`, count }));
-
-        // Price & Value
-        let totalValue = 0;
-        const moviesWithPrice = [];
-        allMovies.forEach((movie) => {
-            const p = parseFloat(movie.pricePaid);
-            if (!isNaN(p) && p > 0) {
-                totalValue += p;
-                moviesWithPrice.push({ ...movie, price: p });
-            }
-        });
-        const mostExpensive = moviesWithPrice
-            .sort((a, b) => b.price - a.price)
-            .slice(0, 5);
 
         // Genres
         const genreCounts = {};
+
+        // Decades
+        const decadeCounts = {};
+
+        // Recent activity (last 10 items with activity)
+        const recentActivity = [];
+
         allMovies.forEach((movie) => {
+            // Type
+            const t = movie.type || "movie";
+            typeCounts[t] = (typeCounts[t] || 0) + 1;
+
+            // Status - use new system
+            const s = getDisplayStatus(movie);
+            statusCounts[s] = (statusCounts[s] || 0) + 1;
+
+            // Runtime
+            const runtime = movie.runtime || 0;
+            if (t === "movie") {
+                if (movie.timesWatched > 0) {
+                    totalRuntimeMinutes += runtime * movie.timesWatched;
+                }
+            } else if (t === "tv") {
+                let minutes = 0;
+                if (movie.episodesWatched) {
+                    const count = Object.values(movie.episodesWatched).filter(
+                        Boolean,
+                    ).length;
+                    minutes += count * runtime;
+                }
+                if (movie.timesWatched > 0) {
+                    const totalEps =
+                        movie.number_of_episodes ||
+                        (movie.number_of_seasons || 1) * 10;
+                    minutes += movie.timesWatched * totalEps * runtime;
+                }
+                totalRuntimeMinutes += minutes;
+            }
+
+            // Rating - check both rating and ratings object
+            if (
+                movie.ratings &&
+                movie.ratings.overall &&
+                movie.ratings.overall > 0
+            ) {
+                ratingSum += movie.ratings.overall;
+                totalRatings++;
+            } else if (movie.rating && movie.rating > 0) {
+                ratingSum += movie.rating;
+                totalRatings++;
+            }
+
+            // Directors
+            const dirs = Array.isArray(movie.director)
+                ? movie.director
+                : Array.isArray(movie.artist)
+                ? movie.artist
+                : [movie.artist || movie.director];
+            dirs.forEach((d) => {
+                if (d) {
+                    const cleanName = String(d).trim();
+                    if (cleanName)
+                        directorCounts[cleanName] =
+                            (directorCounts[cleanName] || 0) + 1;
+                }
+            });
+
+            // Genres
             if (movie.genres && Array.isArray(movie.genres)) {
                 movie.genres.forEach((g) => {
                     const clean = g.trim();
@@ -205,10 +167,50 @@ export default function Stats() {
                         genreCounts[clean] = (genreCounts[clean] || 0) + 1;
                 });
             }
+
+            // Decades
+            if (movie.releaseDate && movie.releaseDate.length >= 4) {
+                const year = parseInt(movie.releaseDate.substring(0, 4));
+                if (!isNaN(year)) {
+                    const decade = Math.floor(year / 10) * 10;
+                    decadeCounts[decade] = (decadeCounts[decade] || 0) + 1;
+                }
+            }
+
+            // Recent activity - track last updated or added
+            if (movie.updatedAt || movie.createdAt) {
+                const timestamp = movie.updatedAt || movie.createdAt;
+                recentActivity.push({
+                    id: movie.id,
+                    title: movie.title,
+                    timestamp: timestamp,
+                    status: s,
+                    type: t,
+                });
+            }
         });
-        const topGenres = Object.entries(genreCounts)
+
+        // Sort and format data
+        const sortedStatus = Object.entries(statusCounts)
+            .filter(([_, count]) => count > 0)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({
+                name,
+                count,
+                percent: Math.round((count / totalMovies) * 100),
+            }));
+
+        const totalHours = Math.round(totalRuntimeMinutes / 60);
+        const avgRating =
+            totalRatings > 0 ? (ratingSum / totalRatings).toFixed(1) : 0;
+
+        const topDirectors = Object.entries(directorCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
+            .map(([name, count]) => ({ name, count }));
+
+        const topGenres = Object.entries(genreCounts)
+            .sort((a, b) => b[1] - a[1])
             .map(([name, count]) => ({
                 name,
                 count,
@@ -218,39 +220,236 @@ export default function Stats() {
                         : 0,
             }));
 
-        // Stores
-        const storeCounts = {};
-        allMovies.forEach((movie) => {
-            if (movie.storeName) {
-                const clean = movie.storeName.trim();
-                if (clean) storeCounts[clean] = (storeCounts[clean] || 0) + 1;
-            }
+        const sortedDecades = Object.entries(decadeCounts)
+            .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+            .map(([decade, count]) => ({ decade: `${decade}s`, count }));
+
+        // Sort recent activity by timestamp
+        const sortedActivity = recentActivity
+            .sort((a, b) => {
+                const timeA = a.timestamp?.seconds || 0;
+                const timeB = b.timestamp?.seconds || 0;
+                return timeB - timeA;
+            })
+            .slice(0, 6);
+
+        // Calculate completion rate
+        const completionRate =
+            totalMovies > 0
+                ? Math.round((statusCounts["Completed"] / totalMovies) * 100)
+                : 0;
+
+        // Calculate streak based on consecutive days with movies watched
+        const completedMovies = allMovies
+            .filter((m) => isWatched(m) && m.completedAt)
+            .map((m) => ({
+                id: m.id,
+                completedAt: m.completedAt,
+            }));
+
+        // Group by date (not week)
+        const dailyCompletions = {};
+        completedMovies.forEach((movie) => {
+            const timestamp = movie.completedAt?.seconds
+                ? movie.completedAt.seconds * 1000
+                : movie.completedAt;
+            const date = new Date(timestamp);
+            const dateKey = `${date.getFullYear()}-${String(
+                date.getMonth() + 1,
+            ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+            dailyCompletions[dateKey] = (dailyCompletions[dateKey] || 0) + 1;
         });
-        const topStores = Object.entries(storeCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
-            .map(([name, count]) => ({ name, count }));
+
+        // Calculate current and longest streak based on weekly milestones
+        let currentStreak = 0;
+        let longestStreak = 0;
+
+        // Get today's date and current week info
+        const today = new Date();
+        const todayKey = `${today.getFullYear()}-${String(
+            today.getMonth() + 1,
+        ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+        // Get start of current week (Monday)
+        const currentWeekStart = new Date(today);
+        const dayOfWeek = currentWeekStart.getDay();
+        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        currentWeekStart.setDate(currentWeekStart.getDate() - daysToMonday);
+        currentWeekStart.setHours(0, 0, 0, 0);
+
+        // Helper function to get week start (Monday) for any date
+        const getWeekStart = (date) => {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = day === 0 ? 6 : day - 1;
+            d.setDate(d.getDate() - diff);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        };
+
+        // Helper function to count movies in a week
+        const getMoviesInWeek = (weekStart) => {
+            let count = 0;
+            for (let i = 0; i < 7; i++) {
+                const checkDate = new Date(weekStart);
+                checkDate.setDate(checkDate.getDate() + i);
+                const checkKey = `${checkDate.getFullYear()}-${String(
+                    checkDate.getMonth() + 1,
+                ).padStart(2, "0")}-${String(checkDate.getDate()).padStart(
+                    2,
+                    "0",
+                )}`;
+                count += dailyCompletions[checkKey] || 0;
+            }
+            return count;
+        };
+
+        // Count current streak (count days with movies, but allow gaps in weeks that meet milestone)
+        if (Object.keys(dailyCompletions).length > 0) {
+            let checkDate = new Date(today);
+            let streakActive = true;
+            let lastWeekWithMovies = null;
+
+            console.log("=== STREAK CALCULATION START ===");
+            console.log("Today:", today.toISOString().split("T")[0]);
+            console.log("Daily completions:", dailyCompletions);
+
+            while (streakActive) {
+                const checkKey = `${checkDate.getFullYear()}-${String(
+                    checkDate.getMonth() + 1,
+                ).padStart(2, "0")}-${String(checkDate.getDate()).padStart(
+                    2,
+                    "0",
+                )}`;
+
+                const weekStart = getWeekStart(checkDate);
+                const moviesThisWeek = getMoviesInWeek(weekStart);
+                const isCurrentWeek =
+                    weekStart.getTime() === currentWeekStart.getTime();
+
+                console.log(`\nChecking ${checkKey}:`);
+                console.log(
+                    `  Movies this day: ${dailyCompletions[checkKey] || 0}`,
+                );
+                console.log(
+                    `  Week start: ${weekStart.toISOString().split("T")[0]}`,
+                );
+                console.log(`  Movies this week: ${moviesThisWeek}`);
+                console.log(`  Is current week: ${isCurrentWeek}`);
+
+                // Check if this day has movies
+                if (dailyCompletions[checkKey] > 0) {
+                    // Only count if this week meets the milestone OR it's the current week
+                    if (
+                        moviesThisWeek >= 3 ||
+                        (isCurrentWeek && moviesThisWeek > 0)
+                    ) {
+                        currentStreak++;
+                        console.log(
+                            `  ✓ COUNTED! Streak now: ${currentStreak}`,
+                        );
+                        lastWeekWithMovies = weekStart.getTime();
+                    } else {
+                        console.log(
+                            `  ✗ Has movies but week doesn't meet criteria`,
+                        );
+                    }
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    // No movies this day - check if we should continue streak
+                    // Continue if: week has 3+ movies OR it's current week with any activity
+                    if (
+                        moviesThisWeek >= 3 ||
+                        (isCurrentWeek && moviesThisWeek > 0)
+                    ) {
+                        console.log(
+                            `  → Skipping (no movies but week qualifies)`,
+                        );
+                        // Don't count this day, but continue checking previous days
+                        checkDate.setDate(checkDate.getDate() - 1);
+                    } else {
+                        console.log(`  ✗ STREAK ENDED (week doesn't qualify)`);
+                        // Week doesn't meet criteria, end streak
+                        streakActive = false;
+                    }
+                }
+            }
+
+            console.log(`\n=== FINAL STREAK: ${currentStreak} ===\n`);
+        }
+
+        // Calculate longest streak
+        let tempStreak = 0;
+        if (Object.keys(dailyCompletions).length > 0) {
+            const sortedDates = Object.keys(dailyCompletions).sort();
+            const oldestDate = new Date(sortedDates[0]);
+            const newestDate = new Date(sortedDates[sortedDates.length - 1]);
+
+            let checkDate = new Date(oldestDate);
+            tempStreak = 0;
+
+            while (checkDate <= newestDate) {
+                const checkKey = `${checkDate.getFullYear()}-${String(
+                    checkDate.getMonth() + 1,
+                ).padStart(2, "0")}-${String(checkDate.getDate()).padStart(
+                    2,
+                    "0",
+                )}`;
+
+                if (dailyCompletions[checkKey] > 0) {
+                    tempStreak++;
+                    longestStreak = Math.max(longestStreak, tempStreak);
+                } else {
+                    tempStreak = 0;
+                }
+
+                checkDate.setDate(checkDate.getDate() + 1);
+            }
+        }
+
+        // Group by week for calendar display
+        const getWeekKey = (date) => {
+            const d = new Date(date);
+            const weekStart = new Date(d);
+            weekStart.setDate(
+                weekStart.getDate() - ((weekStart.getDay() + 6) % 7),
+            ); // Get Monday
+            const year = weekStart.getFullYear();
+            const weekNum = Math.ceil(
+                ((weekStart - new Date(year, 0, 1)) / 86400000 + 1) / 7,
+            );
+            return `${year}-W${weekNum.toString().padStart(2, "0")}`;
+        };
+
+        const weeklyCompletions = {};
+        completedMovies.forEach((movie) => {
+            const timestamp = movie.completedAt?.seconds
+                ? movie.completedAt.seconds * 1000
+                : movie.completedAt;
+            const weekKey = getWeekKey(timestamp);
+            weeklyCompletions[weekKey] = (weeklyCompletions[weekKey] || 0) + 1;
+        });
 
         return {
             totalMovies,
-            // sortedFormats, // Deprecated in favor of availability? Let's keep both if needed, but return new ones
             sortedStatus,
-            sortedAvailability,
             totalHours,
+            avgRating,
             typeCounts,
             topDirectors,
-            uniqueDirectorCount,
-            sortedDecades,
-            totalValue,
-            mostExpensive,
             topGenres,
-            topStores,
+            sortedDecades,
+            recentActivity: sortedActivity,
+            completionRate,
+            currentStreak,
+            longestStreak,
+            weeklyCompletions,
         };
-    }, [movies]);
+    }, [movies, streakThreshold]);
 
-    if (loading)
+    if (loading) {
         return (
-            <div className="min-h-screen bg-neutral-950 text-white">
+            <div className="min-h-screen bg-[#09090b] text-zinc-100">
                 {userId ? <PublicHeader /> : <Navbar />}
                 <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-6 pb-20 flex items-center justify-center">
                     <p>Loading stats...</p>
@@ -258,477 +457,282 @@ export default function Stats() {
                 {userId && <PublicBottomNav />}
             </div>
         );
-    
-    if (!stats)
+    }
+
+    if (!stats) {
         return (
-            <div className="min-h-screen bg-neutral-950 text-white">
-                 {userId ? <PublicHeader /> : <Navbar />}
-                 <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-6 pb-20 flex flex-col items-center justify-center gap-4">
+            <div className="min-h-screen bg-[#09090b] text-zinc-100">
+                {userId ? <PublicHeader /> : <Navbar />}
+                <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-6 pb-20 flex flex-col items-center justify-center gap-4">
                     <p>No data available. Add some movies to your library!</p>
-                    <Link to={userId ? `/u/${userId}` : "/"} className="text-blue-500 hover:underline">
+                    <Link
+                        to={userId ? `/u/${userId}` : "/"}
+                        className="text-blue-500 hover:underline"
+                    >
                         {userId ? "Go to Shelf" : "Go to Library"}
                     </Link>
                 </main>
                 {userId && <PublicBottomNav />}
             </div>
         );
+    }
+
+    const topGenre = stats.topGenres[0]?.name || "N/A";
+    const maxDirectorCount = stats.topDirectors[0]?.count || 1;
+    const maxDecadeCount = Math.max(
+        ...stats.sortedDecades.map((d) => d.count),
+        1,
+    );
 
     return (
-        <div className="min-h-screen bg-neutral-950 text-white">
+        <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans selection:bg-zinc-800">
             {userId ? <PublicHeader /> : <Navbar />}
-            <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-6 pb-24 space-y-8 animate-in fade-in duration-500 slide-in-from-bottom-4">
 
-                    {/* Top Stats Cards */}
-                    <div className="flex flex-wrap gap-4">
-                        <div className="flex-1 min-w-35">
-                            <StatCard
-                                label="Total Movies"
-                                value={stats.totalMovies}
-                                icon={<Library size={20} />}
-                            />
+            <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-10 pb-24">
+                {/* Top Panel: Scrollable History */}
+                {stats.recentActivity.length > 0 && (
+                    <section className="mb-16">
+                        <div className="flex items-center gap-2 mb-5">
+                            <History className="w-5 h-5 text-zinc-500" />
+                            <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-400">
+                                Recent Activity
+                            </h2>
                         </div>
-                        {stats.totalValue > 0 && (
-                            <div className="flex-1 min-w-35">
-                                <StatCard
-                                    label="Library Value"
-                                    value={`$${stats.totalValue}`}
-                                    icon={
-                                        <DollarSign
-                                            size={20}
-                                            className="text-blue-500"
-                                        />
-                                    }
-                                    subtext="Est. Cost"
-                                />
-                            </div>
-                        )}
-                        <div className="flex-1 min-w-35">
-                            <StatCard
-                                label="Total Watched"
-                                value={`${stats.totalHours} hrs`}
-                                icon={<Clock size={20} />}
-                                subtext="Lifetime"
-                            />
+
+                        <div className="flex gap-4 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                            {stats.recentActivity.map((item) => (
+                                <HistoryPill key={item.id} data={item} />
+                            ))}
                         </div>
-                        <div className="flex-1 min-w-35">
-                            <StatCard
-                                label="Completed"
-                                value={stats.sortedStatus.find(s => s.name === 'Completed')?.count || 0}
-                                icon={<CheckCircle2 size={20} />}
-                            />
+                    </section>
+                )}
+
+                {/* Fluid Overview Stats */}
+                <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-y-10 gap-x-6 mb-8 border-y border-zinc-800/50 py-10">
+                    <QuickStat
+                        value={stats.totalMovies}
+                        label="Total Items"
+                        icon={<Film className="w-4 h-4" />}
+                    />
+                    <QuickStat
+                        value={`${stats.totalHours}h`}
+                        label="Time Watched"
+                        icon={<Clock className="w-4 h-4" />}
+                    />
+                    <QuickStat
+                        value={
+                            stats.sortedStatus.find(
+                                (s) => s.name === "Completed",
+                            )?.count || 0
+                        }
+                        label="Completed"
+                        icon={<CheckCircle2 className="w-4 h-4" />}
+                    />
+                    <QuickStat
+                        value={topGenre}
+                        label="Top Genre"
+                        icon={<Trophy className="w-4 h-4" />}
+                    />
+                    <QuickStat
+                        value={stats.avgRating}
+                        label="Avg Rating"
+                        icon={<Star className="w-4 h-4" />}
+                        suffix="★"
+                    />
+                    <QuickStat
+                        value={`${stats.completionRate}%`}
+                        label="Completion"
+                        icon={<BarChart3 className="w-4 h-4" />}
+                    />
+                    <QuickStat
+                        value={stats.currentStreak || 0}
+                        label="Day Streak"
+                        icon={<Trophy className="w-4 h-4" />}
+                    />
+                </section>
+
+                <section className="mb-16">
+                    <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-2">
+                            <Trophy className="w-5 h-5 text-zinc-500" />
+                            <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-400">
+                                Watch Calendar
+                            </h2>
                         </div>
-                        <div className="flex-1 min-w-35">
-                            <StatCard
-                                label="Unique Directors"
-                                value={stats.uniqueDirectorCount}
-                                icon={<Trophy size={20} />}
-                            />
-                        </div>
-                        <div className="flex-1 min-w-35">
-                            <StatCard
-                                label="Top Genre"
-                                value={stats.topGenres[0]?.name || "N/A"}
-                                subtext={
-                                    stats.topGenres[0] &&
-                                    `${stats.topGenres[0].count} titles`
-                                }
-                                icon={<Tags size={20} />}
-                            />
-                        </div>
-                        <div className="flex-1 min-w-35">
-                            <StatCard
-                                label="Top Decade"
-                                value={
-                                    stats.sortedDecades.sort(
-                                        (a, b) => b.count - a.count,
-                                    )[0]?.decade || "N/A"
-                                }
-                                icon={<Calendar size={20} />}
-                            />
+                        <div className="text-xs text-zinc-500 flex items-center gap-1">
+                            Current streak: {stats.currentStreak} days
+                            <Trophy className="w-3.5 h-3.5 text-blue-500" />
                         </div>
                     </div>
+                    <StreakCalendar
+                        weeklyCompletions={stats.weeklyCompletions}
+                        threshold={streakThreshold}
+                        userId={!userId ? user?.uid : null}
+                    />
+                </section>
 
-                    {/* Charts Row 1 */}
-                    <div className="grid md:grid-cols-2 gap-8">
+                {/* Main Content Layout */}
+                <div className="grid lg:grid-cols-12 gap-12 lg:gap-20">
+                    {/* Left Column: Analytics */}
+                    <div className="lg:col-span-7 space-y-20">
                         {/* Status Breakdown */}
-                        <div className="bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors">
-                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <Activity size={20} className="text-green-500" />{" "}
+                        <section>
+                            <h3 className="text-2xl font-bold tracking-tight mb-8">
                                 Status Breakdown
                             </h3>
-                            <div className="space-y-4">
-                                {stats.sortedStatus.map((item) => (
-                                    <div
-                                        key={item.name}
-                                        className="relative group"
-                                    >
-                                        <div className="flex justify-between text-sm mb-2">
-                                            <span className="text-white font-medium">
-                                                {item.name}
-                                            </span>
-                                            <span className="text-neutral-400 group-hover:text-white transition-colors">
-                                                {item.count}
+                            <div className="space-y-6">
+                                {stats.sortedStatus
+                                    .slice(0, 3)
+                                    .map((status) => (
+                                        <ThinProgressBar
+                                            key={status.name}
+                                            label={status.name}
+                                            value={status.count}
+                                            max={stats.totalMovies}
+                                        />
+                                    ))}
+                            </div>
+                        </section>
+
+                        {/* Content Mix (Segmented Ratio Bar) */}
+                        <section>
+                            <h3 className="text-2xl font-bold tracking-tight mb-8">
+                                Content Mix
+                            </h3>
+                            <div className="flex flex-col">
+                                <div className="flex gap-8 md:gap-12 mb-6">
+                                    <div className="flex flex-col group cursor-default">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-zinc-200 group-hover:scale-125 transition-transform" />
+                                            <span className="text-sm font-semibold text-zinc-400">
+                                                Movies
                                             </span>
                                         </div>
-                                        <div className="h-3 w-full bg-neutral-800 rounded-full overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full shadow-[0_0_10px_rgba(34,197,94,0.3)] ${
-                                                    item.name === 'Completed' ? 'bg-green-500' :
-                                                    item.name === 'Watching' ? 'bg-blue-500' :
-                                                    item.name === 'Dropped' ? 'bg-red-500' :
-                                                    'bg-neutral-500'
-                                                }`}
-                                                style={{
-                                                    width: `${item.percent}%`,
-                                                }}
-                                            />
-                                        </div>
+                                        <span className="text-4xl font-light text-zinc-100 tracking-tight">
+                                            {stats.typeCounts.movie || 0}
+                                        </span>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                         {/* Availability Breakdown */}
-                         <div className="bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors">
-                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <Monitor size={20} className="text-purple-500" />{" "}
-                                Streaming Availability
-                            </h3>
-                            {stats.sortedAvailability.length > 0 ? (
-                                <div className="space-y-4">
-                                    {stats.sortedAvailability.slice(0, 6).map((item) => (
-                                        <div
-                                            key={item.name}
-                                            className="relative group"
-                                        >
-                                            <div className="flex justify-between text-sm mb-2">
-                                                <span className="text-white font-medium">
-                                                    {item.name}
-                                                </span>
-                                                <span className="text-neutral-400 group-hover:text-white transition-colors">
-                                                    {item.count}
-                                                </span>
-                                            </div>
-                                            <div className="h-3 w-full bg-neutral-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-linear-to-r from-purple-600 to-purple-400 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                                                    style={{
-                                                        width: `${item.percent}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-48 text-neutral-500 gap-2">
-                                    <Monitor size={32} opacity={0.5} />
-                                    <span>No streaming data available</span>
-                                </div>
-                            )}
-                        </div>
-
-
-                        {/* Top Directors */}
-                        <div className="bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors">
-                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <BarChart3
-                                    size={20}
-                                    className="text-blue-500"
-                                />{" "}
-                                Top Directors
-                            </h3>
-                            <div className="space-y-4">
-                                {stats.topDirectors.map((item, index) => {
-                                    const max = stats.topDirectors[0].count;
-                                    const percent = (item.count / max) * 100;
-                                    return (
-                                        <div
-                                            key={item.name}
-                                            className="relative group"
-                                        >
-                                            <div className="flex justify-between text-sm mb-2">
-                                                <span className="text-white font-medium truncate pr-4 flex items-center gap-2">
-                                                    <span
-                                                        className={`w-5 h-5 flex items-center justify-center rounded-full text-xs ${
-                                                            index === 0
-                                                                ? "bg-yellow-500/20 text-yellow-500"
-                                                                : index === 1
-                                                                ? "bg-slate-400/20 text-slate-300"
-                                                                : index === 2
-                                                                ? "bg-orange-500/20 text-orange-500"
-                                                                : "bg-neutral-800 text-neutral-400"
-                                                        }`}
-                                                    >
-                                                        {index + 1}
-                                                    </span>
-                                                    {item.name}
-                                                </span>
-                                                <span className="text-neutral-400 shrink-0 group-hover:text-white transition-colors">
-                                                    {item.count}
-                                                </span>
-                                            </div>
-                                            <div className="h-3 w-full bg-neutral-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-linear-to-r from-blue-600 to-blue-400 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                                                    style={{
-                                                        width: `${percent}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                         {/* Type Breakdown */}
-                         <div className="bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors">
-                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <Film size={20} className="text-yellow-500" />{" "}
-                                Type Breakdown
-                            </h3>
-                            <div className="space-y-4">
-                                {Object.entries(stats.typeCounts).map(([type, count]) => {
-                                    if(count === 0) return null;
-                                    const percent = Math.round((count / stats.totalMovies) * 100);
-                                    return (
-                                        <div
-                                            key={type}
-                                            className="relative group"
-                                        >
-                                            <div className="flex justify-between text-sm mb-2">
-                                                <span className="text-white font-medium capitalize">
-                                                    {type === 'movie' ? 'Movies' : 'TV Shows'}
-                                                </span>
-                                                <span className="text-neutral-400 group-hover:text-white transition-colors">
-                                                    {count}
-                                                </span>
-                                            </div>
-                                            <div className="h-3 w-full bg-neutral-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full shadow-[0_0_10px_rgba(255,255,255,0.2)] ${
-                                                        type === 'movie' 
-                                                        ? 'bg-linear-to-r from-pink-600 to-pink-400 shadow-[0_0_10px_rgba(236,72,153,0.5)]' 
-                                                        : 'bg-linear-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.5)]'
-                                                    }`}
-                                                    style={{
-                                                        width: `${percent}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Charts Row 2 */}
-                    <div className="grid md:grid-cols-2 gap-8">
-                        {/* Decades */}
-                        <div
-                            className={`bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors ${
-                                stats.topGenres.length === 0
-                                    ? "md:col-span-2"
-                                    : ""
-                            }`}
-                        >
-                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                <Calendar
-                                    size={20}
-                                    className="text-purple-500"
-                                />{" "}
-                                By Decade
-                            </h3>
-                            <div className="flex items-end gap-3 h-56 pt-4 overflow-x-auto overflow-y-hidden custom-scrollbar pb-2">
-                                {stats.sortedDecades.map((item) => {
-                                    const max = Math.max(
-                                        ...stats.sortedDecades.map(
-                                            (d) => d.count,
-                                        ),
-                                        1,
-                                    );
-                                    const heightPercent =
-                                        (item.count / max) * 100;
-
-                                    return (
-                                        <div
-                                            key={item.decade}
-                                            className="flex-1 flex flex-col items-center justify-end h-full gap-2 min-w-12 group cursor-default"
-                                        >
-                                            <div className="text-xs text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity mb-auto font-mono bg-neutral-800 px-2 py-1 rounded">
-                                                {item.count}
-                                            </div>
-                                            <div
-                                                className="w-full bg-neutral-800 hover:bg-purple-500 transition-all duration-300 rounded-t-lg shadow-none hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]"
-                                                style={{
-                                                    height: `${
-                                                        heightPercent || 2
-                                                    }%`,
-                                                }}
-                                            ></div>
-                                            <span className="text-xs font-bold text-neutral-400 group-hover:text-white transition-colors -rotate-45 origin-left translate-y-1">
-                                                {item.decade}
+                                    <div className="flex flex-col group cursor-default">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-zinc-600 group-hover:scale-125 transition-transform" />
+                                            <span className="text-sm font-semibold text-zinc-400">
+                                                TV Shows
                                             </span>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                                        <span className="text-4xl font-light text-zinc-300 tracking-tight">
+                                            {stats.typeCounts.tv || 0}
+                                        </span>
+                                    </div>
+                                </div>
 
-                        {/* Top Genres */}
-                        {stats.topGenres.length > 0 && (
-                            <div className="bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors">
-                                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                    <Tags size={20} className="text-pink-500" />{" "}
-                                    Top Genres
-                                </h3>
-                                <div className="space-y-4">
-                                    {stats.topGenres.map((item) => (
-                                        <div
-                                            key={item.name}
-                                            className="relative group"
-                                        >
-                                            <div className="flex justify-between text-sm mb-2">
-                                                <span className="text-white font-medium capitalize">
-                                                    {item.name}
-                                                </span>
-                                                <span className="text-neutral-400 group-hover:text-white transition-colors">
-                                                    {item.count}
-                                                </span>
-                                            </div>
-                                            <div className="h-3 w-full bg-neutral-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-linear-to-r from-pink-600 to-pink-400 rounded-full shadow-[0_0_10px_rgba(236,72,153,0.5)]"
-                                                    style={{
-                                                        width: `${item.percent}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="h-2 w-full flex rounded-full overflow-hidden gap-1">
+                                    <div
+                                        className="bg-zinc-200 hover:opacity-80 transition-opacity"
+                                        style={{
+                                            width: `${Math.round(
+                                                (stats.typeCounts.movie /
+                                                    stats.totalMovies) *
+                                                    100,
+                                            )}%`,
+                                        }}
+                                        title={`Movies: ${Math.round(
+                                            (stats.typeCounts.movie /
+                                                stats.totalMovies) *
+                                                100,
+                                        )}%`}
+                                    />
+                                    <div
+                                        className="bg-zinc-600 hover:opacity-80 transition-opacity"
+                                        style={{
+                                            width: `${Math.round(
+                                                (stats.typeCounts.tv /
+                                                    stats.totalMovies) *
+                                                    100,
+                                            )}%`,
+                                        }}
+                                        title={`TV Shows: ${Math.round(
+                                            (stats.typeCounts.tv /
+                                                stats.totalMovies) *
+                                                100,
+                                        )}%`}
+                                    />
                                 </div>
                             </div>
+                        </section>
+
+                        {/* Era / Decade Chart */}
+                        {stats.sortedDecades.length > 0 && (
+                            <section>
+                                <h3 className="text-2xl font-bold tracking-tight mb-8">
+                                    Release Eras
+                                </h3>
+                                <div className="flex items-end justify-between h-48 gap-2 mt-4 px-2">
+                                    {stats.sortedDecades.map((item) => (
+                                        <SmoothDecadeBar
+                                            key={item.decade}
+                                            decade={item.decade}
+                                            count={item.count}
+                                            max={maxDecadeCount}
+                                        />
+                                    ))}
+                                </div>
+                            </section>
                         )}
                     </div>
 
-                    {/* Charts Row 3 */}
-                    {(stats.topStores.length > 0 ||
-                        stats.mostExpensive.length > 0) && (
-                        <div className="grid md:grid-cols-2 gap-8">
-                            {/* Top Stores */}
-                            {stats.topStores.length > 0 && (
-                                <div
-                                    className={`bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors ${
-                                        stats.mostExpensive.length === 0
-                                            ? "md:col-span-2"
-                                            : ""
-                                    }`}
-                                >
-                                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                        <Store
-                                            size={20}
-                                            className="text-orange-500"
-                                        />{" "}
-                                        Top Stores
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {stats.topStores.map((store, i) => (
-                                            <div
-                                                key={i}
-                                                className="flex items-center justify-between p-3 bg-neutral-800/30 rounded-lg hover:bg-neutral-800/50 transition-colors"
-                                            >
-                                                <span className="text-white font-medium">
-                                                    {store.name}
-                                                </span>
-                                                <span className="bg-neutral-800 text-neutral-400 text-xs px-2 py-1 rounded-full font-mono">
-                                                    {store.count}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
+                    {/* Right Column: Top Lists */}
+                    <div className="lg:col-span-5 space-y-20">
+                        {/* Top Directors */}
+                        {stats.topDirectors.length > 0 && (
+                            <section>
+                                <h3 className="text-2xl font-bold tracking-tight mb-8">
+                                    Most Watched Directors
+                                </h3>
+                                <div className="flex flex-col gap-1">
+                                    {stats.topDirectors.map((director) => (
+                                        <DirectorItem
+                                            key={director.name}
+                                            name={director.name}
+                                            count={director.count}
+                                            max={maxDirectorCount}
+                                        />
+                                    ))}
                                 </div>
-                            )}
+                            </section>
+                        )}
 
-                            {/* Most Expensive */}
-                            {stats.mostExpensive.length > 0 && (
-                                <div
-                                    className={`bg-neutral-900/40 rounded-3xl p-6 border border-neutral-800/50 hover:border-neutral-700/50 transition-colors ${
-                                        stats.topStores.length === 0
-                                            ? "md:col-span-2"
-                                            : ""
-                                    }`}
-                                >
-                                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                                        <TrendingUp
-                                            size={20}
-                                            className="text-blue-500"
-                                        />{" "}
-                                        Most Valuable
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {stats.mostExpensive.map((movie, i) => (
-                                            <div
-                                                key={i}
-                                                className="flex items-center gap-3 p-2 bg-neutral-800/30 rounded-lg hover:bg-neutral-800/50 transition-colors group"
-                                            >
-                                                <div className="w-10 h-10 rounded overflow-hidden bg-neutral-900 shrink-0">
-                                                    {movie.coverUrl ? (
-                                                        <img
-                                                            src={movie.coverUrl}
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <Clapperboard className="p-2 text-neutral-700" />
-                                                    )}
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="text-sm font-bold text-white truncate group-hover:text-blue-400 table-cell">
-                                                        {movie.title}
-                                                    </div>
-                                                    <div className="text-xs text-neutral-400 truncate">
-                                                        {Array.isArray(
-                                                            movie.director,
-                                                        )
-                                                            ? movie.director.join(
-                                                                  ", ",
-                                                              )
-                                                            : movie.director}
-                                                    </div>
-                                                </div>
-                                                <div className="text-blue-400 font-mono font-bold">
-                                                    ${movie.price.toFixed(2)}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                        {/* Favorite Genres */}
+                        {stats.topGenres.length > 0 && (
+                            <section>
+                                <h3 className="text-2xl font-bold tracking-tight mb-8">
+                                    Favorite Genres
+                                </h3>
+                                <div className="flex flex-wrap gap-3">
+                                    {stats.topGenres.map((genre, index) => {
+                                        let rank = "low";
+                                        if (index === 0 || index === 1)
+                                            rank = "top";
+                                        else if (index === 2 || index === 3)
+                                            rank = "high";
+                                        else if (index < 6) rank = "mid";
+
+                                        return (
+                                            <GenreTag
+                                                key={genre.name}
+                                                name={genre.name}
+                                                count={genre.count}
+                                                rank={rank}
+                                            />
+                                        );
+                                    })}
                                 </div>
-                            )}
-                        </div>
-                    )}
-            </main>
-            {userId && <PublicBottomNav />}
-        </div>
-    );
-}
-
-function StatCard({ label, value, subtext, icon }) {
-
-    return (
-        <div className="h-full bg-neutral-900/40 border border-neutral-800/50 rounded-2xl p-5 flex flex-col items-center justify-center text-center hover:bg-neutral-800/60 transition-colors hover:scale-[1.02] duration-200 cursor-default">
-            <div className="mb-3 text-neutral-400 bg-neutral-800/50 p-3 rounded-full">
-                {icon}
-            </div>
-            <div className="text-3xl font-bold text-white mb-1">{value}</div>
-            <div className="text-xs font-bold text-neutral-500 uppercase tracking-widest">
-                {label}
-            </div>
-            {subtext && (
-                <div className="text-xs text-blue-400 mt-2 font-medium bg-blue-500/10 px-2 py-1 rounded-full">
-                    {subtext}
+                            </section>
+                        )}
+                    </div>
                 </div>
-            )}
+            </main>
+
+            {userId && <PublicBottomNav />}
         </div>
     );
 }

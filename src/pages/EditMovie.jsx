@@ -249,22 +249,83 @@ export default function EditMovie() {
     const handleSave = async () => {
         setIsProcessing(true);
         try {
-            await updateMovie(movie.id, {
+            // Determine status flags based on watch state
+            let statusFlags = {};
+            let completedAt = movie.completedAt; // Preserve existing completedAt
+
+            if (type === "tv") {
+                // For TV shows, use tvStatus
+                if (tvStatus === "Completed") {
+                    statusFlags = {
+                        inWatchlist: false,
+                        inProgress: false,
+                        watched: true,
+                    };
+                    // Set completedAt if not already set
+                    if (!completedAt) {
+                        completedAt = Date.now();
+                    }
+                } else if (tvStatus === "Watching") {
+                    statusFlags = {
+                        inWatchlist: false,
+                        inProgress: true,
+                        watched: false,
+                    };
+                    // Clear completedAt when unwatching
+                    completedAt = null;
+                } else {
+                    statusFlags = {
+                        inWatchlist: true,
+                        inProgress: false,
+                        watched: false,
+                    };
+                    // Clear completedAt when unwatching
+                    completedAt = null;
+                }
+            } else {
+                // For movies, use timesWatched and inProgress/inWatchlist
+                if (timesWatched > 0) {
+                    statusFlags = {
+                        inWatchlist: false,
+                        inProgress: false,
+                        watched: true,
+                    };
+                    // Set completedAt if not already set
+                    if (!completedAt) {
+                        completedAt = Date.now();
+                    }
+                } else if (inProgress) {
+                    statusFlags = {
+                        inWatchlist: false,
+                        inProgress: true,
+                        watched: false,
+                    };
+                    // Clear completedAt when unwatching
+                    completedAt = null;
+                } else {
+                    statusFlags = {
+                        inWatchlist: true,
+                        inProgress: false,
+                        watched: false,
+                    };
+                    // Clear completedAt when unwatching
+                    completedAt = null;
+                }
+            }
+
+            const updateData = {
                 availability,
                 title,
                 director,
                 coverUrl,
                 releaseDate,
                 url: movieUrl,
-                status:
-                    type === "tv"
-                        ? tvStatus
-                        : timesWatched > 0
-                        ? "Watched"
-                        : "Watchlist",
-                inWatchlist:
-                    type === "tv" ? tvStatus === "Plan to Watch" : inWatchlist,
-                inProgress,
+                status: statusFlags.watched
+                    ? "Completed"
+                    : statusFlags.inProgress
+                    ? "Watching"
+                    : "Watchlist", // Backward compatibility
+                ...statusFlags,
                 lastWatchedPosition,
                 imdbId,
                 voteAverage,
@@ -281,7 +342,17 @@ export default function EditMovie() {
                 number_of_episodes: numberOfEpisodes,
                 episodesWatched,
                 addedAt: movie.addedAt,
-            });
+                updatedAt: Date.now(),
+            };
+
+            // Handle completedAt: set it when watched, remove it when unwatched
+            if (completedAt !== undefined && completedAt !== null) {
+                updateData.completedAt = completedAt;
+            } else if (completedAt === null) {
+                updateData.completedAt = null; // Explicitly remove from calendar
+            }
+
+            await updateMovie(movie.id, updateData);
             navigate(-1);
         } catch (e) {
             console.error("Failed to update movie", e);

@@ -21,6 +21,8 @@ import {
     Loader2,
     Layers,
 } from "lucide-react";
+import { getDisplayStatus } from "../lib/movieStatus";
+
 
 export default function SharedShelf() {
     const { userId } = useParams();
@@ -134,7 +136,7 @@ export default function SharedShelf() {
         // Filter by Status
         if (filterStatus !== "All") {
             result = result.filter(
-                (m) => (m.status || "Watchlist") === filterStatus,
+                (m) => getDisplayStatus(m) === filterStatus,
             );
         }
 

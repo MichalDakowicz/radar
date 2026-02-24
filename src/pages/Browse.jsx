@@ -242,8 +242,10 @@ export default function Browse() {
             const fullData = await fetchMediaMetadata(item.tmdbId, item.type);
             await addMovie({
                 ...fullData,
-                status: "Plan to Watch",
+                status: "Watchlist", // Backward compatibility
                 inWatchlist: true,
+                inProgress: false,
+                watched: false,
                 timesWatched: 0,
                 addedAt: Date.now(),
                 ratings: {
@@ -256,7 +258,7 @@ export default function Browse() {
             });
             toast({
                 title: "Added",
-                description: "Added to Plan to Watch.",
+                description: "Added to Watchlist.",
                 variant: "success",
             });
         } catch {

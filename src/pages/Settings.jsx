@@ -20,9 +20,12 @@ import {
     Lock,
     Monitor,
     LayoutGrid,
+    BarChart3,
+    RefreshCw,
 } from "lucide-react";
 import { ref, update, get, set } from "firebase/database";
 import { db } from "../lib/firebase";
+import { migrateUserMovies } from "../lib/migrateDatabase";
 
 export default function Settings() {
     const { user, logout } = useAuth();
@@ -32,6 +35,7 @@ export default function Settings() {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [migrating, setMigrating] = useState(false);
 
     // Privacy State
     const [friendsVisibility, setFriendsVisibility] = useState("friends"); // 'friends' | 'noone'
@@ -46,6 +50,10 @@ export default function Settings() {
             return "normal";
         }
     });
+
+    // Stats State
+    const [streakThreshold, setStreakThreshold] = useState(2);
+    const [loadingStats, setLoadingStats] = useState(true);
 
     const handleGridSizeChange = (newSize) => {
         setGridSize(newSize);
@@ -76,6 +84,20 @@ export default function Settings() {
         fetchPrivacy();
     }, [user]);
 
+    useEffect(() => {
+        if (!user) return;
+        const fetchStats = async () => {
+            const snap = await get(
+                ref(db, `users/${user.uid}/settings/stats/streakThreshold`),
+            );
+            if (snap.exists()) {
+                setStreakThreshold(snap.val());
+            }
+            setLoadingStats(false);
+        };
+        fetchStats();
+    }, [user]);
+
     const handlePrivacyChange = async (newVal) => {
         if (newVal === friendsVisibility) return;
         const oldVal = friendsVisibility;
@@ -98,6 +120,29 @@ export default function Settings() {
         } catch (e) {
             console.error(e);
             setFriendsVisibility(oldVal); // Revert
+            toast({
+                title: "Update Failed",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleStreakThresholdChange = async (newVal) => {
+        if (newVal === streakThreshold) return;
+        const oldVal = streakThreshold;
+        setStreakThreshold(newVal);
+        try {
+            await set(
+                ref(db, `users/${user.uid}/settings/stats/streakThreshold`),
+                newVal,
+            );
+            toast({
+                title: "Streak Settings Updated",
+                description: `Streak threshold set to ${newVal} movies per week`,
+            });
+        } catch (e) {
+            console.error(e);
+            setStreakThreshold(oldVal);
             toast({
                 title: "Update Failed",
                 variant: "destructive",
@@ -154,6 +199,30 @@ export default function Settings() {
         }
     };
 
+    const handleMigrateDatabase = async () => {
+        if (!user) return;
+        setMigrating(true);
+        try {
+            const result = await migrateUserMovies(user.uid);
+            toast({
+                title: result.success
+                    ? "Migration Complete"
+                    : "Migration Failed",
+                description: result.message,
+                variant: result.success ? "default" : "destructive",
+            });
+        } catch (e) {
+            console.error(e);
+            toast({
+                title: "Migration Failed",
+                description: e.message,
+                variant: "destructive",
+            });
+        } finally {
+            setMigrating(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-neutral-950 text-white pb-20">
             <Navbar />
@@ -195,6 +264,22 @@ export default function Settings() {
                                     </p>
                                 </div>
                             </div>
+
+                            <button
+                                onClick={handleMigrateDatabase}
+                                disabled={migrating}
+                                className="w-full flex items-center justify-between p-4 rounded-lg bg-neutral-800/50 hover:bg-neutral-800 transition-colors border border-transparent mb-2 group"
+                            >
+                                <span className="flex items-center gap-3 font-medium text-neutral-200">
+                                    <RefreshCw
+                                        className={`w-5 h-5 text-green-500 ${
+                                            migrating ? "animate-spin" : ""
+                                        }`}
+                                    />
+                                    Migrate Database to New Status System
+                                </span>
+                                <ChevronRight className="w-5 h-5 text-neutral-600 group-hover:text-neutral-400" />
+                            </button>
 
                             <button
                                 onClick={handleRepairSearch}
@@ -408,6 +493,48 @@ export default function Settings() {
                                     />
                                     <span className="font-medium">Large</span>
                                 </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Stats Section */}
+                    <section className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
+                        <div className="px-6 py-4 border-b border-neutral-800">
+                            <h2 className="text-lg font-semibold flex items-center gap-2">
+                                <BarChart3 className="w-5 h-5 text-neutral-400" />
+                                Stats
+                            </h2>
+                        </div>
+                        <div className="p-6">
+                            <div className="mb-4">
+                                <h3 className="font-medium text-white">
+                                    Weekly Streak Threshold
+                                </h3>
+                                <p className="text-sm text-neutral-400">
+                                    Set how many movies per week to maintain
+                                    your streak
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="50"
+                                    value={streakThreshold}
+                                    onChange={(e) => {
+                                        const val =
+                                            parseInt(e.target.value) || 1;
+                                        if (val >= 1 && val <= 50) {
+                                            handleStreakThresholdChange(val);
+                                        }
+                                    }}
+                                    disabled={loadingStats}
+                                    className="w-24 px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-center font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                                <span className="text-neutral-400">
+                                    movies per week
+                                </span>
                             </div>
                         </div>
                     </section>
