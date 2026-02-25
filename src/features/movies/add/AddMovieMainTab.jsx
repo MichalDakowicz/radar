@@ -110,7 +110,14 @@ export default function AddMovieMainTab({
                                 In Watchlist
                             </label>
                             <div
-                                onClick={() => setInWatchlist(!inWatchlist)}
+                                onClick={() => {
+                                    if (!inWatchlist) {
+                                        setInWatchlist(true);
+                                        setInProgress(false);
+                                    } else {
+                                        setInWatchlist(false);
+                                    }
+                                }}
                                 className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${
                                     inWatchlist
                                         ? "bg-blue-500"
@@ -140,7 +147,14 @@ export default function AddMovieMainTab({
                                 In Progress
                             </label>
                             <div
-                                onClick={() => setInProgress(!inProgress)}
+                                onClick={() => {
+                                    if (!inProgress) {
+                                        setInProgress(true);
+                                        setInWatchlist(false);
+                                    } else {
+                                        setInProgress(false);
+                                    }
+                                }}
                                 className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${
                                     inProgress
                                         ? "bg-yellow-500"

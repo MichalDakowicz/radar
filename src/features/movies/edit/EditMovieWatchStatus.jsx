@@ -18,11 +18,21 @@ export default function EditMovieWatchStatus({
     if (type === "movie") {
         const handleStatusToggle = (newStatus) => {
             if (newStatus === "watchlist") {
-                setInWatchlist(true);
-                setInProgress(false);
+                // Toggle watchlist - allow unchecking
+                if (inWatchlist) {
+                    setInWatchlist(false);
+                } else {
+                    setInWatchlist(true);
+                    setInProgress(false);
+                }
             } else if (newStatus === "progress") {
-                setInWatchlist(false);
-                setInProgress(true);
+                // Toggle in progress - allow unchecking
+                if (inProgress) {
+                    setInProgress(false);
+                } else {
+                    setInProgress(true);
+                    setInWatchlist(false);
+                }
             }
         };
 

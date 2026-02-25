@@ -20,6 +20,7 @@ export default function MovieCard({
     innerRef,
     readOnly = false,
     onAdd,
+    onRemove,
     isAdded,
 }) {
     const highlightedStyles = isHighlighted
@@ -217,13 +218,28 @@ export default function MovieCard({
                             <Plus size={12} />
                         </button>
                     )}
-                    {/* Added Indicator - Only show in browse mode when onAdd is available */}
+                    {/* Added Indicator with Remove Button - Only show in browse mode when onAdd is available */}
                     {onAdd &&
                         (isAdded ||
                             (movie.status && movie.status !== "Waited")) && (
-                            <div className="absolute bottom-2 right-2 bg-green-500/90 backdrop-blur-md p-2 rounded-full text-white z-30 shadow-lg">
-                                <Check size={12} />
-                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onRemove) onRemove(movie);
+                                }}
+                                disabled={!onRemove}
+                                className="absolute bottom-2 right-2 bg-green-500/90 backdrop-blur-md p-2 rounded-full text-white hover:bg-red-500 hover:scale-110 transition-all z-30 shadow-lg md:opacity-0 md:group-hover:opacity-100"
+                                title="Remove from library"
+                            >
+                                <Check
+                                    size={12}
+                                    className="md:group-hover:hidden"
+                                />
+                                <X
+                                    size={12}
+                                    className="hidden md:group-hover:block"
+                                />
+                            </button>
                         )}
 
                     <p className="text-xs text-neutral-300 truncate drop-shadow-md font-medium">

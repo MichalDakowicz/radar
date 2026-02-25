@@ -2,7 +2,13 @@ import { useState, useEffect } from "react";
 import { ChevronRight, Play, Info, Plus, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
-export default function HeroCarousel({ items, onInfoClick, onAdd, isAdded }) {
+export default function HeroCarousel({
+    items,
+    onInfoClick,
+    onAdd,
+    onRemove,
+    isAdded,
+}) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
 
@@ -104,7 +110,13 @@ export default function HeroCarousel({ items, onInfoClick, onAdd, isAdded }) {
                             <span className="hidden sm:inline">Play</span>
                         </a>
                         <button
-                            onClick={() => onAdd(currentItem)}
+                            onClick={() => {
+                                if (isAdded && isAdded(currentItem.tmdbId)) {
+                                    onRemove(currentItem);
+                                } else {
+                                    onAdd(currentItem);
+                                }
+                            }}
                             className="bg-neutral-500/50 backdrop-blur-md text-white px-4 md:px-8 py-2 md:py-3 rounded-lg font-bold flex items-center gap-2 hover:bg-neutral-500/70 transition-colors text-sm md:text-base"
                         >
                             {isAdded && isAdded(currentItem.tmdbId) ? (

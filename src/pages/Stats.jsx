@@ -14,6 +14,7 @@ import { useMovies } from "../hooks/useMovies";
 import { usePublicMovies } from "../hooks/usePublicMovies";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { useFriendVisibility } from "../hooks/useFriendVisibility";
+import { useActivity, usePublicActivity } from "../hooks/useActivity";
 import { Navbar } from "../components/layout/Navbar";
 import { PublicBottomNav } from "../components/layout/PublicBottomNav";
 import { PublicHeader } from "../components/layout/PublicHeader";
@@ -39,8 +40,18 @@ export default function Stats() {
     const { profile, loading: profileLoading } = useUserProfile(userId);
     const { showFriends } = useFriendVisibility(userId);
 
+    // Fetch activity data
+    const { activities: userActivities, loading: userActivityLoading } =
+        useActivity(20);
+    const { activities: publicActivities, loading: publicActivityLoading } =
+        usePublicActivity(userId, 20);
+
     const movies = userId ? publicMovies : userMovies;
     const loading = userId ? publicLoading : userLoading;
+    const activities = userId ? publicActivities : userActivities;
+    const activityLoading = userId
+        ? publicActivityLoading
+        : userActivityLoading;
 
     // Streak settings
     const [streakThreshold, setStreakThreshold] = useState(2); // Default: 2 movies per week
@@ -96,9 +107,6 @@ export default function Stats() {
 
         // Decades
         const decadeCounts = {};
-
-        // Recent activity (last 10 items with activity)
-        const recentActivity = [];
 
         allMovies.forEach((movie) => {
             // Type
@@ -177,18 +185,6 @@ export default function Stats() {
                     decadeCounts[decade] = (decadeCounts[decade] || 0) + 1;
                 }
             }
-
-            // Recent activity - track last updated or added
-            if (movie.updatedAt || movie.createdAt) {
-                const timestamp = movie.updatedAt || movie.createdAt;
-                recentActivity.push({
-                    id: movie.id,
-                    title: movie.title,
-                    timestamp: timestamp,
-                    status: s,
-                    type: t,
-                });
-            }
         });
 
         // Sort and format data
@@ -224,15 +220,6 @@ export default function Stats() {
         const sortedDecades = Object.entries(decadeCounts)
             .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
             .map(([decade, count]) => ({ decade: `${decade}s`, count }));
-
-        // Sort recent activity by timestamp
-        const sortedActivity = recentActivity
-            .sort((a, b) => {
-                const timeA = a.timestamp?.seconds || 0;
-                const timeB = b.timestamp?.seconds || 0;
-                return timeB - timeA;
-            })
-            .slice(0, 6);
 
         // Calculate completion rate
         const completionRate =
@@ -440,7 +427,6 @@ export default function Stats() {
             topDirectors,
             topGenres,
             sortedDecades,
-            recentActivity: sortedActivity,
             completionRate,
             currentStreak,
             longestStreak,
@@ -491,7 +477,7 @@ export default function Stats() {
 
             <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-10 pb-24">
                 {/* Top Panel: Scrollable History */}
-                {stats.recentActivity.length > 0 && (
+                {!activityLoading && activities.length > 0 && (
                     <section className="mb-8">
                         <div className="flex items-center gap-2 mb-5">
                             <History className="w-5 h-5 text-zinc-500" />
@@ -501,7 +487,7 @@ export default function Stats() {
                         </div>
 
                         <div className="flex gap-4 overflow-x-auto pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                            {stats.recentActivity.map((item) => (
+                            {activities.map((item) => (
                                 <HistoryPill
                                     key={item.id}
                                     data={item}

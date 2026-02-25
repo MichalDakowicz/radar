@@ -286,7 +286,7 @@ export default function EditMovie() {
                 // For movies, use timesWatched and inProgress/inWatchlist
                 if (timesWatched > 0) {
                     statusFlags = {
-                        inWatchlist: movie.inWatchlist || false, // Preserve watchlist status
+                        inWatchlist: inWatchlist, // Use current state
                         inProgress: false,
                         watched: true,
                     };
@@ -304,7 +304,7 @@ export default function EditMovie() {
                     completedAt = null;
                 } else {
                     statusFlags = {
-                        inWatchlist: true,
+                        inWatchlist: inWatchlist, // Use current state, not forced to true
                         inProgress: false,
                         watched: false, // Not watched if timesWatched is 0
                     };

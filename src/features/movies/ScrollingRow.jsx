@@ -7,6 +7,7 @@ export default function ScrollingRow({
     items,
     onMovieClick,
     onAdd,
+    onRemove,
     isAdded,
 }) {
     const rowRef = useRef(null);
@@ -125,6 +126,9 @@ export default function ScrollingRow({
                                 movie={movie}
                                 onClick={() => onMovieClick(movie)}
                                 onAdd={onAdd ? () => onAdd(movie) : null}
+                                onRemove={
+                                    onRemove ? () => onRemove(movie) : null
+                                }
                                 isAdded={
                                     isAdded ? isAdded(movie.tmdbId) : false
                                 }

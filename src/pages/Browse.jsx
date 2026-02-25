@@ -276,7 +276,27 @@ export default function Browse() {
         setRemovingId(item.tmdbId);
         try {
             const movieToRemove = movies.find((m) => m.tmdbId === item.tmdbId);
-            if (movieToRemove) await removeMovie(movieToRemove.id);
+            if (movieToRemove) {
+                await removeMovie(movieToRemove.id);
+                toast({
+                    title: "Removed",
+                    description: "Removed from your library.",
+                    variant: "success",
+                });
+            } else {
+                toast({
+                    title: "Not Found",
+                    description: "This item is not in your library.",
+                    variant: "destructive",
+                });
+            }
+        } catch (error) {
+            console.error("Error removing movie:", error);
+            toast({
+                title: "Error",
+                description: "Failed to remove from library.",
+                variant: "destructive",
+            });
         } finally {
             setRemovingId(null);
         }
@@ -331,6 +351,7 @@ export default function Browse() {
                         items={trending.filter((i) => i.type === "movie")}
                         onMovieClick={handleViewDetails}
                         onAdd={handleQuickAdd}
+                        onRemove={handleRemove}
                         isAdded={isAdded}
                     />
                     <ScrollingRow
@@ -338,6 +359,7 @@ export default function Browse() {
                         items={topRated}
                         onMovieClick={handleViewDetails}
                         onAdd={handleQuickAdd}
+                        onRemove={handleRemove}
                         isAdded={isAdded}
                     />
                 </div>
@@ -350,6 +372,7 @@ export default function Browse() {
                         items={tvPopular}
                         onMovieClick={handleViewDetails}
                         onAdd={handleQuickAdd}
+                        onRemove={handleRemove}
                         isAdded={isAdded}
                     />
                     <ScrollingRow
@@ -357,6 +380,7 @@ export default function Browse() {
                         items={tvTopRated}
                         onMovieClick={handleViewDetails}
                         onAdd={handleQuickAdd}
+                        onRemove={handleRemove}
                         isAdded={isAdded}
                     />
                     <ScrollingRow
@@ -364,6 +388,7 @@ export default function Browse() {
                         items={trending.filter((i) => i.type === "tv")}
                         onMovieClick={handleViewDetails}
                         onAdd={handleQuickAdd}
+                        onRemove={handleRemove}
                         isAdded={isAdded}
                     />
                 </div>
@@ -378,6 +403,7 @@ export default function Browse() {
                             .slice(0, 15)}
                         onMovieClick={handleViewDetails}
                         onAdd={handleQuickAdd}
+                        onRemove={handleRemove}
                         isAdded={isAdded}
                     />
                     <ScrollingRow
@@ -387,6 +413,7 @@ export default function Browse() {
                             .slice(0, 15)}
                         onMovieClick={handleViewDetails}
                         onAdd={handleQuickAdd}
+                        onRemove={handleRemove}
                         isAdded={isAdded}
                     />
                 </div>
@@ -404,6 +431,7 @@ export default function Browse() {
                     items={heroContent}
                     onInfoClick={handleViewDetails}
                     onAdd={handleQuickAdd}
+                    onRemove={handleRemove}
                     isAdded={isAdded}
                 />
             )}

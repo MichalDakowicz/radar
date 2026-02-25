@@ -1,23 +1,64 @@
-import { CheckCircle2, PlayCircle, Bookmark } from "lucide-react";
+import {
+    CheckCircle2,
+    PlayCircle,
+    Bookmark,
+    Plus,
+    Star,
+    Trash2,
+    Edit,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function HistoryPill({ data, userId }) {
     const getIcon = () => {
-        if (data.status === "Completed") return CheckCircle2;
-        if (data.status === "Watching") return PlayCircle;
-        if (data.status === "Watchlist") return Bookmark;
-        return PlayCircle;
+        switch (data.type) {
+            case "added":
+                return Plus;
+            case "completed":
+                return CheckCircle2;
+            case "started_watching":
+                return PlayCircle;
+            case "added_to_watchlist":
+                return Bookmark;
+            case "rating_changed":
+                return Star;
+            case "removed":
+                return Trash2;
+            case "updated":
+                return Edit;
+            case "status_changed":
+                if (data.newStatus === "Completed") return CheckCircle2;
+                if (data.newStatus === "Watching") return PlayCircle;
+                if (data.newStatus === "Watchlist") return Bookmark;
+                return Edit;
+            default:
+                return Edit;
+        }
     };
 
     const Icon = getIcon();
 
     const getAction = () => {
-        if (data.status === "Completed") return "Finished watching";
-        if (data.status === "Watching") return "Currently watching";
-        if (data.status === "Watchlist") return "Added to watchlist";
-        if (data.status === "Dropped") return "Dropped";
-        if (data.status === "On Hold") return "Put on hold";
-        return "Updated";
+        switch (data.type) {
+            case "added":
+                return "Added to library";
+            case "completed":
+                return "Completed";
+            case "started_watching":
+                return "Started watching";
+            case "added_to_watchlist":
+                return "Added to watchlist";
+            case "rating_changed":
+                return `Rated ${data.rating}/10`;
+            case "removed":
+                return "Removed from library";
+            case "updated":
+                return "Updated details";
+            case "status_changed":
+                return `Changed to ${data.newStatus}`;
+            default:
+                return "Updated";
+        }
     };
 
     const getTimeAgo = () => {
@@ -42,20 +83,20 @@ export function HistoryPill({ data, userId }) {
     };
 
     const detailsPath = userId
-        ? `/u/${userId}/${data.type}/${data.id}`
-        : `/edit/${data.id}`;
+        ? `/u/${userId}/${data.mediaType || data.type}/${data.movieId}`
+        : `/edit/${data.movieId}`;
 
-    return (
-        <Link
-            to={detailsPath}
-            className="shrink-0 flex items-center gap-4 bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/60 rounded-full pr-8 pl-2 py-2 transition-colors cursor-pointer group"
-        >
+    // Don't show link for removed items
+    const isRemoved = data.type === "removed";
+
+    const content = (
+        <>
             <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center group-hover:bg-zinc-700 transition-colors">
                 <Icon className="w-4 h-4 text-zinc-300" />
             </div>
             <div className="flex flex-col justify-center">
                 <span className="text-sm font-semibold text-zinc-100 leading-tight mb-0.5">
-                    {data.title}
+                    {data.movieTitle}
                 </span>
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-zinc-400 font-medium">
@@ -67,6 +108,23 @@ export function HistoryPill({ data, userId }) {
                     </span>
                 </div>
             </div>
+        </>
+    );
+
+    if (isRemoved) {
+        return (
+            <div className="shrink-0 flex items-center gap-4 bg-zinc-900/60 border border-zinc-800/60 rounded-full pr-8 pl-2 py-2 opacity-60">
+                {content}
+            </div>
+        );
+    }
+
+    return (
+        <Link
+            to={detailsPath}
+            className="shrink-0 flex items-center gap-4 bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/60 rounded-full pr-8 pl-2 py-2 transition-colors cursor-pointer group"
+        >
+            {content}
         </Link>
     );
 }
