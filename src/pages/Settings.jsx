@@ -11,7 +11,6 @@ import {
     Database,
     Share2,
     User,
-    ChevronRight,
     Settings as SettingsIcon,
     Edit2,
     RotateCw,
@@ -44,11 +43,9 @@ export default function Settings() {
         total: 0,
     });
 
-    // Privacy State
-    const [friendsVisibility, setFriendsVisibility] = useState("friends"); // 'friends' | 'noone'
+    const [friendsVisibility, setFriendsVisibility] = useState("friends");
     const [loadingPrivacy, setLoadingPrivacy] = useState(true);
 
-    // Appearance State
     const [gridSize, setGridSize] = useState(() => {
         try {
             const saved = localStorage.getItem("mt_gridSize");
@@ -58,7 +55,6 @@ export default function Settings() {
         }
     });
 
-    // Stats State
     const [streakThreshold, setStreakThreshold] = useState(2);
     const [tvStreakThreshold, setTvStreakThreshold] = useState(5);
     const [loadingStats, setLoadingStats] = useState(true);
@@ -66,7 +62,6 @@ export default function Settings() {
     const handleGridSizeChange = (newSize) => {
         setGridSize(newSize);
         localStorage.setItem("mt_gridSize", JSON.stringify(newSize));
-        // Dispatch custom event for same-page updates
         window.dispatchEvent(
             new CustomEvent("localStorageChange", {
                 detail: { key: "mt_gridSize", value: newSize },
@@ -135,7 +130,7 @@ export default function Settings() {
             });
         } catch (e) {
             console.error(e);
-            setFriendsVisibility(oldVal); // Revert
+            setFriendsVisibility(oldVal);
             toast({
                 title: "Update Failed",
                 variant: "destructive",
@@ -191,6 +186,7 @@ export default function Settings() {
 
     const displayPfp = profile?.pfp || user?.photoURL;
     const displayUsername = profile?.username || user?.displayName || "User";
+    const displayName = profile?.displayName || user?.displayName || "User";
 
     const handleShareShelf = () => {
         if (!user) return;
@@ -208,7 +204,6 @@ export default function Settings() {
         setRefreshing(true);
         try {
             const updates = {};
-            // Update Search Index
             const indexData = {
                 username: profile.username,
                 displayName: profile.displayName || user.displayName || "User",
@@ -216,7 +211,6 @@ export default function Settings() {
             };
             updates[`userSearchIndex/${user.uid}`] = indexData;
 
-            // Ensure username mapping is correct
             if (profile.username) {
                 updates[`usernames/${profile.username}`] = user.uid;
             }
@@ -290,17 +284,15 @@ export default function Settings() {
                 setMetadataProgress({ current: i + 1, total: movies.length });
 
                 try {
-                    // Fetch fresh metadata from TMDB
                     const freshData = await fetchMediaMetadata(
                         movie.tmdbId,
                         movie.type || "movie",
                     );
 
                     if (freshData) {
-                        // Update the movie with fresh metadata, preserving user data
                         const updatedMovie = {
                             ...movie,
-                            genres: freshData.genres, // Update genres
+                            genres: freshData.genres,
                             director: freshData.director,
                             cast: freshData.cast,
                             overview: freshData.overview,
@@ -308,7 +300,6 @@ export default function Settings() {
                             voteAverage: freshData.voteAverage,
                             voteCount: freshData.voteCount,
                             availability: freshData.availability,
-                            // Preserve all user-specific data
                             ratings: movie.ratings,
                             watched: movie.watched,
                             inWatchlist: movie.inWatchlist,
@@ -319,7 +310,6 @@ export default function Settings() {
                             notes: movie.notes,
                         };
 
-                        // Update in database
                         await update(
                             ref(db, `users/${user.uid}/movies/${movie.id}`),
                             updatedMovie,
@@ -332,7 +322,6 @@ export default function Settings() {
                     errorCount++;
                 }
 
-                // Small delay to avoid rate limiting
                 await new Promise((resolve) => setTimeout(resolve, 100));
             }
 
@@ -344,7 +333,6 @@ export default function Settings() {
                 variant: errorCount > 0 ? "default" : "success",
             });
 
-            // Reload the page to show updated data
             setTimeout(() => window.location.reload(), 1500);
         } catch (e) {
             console.error(e);
@@ -360,142 +348,148 @@ export default function Settings() {
     };
 
     return (
-        <div className="min-h-screen bg-neutral-950 text-white pb-20">
+        <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans selection:bg-zinc-800">
             <Navbar />
 
-            <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-6 pb-8">
+            <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-10 pb-24">
                 <EditProfileModal
                     isOpen={isEditProfileOpen}
                     onClose={() => setIsEditProfileOpen(false)}
                 />
 
-                <div className="space-y-6">
-                    {/* Account Section */}
-                    <section className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-neutral-800">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <User className="w-5 h-5 text-neutral-400" />
-                                Account
-                            </h2>
+                {/* Profile Header */}
+                <section className="mb-16 border-b border-zinc-800 pb-10">
+                    <div className="flex items-center gap-2 mb-6">
+                        <User className="w-5 h-5 text-zinc-400" />
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                            Account
+                        </h2>
+                    </div>
+
+                    <div className="flex items-center gap-6 mb-8">
+                        {displayPfp ? (
+                            <img
+                                src={displayPfp}
+                                alt={displayUsername}
+                                className="w-20 h-20 rounded-full border-2 border-zinc-700 object-cover"
+                            />
+                        ) : (
+                            <div className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center text-2xl font-semibold text-zinc-300">
+                                {displayUsername?.[0] || "?"}
+                            </div>
+                        )}
+                        <div>
+                            <p className="text-3xl font-bold tracking-tight text-white mb-1">
+                                {displayName}
+                            </p>
+                            <p className="text-sm text-zinc-400 font-medium">
+                                @{displayUsername}
+                            </p>
+                            <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                                {user?.email}
+                            </p>
                         </div>
-                        <div className="p-6">
-                            <div className="flex items-center gap-4 mb-6">
-                                {displayPfp ? (
-                                    <img
-                                        src={displayPfp}
-                                        alt={displayUsername}
-                                        className="w-16 h-16 rounded-full border-2 border-neutral-800 object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center text-xl font-bold text-neutral-400">
-                                        {displayUsername?.[0] || "?"}
-                                    </div>
-                                )}
-                                <div>
-                                    <p className="font-medium text-lg">
-                                        {displayUsername}
-                                    </p>
-                                    <p className="text-neutral-400 text-sm">
-                                        {user?.email}
-                                    </p>
-                                </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <button
+                            onClick={() => setIsEditProfileOpen(true)}
+                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group"
+                        >
+                            <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
+                            <span className="text-sm font-semibold text-white">
+                                Edit Profile
+                            </span>
+                        </button>
+
+                        <button
+                            onClick={handleShareShelf}
+                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group"
+                        >
+                            <Share2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
+                            <span className="text-sm font-semibold text-white">
+                                Share Public Shelf
+                            </span>
+                        </button>
+
+                        <button
+                            onClick={handleRepairSearch}
+                            disabled={refreshing}
+                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group disabled:opacity-50"
+                        >
+                            <RotateCw
+                                className={`w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors ${
+                                    refreshing ? "animate-spin" : ""
+                                }`}
+                            />
+                            <span className="text-sm font-semibold text-white">
+                                Repair Account Visibility
+                            </span>
+                        </button>
+
+                        <button
+                            onClick={handleMigrateDatabase}
+                            disabled={migrating}
+                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group disabled:opacity-50"
+                        >
+                            <RefreshCw
+                                className={`w-5 h-5 text-zinc-400 group-hover:text-green-400 transition-colors ${
+                                    migrating ? "animate-spin" : ""
+                                }`}
+                            />
+                            <span className="text-sm font-semibold text-white">
+                                Migrate Database
+                            </span>
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={logout}
+                        className="mt-3 w-full flex items-center justify-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-red-500/50 hover:bg-red-950/30 transition-all group"
+                    >
+                        <LogOut className="w-5 h-5 text-zinc-400 group-hover:text-red-400 transition-colors" />
+                        <span className="text-sm font-semibold text-white group-hover:text-red-400 transition-colors">
+                            Sign Out
+                        </span>
+                    </button>
+                </section>
+
+                {/* Main Settings Grid */}
+                <div className="grid lg:grid-cols-2 gap-16 lg:gap-20">
+                    {/* Left Column */}
+                    <div className="space-y-16">
+                        {/* Privacy */}
+                        <section>
+                            <div className="flex items-center gap-2 mb-6">
+                                <Globe className="w-5 h-5 text-zinc-400" />
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                                    Privacy
+                                </h2>
                             </div>
 
-                            <button
-                                onClick={handleMigrateDatabase}
-                                disabled={migrating}
-                                className="w-full flex items-center justify-between p-4 rounded-lg bg-neutral-800/50 hover:bg-neutral-800 transition-colors border border-transparent mb-2 group"
-                            >
-                                <span className="flex items-center gap-3 font-medium text-neutral-200">
-                                    <RefreshCw
-                                        className={`w-5 h-5 text-green-500 ${
-                                            migrating ? "animate-spin" : ""
-                                        }`}
-                                    />
-                                    Migrate Database to New Status System
-                                </span>
-                                <ChevronRight className="w-5 h-5 text-neutral-600 group-hover:text-neutral-400" />
-                            </button>
-
-                            <button
-                                onClick={handleRepairSearch}
-                                disabled={refreshing}
-                                className="w-full flex items-center justify-between p-4 rounded-lg bg-neutral-800/50 hover:bg-neutral-800 transition-colors border border-transparent mb-2 group"
-                            >
-                                <span className="flex items-center gap-3 font-medium text-neutral-200">
-                                    <RotateCw
-                                        className={`w-5 h-5 text-blue-500 ${
-                                            refreshing ? "animate-spin" : ""
-                                        }`}
-                                    />
-                                    Repair Account Visibility
-                                </span>
-                                <ChevronRight className="w-5 h-5 text-neutral-600 group-hover:text-neutral-400" />
-                            </button>
-
-                            <button
-                                onClick={() => setIsEditProfileOpen(true)}
-                                className="w-full flex items-center justify-between p-4 rounded-lg bg-neutral-800/50 hover:bg-neutral-800 transition-colors border border-transparent mb-2 group"
-                            >
-                                <span className="flex items-center gap-3 font-medium text-neutral-200">
-                                    <Edit2 className="w-5 h-5 text-blue-500" />
-                                    Edit Profile
-                                </span>
-                                <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity text-neutral-400" />
-                            </button>
-
-                            <button
-                                onClick={logout}
-                                className="w-full flex items-center justify-between p-4 rounded-lg bg-neutral-800/50 hover:bg-red-900/20 hover:text-red-400 transition-colors border border-transparent hover:border-red-900/50 group"
-                            >
-                                <span className="flex items-center gap-3 font-medium">
-                                    <LogOut className="w-5 h-5" />
-                                    Sign Out
-                                </span>
-                                <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </button>
-                        </div>
-                    </section>
-
-                    {/* Privacy Section */}
-                    <section className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-neutral-800">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <Globe className="w-5 h-5 text-neutral-400" />
-                                Privacy
-                            </h2>
-                        </div>
-                        <div className="p-6">
-                            <div className="mb-4">
-                                <h3 className="font-medium text-white">
+                            <div className="mb-6">
+                                <h3 className="text-xl font-bold tracking-tight text-white mb-2">
                                     Friends List Visibility
                                 </h3>
-                                <p className="text-sm text-neutral-400">
+                                <p className="text-sm text-zinc-400 font-medium">
                                     Control who can see your friends on your
                                     public profile
                                 </p>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="grid grid-cols-3 gap-3">
                                 <button
                                     onClick={() => handlePrivacyChange("noone")}
                                     disabled={loadingPrivacy}
-                                    className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all ${
+                                    className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         friendsVisibility === "noone"
-                                            ? "bg-red-900/20 border-red-500/50 text-white"
-                                            : "bg-neutral-800/50 border-transparent text-neutral-400 hover:bg-neutral-800"
+                                            ? "bg-red-500/20 border-red-500/50 text-white"
+                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
                                     }`}
                                 >
-                                    <Lock
-                                        className={`mb-2 w-6 h-6 ${
-                                            friendsVisibility === "noone"
-                                                ? "text-red-400"
-                                                : ""
-                                        }`}
-                                    />
-                                    <span className="font-medium">Only Me</span>
-                                    <span className="text-xs opacity-70">
-                                        Private
+                                    <Lock className="w-6 h-6 mb-2" />
+                                    <span className="text-sm font-bold">
+                                        Only Me
                                     </span>
                                 </button>
 
@@ -504,22 +498,15 @@ export default function Settings() {
                                         handlePrivacyChange("friends")
                                     }
                                     disabled={loadingPrivacy}
-                                    className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all ${
+                                    className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         friendsVisibility === "friends"
-                                            ? "bg-blue-900/20 border-blue-500/50 text-white"
-                                            : "bg-neutral-800/50 border-transparent text-neutral-400 hover:bg-neutral-800"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
+                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
                                     }`}
                                 >
-                                    <Users
-                                        className={`mb-2 w-6 h-6 ${
-                                            friendsVisibility === "friends"
-                                                ? "text-blue-400"
-                                                : ""
-                                        }`}
-                                    />
-                                    <span className="font-medium">Friends</span>
-                                    <span className="text-xs opacity-70">
-                                        Friends Only
+                                    <Users className="w-6 h-6 mb-2" />
+                                    <span className="text-sm font-bold">
+                                        Friends
                                     </span>
                                 </button>
 
@@ -528,44 +515,35 @@ export default function Settings() {
                                         handlePrivacyChange("public")
                                     }
                                     disabled={loadingPrivacy}
-                                    className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all ${
+                                    className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         friendsVisibility === "public"
-                                            ? "bg-blue-900/20 border-blue-500/50 text-white"
-                                            : "bg-neutral-800/50 border-transparent text-neutral-400 hover:bg-neutral-800"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
+                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
                                     }`}
                                 >
-                                    <Globe
-                                        className={`mb-2 w-6 h-6 ${
-                                            friendsVisibility === "public"
-                                                ? "text-blue-400"
-                                                : ""
-                                        }`}
-                                    />
-                                    <span className="font-medium">Public</span>
-                                    <span className="text-xs opacity-70">
-                                        Anyone with link
+                                    <Globe className="w-6 h-6 mb-2" />
+                                    <span className="text-sm font-bold">
+                                        Public
                                     </span>
                                 </button>
                             </div>
-                        </div>
-                    </section>
+                        </section>
 
-                    {/* Appearance Section */}
-                    <section className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-neutral-800">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <Monitor className="w-5 h-5 text-neutral-400" />
-                                Appearance
-                            </h2>
-                        </div>
-                        <div className="p-6">
-                            <div className="mb-4">
-                                <h3 className="font-medium text-white">
+                        {/* Appearance */}
+                        <section>
+                            <div className="flex items-center gap-2 mb-6">
+                                <Monitor className="w-5 h-5 text-zinc-400" />
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                                    Appearance
+                                </h2>
+                            </div>
+
+                            <div className="mb-6">
+                                <h3 className="text-xl font-bold tracking-tight text-white mb-2">
                                     Grid Size
                                 </h3>
-                                <p className="text-sm text-neutral-400">
-                                    Adjust the size of album cards in the grid
-                                    view
+                                <p className="text-sm text-zinc-400 font-medium">
+                                    Adjust the size of cards in the grid view
                                 </p>
                             </div>
 
@@ -574,212 +552,190 @@ export default function Settings() {
                                     onClick={() =>
                                         handleGridSizeChange("compact")
                                     }
-                                    className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all ${
+                                    className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         gridSize === "compact"
-                                            ? "bg-blue-900/20 border-blue-500/50 text-white"
-                                            : "bg-neutral-800/50 border-transparent text-neutral-400 hover:bg-neutral-800"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
+                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
                                     }`}
                                 >
-                                    <LayoutGrid
-                                        className={`mb-2 w-6 h-6 ${
-                                            gridSize === "compact"
-                                                ? "text-blue-400"
-                                                : ""
-                                        } scale-75`}
-                                    />
-                                    <span className="font-medium">Compact</span>
+                                    <LayoutGrid className="w-6 h-6 mb-2 scale-75" />
+                                    <span className="text-sm font-bold">
+                                        Compact
+                                    </span>
                                 </button>
 
                                 <button
                                     onClick={() =>
                                         handleGridSizeChange("normal")
                                     }
-                                    className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all ${
+                                    className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         gridSize === "normal"
-                                            ? "bg-blue-900/20 border-blue-500/50 text-white"
-                                            : "bg-neutral-800/50 border-transparent text-neutral-400 hover:bg-neutral-800"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
+                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
                                     }`}
                                 >
-                                    <LayoutGrid
-                                        className={`mb-2 w-6 h-6 ${
-                                            gridSize === "normal"
-                                                ? "text-blue-400"
-                                                : ""
-                                        }`}
-                                    />
-                                    <span className="font-medium">Normal</span>
+                                    <LayoutGrid className="w-6 h-6 mb-2" />
+                                    <span className="text-sm font-bold">
+                                        Normal
+                                    </span>
                                 </button>
 
                                 <button
                                     onClick={() =>
                                         handleGridSizeChange("large")
                                     }
-                                    className={`flex flex-col items-center justify-center p-4 rounded-lg border transition-all ${
+                                    className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         gridSize === "large"
-                                            ? "bg-blue-900/20 border-blue-500/50 text-white"
-                                            : "bg-neutral-800/50 border-transparent text-neutral-400 hover:bg-neutral-800"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
+                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
                                     }`}
                                 >
-                                    <LayoutGrid
-                                        className={`mb-2 w-6 h-6 ${
-                                            gridSize === "large"
-                                                ? "text-blue-400"
-                                                : ""
-                                        } scale-125`}
-                                    />
-                                    <span className="font-medium">Large</span>
+                                    <LayoutGrid className="w-6 h-6 mb-2 scale-125" />
+                                    <span className="text-sm font-bold">
+                                        Large
+                                    </span>
                                 </button>
                             </div>
-                        </div>
-                    </section>
+                        </section>
+                    </div>
 
-                    {/* Stats Section */}
-                    <section className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-neutral-800">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <BarChart3 className="w-5 h-5 text-neutral-400" />
-                                Stats
-                            </h2>
-                        </div>
-                        <div className="p-6 space-y-6">
-                            <div>
-                                <div className="mb-4">
-                                    <h3 className="font-medium text-white">
+                    {/* Right Column */}
+                    <div className="space-y-16">
+                        {/* Stats */}
+                        <section>
+                            <div className="flex items-center gap-2 mb-6">
+                                <BarChart3 className="w-5 h-5 text-zinc-400" />
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                                    Stats
+                                </h2>
+                            </div>
+
+                            <div className="space-y-8">
+                                <div>
+                                    <h3 className="text-xl font-bold tracking-tight text-white mb-2">
                                         Movie Streak Threshold
                                     </h3>
-                                    <p className="text-sm text-neutral-400">
+                                    <p className="text-sm text-zinc-400 font-medium mb-4">
                                         Set how many movies per week to maintain
                                         your streak
                                     </p>
+
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="50"
+                                            value={streakThreshold}
+                                            onChange={(e) => {
+                                                const val =
+                                                    parseInt(e.target.value) ||
+                                                    1;
+                                                if (val >= 1 && val <= 50) {
+                                                    handleStreakThresholdChange(
+                                                        val,
+                                                    );
+                                                }
+                                            }}
+                                            disabled={loadingStats}
+                                            className="w-24 px-4 py-3 bg-zinc-900 border-2 border-zinc-800 rounded-lg text-white text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                        />
+                                        <span className="text-sm text-zinc-400 font-semibold">
+                                            movies per week
+                                        </span>
+                                    </div>
                                 </div>
 
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="50"
-                                        value={streakThreshold}
-                                        onChange={(e) => {
-                                            const val =
-                                                parseInt(e.target.value) || 1;
-                                            if (val >= 1 && val <= 50) {
-                                                handleStreakThresholdChange(
-                                                    val,
-                                                );
-                                            }
-                                        }}
-                                        disabled={loadingStats}
-                                        className="w-24 px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-center font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    />
-                                    <span className="text-neutral-400">
-                                        movies per week
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div className="mb-4">
-                                    <h3 className="font-medium text-white">
+                                <div>
+                                    <h3 className="text-xl font-bold tracking-tight text-white mb-2">
                                         TV Show Streak Threshold
                                     </h3>
-                                    <p className="text-sm text-neutral-400">
+                                    <p className="text-sm text-zinc-400 font-medium mb-4">
                                         Set how many episodes per week to
                                         maintain your TV streak
                                     </p>
-                                </div>
 
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="100"
-                                        value={tvStreakThreshold}
-                                        onChange={(e) => {
-                                            const val =
-                                                parseInt(e.target.value) || 1;
-                                            if (val >= 1 && val <= 100) {
-                                                handleTvStreakThresholdChange(
-                                                    val,
-                                                );
-                                            }
-                                        }}
-                                        disabled={loadingStats}
-                                        className="w-24 px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-center font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                    />
-                                    <span className="text-neutral-400">
-                                        episodes per week
-                                    </span>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            value={tvStreakThreshold}
+                                            onChange={(e) => {
+                                                const val =
+                                                    parseInt(e.target.value) ||
+                                                    1;
+                                                if (val >= 1 && val <= 100) {
+                                                    handleTvStreakThresholdChange(
+                                                        val,
+                                                    );
+                                                }
+                                            }}
+                                            disabled={loadingStats}
+                                            className="w-24 px-4 py-3 bg-zinc-900 border-2 border-zinc-800 rounded-lg text-white text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                        />
+                                        <span className="text-sm text-zinc-400 font-semibold">
+                                            episodes per week
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </section>
+                        </section>
 
-                    {/* Content Section */}
-                    <section className="bg-neutral-900/50 border border-neutral-800 rounded-xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-neutral-800">
-                            <h2 className="text-lg font-semibold flex items-center gap-2">
-                                <Database className="w-5 h-5 text-neutral-400" />
-                                Data & Privacy
-                            </h2>
-                        </div>
-                        <div className="p-2">
-                            <button
-                                onClick={handleRefreshMetadata}
-                                disabled={refreshingMetadata}
-                                className="w-full flex items-center justify-between p-4 rounded-lg hover:bg-neutral-800 transition-colors group"
-                            >
-                                <div className="text-left flex-1">
-                                    <p className="font-medium text-white mb-1 flex items-center gap-2">
+                        {/* Data & Privacy */}
+                        <section>
+                            <div className="flex items-center gap-2 mb-6">
+                                <Database className="w-5 h-5 text-zinc-400" />
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                                    Data Management
+                                </h2>
+                            </div>
+
+                            <div className="space-y-2">
+                                <button
+                                    onClick={handleRefreshMetadata}
+                                    disabled={refreshingMetadata}
+                                    className="w-full flex items-center justify-between px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-3">
                                         <Download
-                                            className={`w-4 h-4 ${
+                                            className={`w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors ${
                                                 refreshingMetadata
                                                     ? "animate-bounce"
                                                     : ""
                                             }`}
                                         />
-                                        Refresh All Movie Metadata
-                                    </p>
-                                    <p className="text-sm text-neutral-400">
-                                        {refreshingMetadata
-                                            ? `Refreshing ${metadataProgress.current} of ${metadataProgress.total}...`
-                                            : "Update genres and info from TMDB for all movies."}
-                                    </p>
-                                </div>
-                                <ChevronRight className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors" />
-                            </button>
+                                        <div>
+                                            <p className="text-sm font-semibold text-white">
+                                                Refresh All Metadata
+                                            </p>
+                                            <p className="text-xs text-zinc-500 font-medium">
+                                                {refreshingMetadata
+                                                    ? `${metadataProgress.current} of ${metadataProgress.total}`
+                                                    : "Update from TMDB"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </button>
 
-                            <button
-                                onClick={() => setIsImportModalOpen(true)}
-                                className="w-full flex items-center justify-between p-4 rounded-lg hover:bg-neutral-800 transition-colors group"
-                            >
-                                <div className="text-left">
-                                    <p className="font-medium text-white mb-1">
-                                        Import / Export Data
-                                    </p>
-                                    <p className="text-sm text-neutral-400">
-                                        Backup your library or import from
-                                        JSON/CSV.
-                                    </p>
-                                </div>
-                                <ChevronRight className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors" />
-                            </button>
-
-                            <button
-                                onClick={handleShareShelf}
-                                className="w-full flex items-center justify-between p-4 rounded-lg hover:bg-neutral-800 transition-colors group"
-                            >
-                                <div className="text-left">
-                                    <p className="font-medium text-white mb-1">
-                                        Share Public Shelf
-                                    </p>
-                                    <p className="text-sm text-neutral-400">
-                                        Copy link to your public profile.
-                                    </p>
-                                </div>
-                                <Share2 className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors" />
-                            </button>
-                        </div>
-                    </section>
+                                <button
+                                    onClick={() => setIsImportModalOpen(true)}
+                                    className="w-full flex items-center justify-between px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Database className="w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
+                                        <div>
+                                            <p className="text-sm font-semibold text-white">
+                                                Import / Export Data
+                                            </p>
+                                            <p className="text-xs text-zinc-500 font-medium">
+                                                Backup or restore library
+                                            </p>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                        </section>
+                    </div>
                 </div>
             </main>
 
