@@ -224,6 +224,7 @@ export default function Browse() {
             { id: 9648, name: "Mystery", type: "movie" },
             { id: 10749, name: "Romance", type: "movie" },
             { id: 878, name: "Sci-Fi", type: "movie" },
+            { id: 878, name: "Science Fiction", type: "movie" }, // Alias
             { id: 53, name: "Thriller", type: "movie" },
             { id: 10752, name: "War", type: "movie" },
             { id: 37, name: "Western", type: "movie" },
@@ -241,11 +242,24 @@ export default function Browse() {
         [],
     );
 
+    // Create a name-to-ID mapping for genres
+    const genreNameToId = useMemo(() => {
+        const map = {};
+        allGenres.forEach((g) => {
+            map[g.name.toLowerCase()] = g.id;
+        });
+        return map;
+    }, [allGenres]);
+
     // Function to generate categories
     const generateCategories = async () => {
-        const baseCategories = [
+        const timestamp = Date.now();
+        const random = Math.random();
+
+        // Only include ONE of each base category type per page load
+        const allBaseCategories = [
             {
-                id: "trending",
+                id: `trending_${timestamp}_${random}`,
                 title: "Trending Now",
                 fetch: () => getTrending(),
                 filter: (items) =>
@@ -256,61 +270,91 @@ export default function Browse() {
                         : items,
             },
             {
-                id: "top_rated_movies",
+                id: `top_rated_movies_${timestamp}_${random}`,
                 title: "Top Rated Movies",
                 fetch: () => getMovies("top_rated"),
                 showIn: ["movies", "picks"],
             },
             {
-                id: "popular_movies",
+                id: `popular_movies_${timestamp}_${random}`,
                 title: "Popular Movies",
                 fetch: () => getMovies("popular"),
                 showIn: ["movies"],
             },
             {
-                id: "tv_popular",
+                id: `tv_popular_${timestamp}_${random}`,
                 title: "Popular TV Shows",
                 fetch: () => getTVShows("popular"),
                 showIn: ["tv", "picks"],
             },
             {
-                id: "tv_top_rated",
+                id: `tv_top_rated_${timestamp}_${random}`,
                 title: "Top Rated TV",
                 fetch: () => getTVShows("top_rated"),
                 showIn: ["tv", "picks"],
             },
             {
-                id: "tv_airing_today",
+                id: `tv_airing_today_${timestamp}_${random}`,
                 title: "Airing Today",
                 fetch: () => getTVShows("airing_today"),
                 showIn: ["tv"],
             },
             {
-                id: "tv_on_air",
+                id: `tv_on_air_${timestamp}_${random}`,
                 title: "Currently Airing",
                 fetch: () => getTVShows("on_the_air"),
                 showIn: ["tv"],
             },
         ];
 
+        // Filter base categories by tab and pick only ONE of each type
+        const relevantBaseCategories = allBaseCategories.filter(
+            (cat) => !cat.showIn || cat.showIn.includes(activeTab),
+        );
+
+        // Randomly select just ONE base category to include
+        const baseCategories =
+            relevantBaseCategories.length > 0
+                ? [
+                      relevantBaseCategories[
+                          Math.floor(
+                              Math.random() * relevantBaseCategories.length,
+                          )
+                      ],
+                  ]
+                : [];
+
         const genreCategories = [];
-        const usedGenreIds = new Set(); // Track used genres to prevent duplicates
+        const usedDiscoveryGenreIds = new Set();
+
+        // Add user's favorite genres (NOT marked as discovery)
+        console.log("User favorite genres:", userFavoriteGenres);
+        console.log("Active tab:", activeTab);
 
         if (userFavoriteGenres.length > 0) {
             userFavoriteGenres.forEach((userGenre) => {
                 const mediaType = activeTab === "tv" ? "tv" : "movie";
+
+                // Convert genre name to ID if it's a string
+                const genreId =
+                    typeof userGenre.id === "string"
+                        ? genreNameToId[userGenre.id.toLowerCase()]
+                        : userGenre.id;
+
                 const matchingGenre = allGenres.find(
                     (g) =>
-                        g.id === userGenre.id &&
+                        g.id === genreId &&
                         (activeTab === "picks" || g.type === mediaType),
                 );
 
+                console.log(
+                    `Checking genre ${userGenre.name} (${userGenre.id} -> ${genreId}):`,
+                    matchingGenre ? "FOUND" : "NOT FOUND",
+                );
+
                 if (matchingGenre) {
-                    usedGenreIds.add(matchingGenre.id); // Mark as used
                     genreCategories.push({
-                        id: `genre_${matchingGenre.id}_${
-                            matchingGenre.type
-                        }_${Date.now()}`,
+                        id: `genre_fav_${matchingGenre.id}_${matchingGenre.type}_${timestamp}_${random}`,
                         title: `${matchingGenre.name} ${
                             matchingGenre.type === "tv" ? "Shows" : "Movies"
                         }`,
@@ -319,37 +363,70 @@ export default function Browse() {
                                 matchingGenre.id,
                                 matchingGenre.type,
                             ),
-                        showIn: activeTab === "picks" ? ["picks"] : [activeTab],
-                        isUserPreference: true,
+                        isUserPreference: true, // Regular genre, not discovery
                     });
                 }
             });
         }
 
+        console.log(
+            "Genre categories after user favorites:",
+            genreCategories.length,
+        );
+
         const mediaType = activeTab === "tv" ? "tv" : "movie";
 
-        // Get user's genres with 15+ movies (these are truly popular for them)
+        // Get user's genres with 15+ movies - convert string IDs to numeric
         const significantUserGenreIds = allUserGenres
             .filter((g) => g.count >= 15)
-            .map((g) => g.id);
+            .map((g) => {
+                // Convert string genre names to IDs
+                return typeof g.id === "string"
+                    ? genreNameToId[g.id.toLowerCase()]
+                    : g.id;
+            })
+            .filter((id) => id !== undefined); // Remove any that couldn't be mapped
 
-        // Filter for truly unexplored genres
+        console.log(
+            "Significant user genre IDs (15+ movies):",
+            significantUserGenreIds,
+        );
+        console.log("All user genres:", allUserGenres);
+
+        // Filter for unexplored genres (for discovery only)
         const discoveryGenres = allGenres.filter((g) => {
-            // Must match the active tab
             if (activeTab !== "picks" && g.type !== mediaType) return false;
+            if (significantUserGenreIds.includes(g.id)) {
+                console.log(
+                    `Excluding ${g.name} (${g.id}) - significant genre`,
+                );
+                return false;
+            }
 
-            // Must not be already used in the page
-            if (usedGenreIds.has(g.id)) return false;
+            // Check if user has this genre (by ID or name)
+            const userGenre = allUserGenres.find((ug) => {
+                const ugId =
+                    typeof ug.id === "string"
+                        ? genreNameToId[ug.id.toLowerCase()]
+                        : ug.id;
+                return ugId === g.id;
+            });
 
-            // Must not be a significant genre for the user (15+ movies)
-            if (significantUserGenreIds.includes(g.id)) return false;
+            const shouldInclude = !userGenre || userGenre.count < 10;
 
-            // Check if user has this genre at all
-            const userGenre = allUserGenres.find((ug) => ug.id === g.id);
+            if (!shouldInclude && userGenre) {
+                console.log(
+                    `Excluding ${g.name} (${g.id}) - user has ${userGenre.count} movies`,
+                );
+            }
 
-            // Only include if user has less than 10 movies in this genre (or none at all)
-            return !userGenre || userGenre.count < 10;
+            return shouldInclude;
         });
+
+        console.log(
+            "Discovery genres available:",
+            discoveryGenres.map((g) => `${g.name} (${g.id})`),
+        );
 
         const randomGenreCount = Math.floor(Math.random() * 2) + 2;
         const shuffledRandomGenres = [...discoveryGenres].sort(
@@ -357,27 +434,24 @@ export default function Browse() {
         );
 
         shuffledRandomGenres.slice(0, randomGenreCount).forEach((genre) => {
-            if (!usedGenreIds.has(genre.id)) {
-                usedGenreIds.add(genre.id); // Mark as used to prevent duplicates
+            if (!usedDiscoveryGenreIds.has(genre.id)) {
+                usedDiscoveryGenreIds.add(genre.id);
                 genreCategories.push({
-                    id: `genre_${genre.id}_${
+                    id: `genre_disc_${genre.id}_${
                         genre.type
-                    }_random_${Date.now()}_${Math.random()}`,
+                    }_${timestamp}_${Math.random()}`,
                     title: `Discover ${genre.name}`,
                     fetch: () => getMoviesByGenre(genre.id, genre.type),
-                    showIn: activeTab === "picks" ? ["picks"] : [activeTab],
-                    isDiscovery: true,
+                    isDiscovery: true, // Marked as discovery with green badge
                 });
             }
         });
 
         const allCategories = [...baseCategories, ...genreCategories];
-        const relevantCategories = allCategories.filter(
-            (cat) => !cat.showIn || cat.showIn.includes(activeTab),
-        );
-        const shuffled = [...relevantCategories].sort(
-            () => 0.5 - Math.random(),
-        );
+
+        // Don't filter by showIn again - we already did that for base categories
+        // Just shuffle all categories together
+        const shuffled = [...allCategories].sort(() => 0.5 - Math.random());
 
         const categoriesWithData = await Promise.all(
             shuffled.map(async (cat) => {
@@ -420,7 +494,9 @@ export default function Browse() {
                         );
                         if (similar && similar.length > 0) {
                             categoriesWithRecommendations.push({
-                                id: `similar_${baseMovie.tmdbId}_${Date.now()}`,
+                                id: `similar_${
+                                    baseMovie.tmdbId
+                                }_${timestamp}_${Math.random()}`,
                                 title: `Because you liked "${baseMovie.title}"`,
                                 items: similar.slice(0, 20),
                                 isRecommendation: true,
@@ -716,7 +792,7 @@ export default function Browse() {
 
             {!query.trim() && (
                 <>
-                    <div className="sticky top-15 z-40 bg-black/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
+                    <div className="sticky top-15 z-40 bg-neutral-950/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
                         <div className="flex justify-center gap-6 md:gap-8">
                             {["movies", "tv", "picks"].map((tab) => (
                                 <button

@@ -22,10 +22,12 @@ import {
     LayoutGrid,
     BarChart3,
     RefreshCw,
+    Download,
 } from "lucide-react";
 import { ref, update, get, set } from "firebase/database";
 import { db } from "../lib/firebase";
 import { migrateUserMovies } from "../lib/migrateDatabase";
+import { fetchMediaMetadata } from "../services/tmdb";
 
 export default function Settings() {
     const { user, logout } = useAuth();
@@ -36,6 +38,11 @@ export default function Settings() {
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [migrating, setMigrating] = useState(false);
+    const [refreshingMetadata, setRefreshingMetadata] = useState(false);
+    const [metadataProgress, setMetadataProgress] = useState({
+        current: 0,
+        total: 0,
+    });
 
     // Privacy State
     const [friendsVisibility, setFriendsVisibility] = useState("friends"); // 'friends' | 'noone'
@@ -252,6 +259,103 @@ export default function Settings() {
             });
         } finally {
             setMigrating(false);
+        }
+    };
+
+    const handleRefreshMetadata = async () => {
+        if (!user || movies.length === 0) {
+            toast({
+                title: "No Movies",
+                description: "You don't have any movies to refresh.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `This will refresh metadata for all ${movies.length} movies in your library from TMDB. This may take a few minutes. Continue?`,
+        );
+
+        if (!confirmed) return;
+
+        setRefreshingMetadata(true);
+        setMetadataProgress({ current: 0, total: movies.length });
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        try {
+            for (let i = 0; i < movies.length; i++) {
+                const movie = movies[i];
+                setMetadataProgress({ current: i + 1, total: movies.length });
+
+                try {
+                    // Fetch fresh metadata from TMDB
+                    const freshData = await fetchMediaMetadata(
+                        movie.tmdbId,
+                        movie.type || "movie",
+                    );
+
+                    if (freshData) {
+                        // Update the movie with fresh metadata, preserving user data
+                        const updatedMovie = {
+                            ...movie,
+                            genres: freshData.genres, // Update genres
+                            director: freshData.director,
+                            cast: freshData.cast,
+                            overview: freshData.overview,
+                            runtime: freshData.runtime,
+                            voteAverage: freshData.voteAverage,
+                            voteCount: freshData.voteCount,
+                            availability: freshData.availability,
+                            // Preserve all user-specific data
+                            ratings: movie.ratings,
+                            watched: movie.watched,
+                            inWatchlist: movie.inWatchlist,
+                            inProgress: movie.inProgress,
+                            timesWatched: movie.timesWatched,
+                            addedAt: movie.addedAt,
+                            watchedAt: movie.watchedAt,
+                            notes: movie.notes,
+                        };
+
+                        // Update in database
+                        await update(
+                            ref(db, `users/${user.uid}/movies/${movie.id}`),
+                            updatedMovie,
+                        );
+
+                        successCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error refreshing ${movie.title}:`, error);
+                    errorCount++;
+                }
+
+                // Small delay to avoid rate limiting
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            }
+
+            toast({
+                title: "Metadata Refresh Complete",
+                description: `Successfully refreshed ${successCount} movies. ${
+                    errorCount > 0 ? `${errorCount} failed.` : ""
+                }`,
+                variant: errorCount > 0 ? "default" : "success",
+            });
+
+            // Reload the page to show updated data
+            setTimeout(() => window.location.reload(), 1500);
+        } catch (e) {
+            console.error(e);
+            toast({
+                title: "Refresh Failed",
+                description: e.message,
+                variant: "destructive",
+            });
+        } finally {
+            setRefreshingMetadata(false);
+            setMetadataProgress({ current: 0, total: 0 });
         }
     };
 
@@ -619,6 +723,31 @@ export default function Settings() {
                             </h2>
                         </div>
                         <div className="p-2">
+                            <button
+                                onClick={handleRefreshMetadata}
+                                disabled={refreshingMetadata}
+                                className="w-full flex items-center justify-between p-4 rounded-lg hover:bg-neutral-800 transition-colors group"
+                            >
+                                <div className="text-left flex-1">
+                                    <p className="font-medium text-white mb-1 flex items-center gap-2">
+                                        <Download
+                                            className={`w-4 h-4 ${
+                                                refreshingMetadata
+                                                    ? "animate-bounce"
+                                                    : ""
+                                            }`}
+                                        />
+                                        Refresh All Movie Metadata
+                                    </p>
+                                    <p className="text-sm text-neutral-400">
+                                        {refreshingMetadata
+                                            ? `Refreshing ${metadataProgress.current} of ${metadataProgress.total}...`
+                                            : "Update genres and info from TMDB for all movies."}
+                                    </p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-neutral-500 group-hover:text-white transition-colors" />
+                            </button>
+
                             <button
                                 onClick={() => setIsImportModalOpen(true)}
                                 className="w-full flex items-center justify-between p-4 rounded-lg hover:bg-neutral-800 transition-colors group"
