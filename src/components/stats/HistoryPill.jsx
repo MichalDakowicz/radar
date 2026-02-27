@@ -49,7 +49,7 @@ export function HistoryPill({ data, userId }) {
             case "added_to_watchlist":
                 return "Added to watchlist";
             case "rating_changed":
-                return `Rated ${data.rating}/10`;
+                return `Rated ${data.rating}/5`;
             case "removed":
                 return "Removed from library";
             case "updated":
