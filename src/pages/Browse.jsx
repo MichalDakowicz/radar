@@ -341,20 +341,27 @@ export default function Browse() {
                         ? genreNameToId[userGenre.id.toLowerCase()]
                         : userGenre.id;
 
-                const matchingGenre = allGenres.find(
-                    (g) =>
-                        g.id === genreId &&
-                        (activeTab === "picks" || g.type === mediaType),
-                );
+                // For picks tab, try to find both movie and TV versions
+                const matchingGenres =
+                    activeTab === "picks"
+                        ? allGenres.filter((g) => g.id === genreId)
+                        : allGenres.filter(
+                              (g) => g.id === genreId && g.type === mediaType,
+                          );
 
                 console.log(
                     `Checking genre ${userGenre.name} (${userGenre.id} -> ${genreId}):`,
-                    matchingGenre ? "FOUND" : "NOT FOUND",
+                    matchingGenres.length > 0
+                        ? `FOUND ${matchingGenres.length}`
+                        : "NOT FOUND",
                 );
 
-                if (matchingGenre) {
+                // Add each matching genre (could be both movie and TV for picks tab)
+                matchingGenres.forEach((matchingGenre) => {
                     genreCategories.push({
-                        id: `genre_fav_${matchingGenre.id}_${matchingGenre.type}_${timestamp}_${random}`,
+                        id: `genre_fav_${matchingGenre.id}_${
+                            matchingGenre.type
+                        }_${timestamp}_${random}_${Math.random()}`,
                         title: `${matchingGenre.name} ${
                             matchingGenre.type === "tv" ? "Shows" : "Movies"
                         }`,
@@ -365,7 +372,7 @@ export default function Browse() {
                             ),
                         isUserPreference: true, // Regular genre, not discovery
                     });
-                }
+                });
             });
         }
 
@@ -486,27 +493,47 @@ export default function Browse() {
                 recommendationIndex < topRatedUserMovies.length
             ) {
                 const baseMovie = topRatedUserMovies[recommendationIndex];
-                if (baseMovie && baseMovie.tmdbId) {
+
+                // Only show recommendations that match the current tab
+                const shouldShowRecommendation =
+                    activeTab === "picks" ||
+                    (activeTab === "movies" && baseMovie.type === "movie") ||
+                    (activeTab === "tv" && baseMovie.type === "tv");
+
+                if (baseMovie && baseMovie.tmdbId && shouldShowRecommendation) {
                     try {
                         const similar = await getSimilarMovies(
                             baseMovie.tmdbId,
                             baseMovie.type || "movie",
                         );
-                        if (similar && similar.length > 0) {
+
+                        // Filter similar items to match the active tab
+                        const filteredSimilar =
+                            activeTab === "picks"
+                                ? similar
+                                : similar.filter(
+                                      (item) =>
+                                          (activeTab === "movies" &&
+                                              item.type === "movie") ||
+                                          (activeTab === "tv" &&
+                                              item.type === "tv"),
+                                  );
+
+                        if (filteredSimilar && filteredSimilar.length > 0) {
                             categoriesWithRecommendations.push({
                                 id: `similar_${
                                     baseMovie.tmdbId
                                 }_${timestamp}_${Math.random()}`,
                                 title: `Because you liked "${baseMovie.title}"`,
-                                items: similar.slice(0, 20),
+                                items: filteredSimilar.slice(0, 20),
                                 isRecommendation: true,
                             });
                         }
                     } catch (error) {
                         console.error("Error fetching similar movies:", error);
                     }
-                    recommendationIndex++;
                 }
+                recommendationIndex++;
             }
         }
 
@@ -792,7 +819,7 @@ export default function Browse() {
 
             {!query.trim() && (
                 <>
-                    <div className="sticky top-15 z-40 bg-neutral-950/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
+                    <div className="sticky top-18 z-40 bg-neutral-950/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
                         <div className="flex justify-center gap-6 md:gap-8">
                             {["movies", "tv", "picks"].map((tab) => (
                                 <button
