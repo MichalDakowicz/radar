@@ -633,6 +633,14 @@ export default function Browse() {
                     ) || [],
             };
 
+            // Remove any fields from TMDB that could conflict with our tracking fields
+            delete normalizedData.status; // TMDB status (Released, etc.) conflicts with our watch status
+            delete normalizedData.watched;
+            delete normalizedData.timesWatched;
+            delete normalizedData.completedAt;
+            delete normalizedData.inWatchlist;
+            delete normalizedData.inProgress;
+
             await addMovie({
                 ...normalizedData,
                 status: "Watchlist",
@@ -640,6 +648,7 @@ export default function Browse() {
                 inProgress: false,
                 watched: false,
                 timesWatched: 0,
+                completedAt: null, // Explicitly ensure no completion date for watchlist items
                 addedAt: Date.now(),
                 ratings: {
                     story: 0,

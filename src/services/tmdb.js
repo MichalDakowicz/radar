@@ -144,7 +144,7 @@ export async function fetchMediaMetadata(tmdbId, type = "movie") {
             availability: availability,
             number_of_seasons: data.number_of_seasons || null,
             number_of_episodes: data.number_of_episodes || null,
-            status: data.status || null,
+            tmdbStatus: data.status || null, // Renamed to avoid conflict with user's watch status
             voteAverage: data.vote_average || 0,
             imdbId: data.external_ids?.imdb_id || null,
             budget: data.budget || 0,

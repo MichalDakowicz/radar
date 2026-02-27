@@ -128,9 +128,20 @@ export default function Stats() {
             const t = movie.type || "movie";
             typeCounts[t] = (typeCounts[t] || 0) + 1;
 
-            // Status - use new system
-            const s = getDisplayStatus(movie);
-            statusCounts[s] = (statusCounts[s] || 0) + 1;
+            // Status - count movies in multiple categories if applicable
+            // A movie can be both Completed and Watchlist (for rewatching)
+            if (movie.inWatchlist) {
+                statusCounts["Watchlist"] =
+                    (statusCounts["Watchlist"] || 0) + 1;
+            }
+            if (movie.inProgress) {
+                statusCounts["Watching"] = (statusCounts["Watching"] || 0) + 1;
+            }
+            if (movie.watched || isWatched(movie)) {
+                statusCounts["Completed"] =
+                    (statusCounts["Completed"] || 0) + 1;
+            }
+            // Note: Movies can now be in multiple categories (e.g., Completed + Watchlist)
 
             // Runtime
             const runtime = movie.runtime || 0;
@@ -186,9 +197,15 @@ export default function Stats() {
             // Genres
             if (movie.genres && Array.isArray(movie.genres)) {
                 movie.genres.forEach((g) => {
-                    const clean = g.trim();
-                    if (clean)
-                        genreCounts[clean] = (genreCounts[clean] || 0) + 1;
+                    if (g && typeof g === "string") {
+                        const clean = g.trim();
+                        if (clean)
+                            genreCounts[clean] = (genreCounts[clean] || 0) + 1;
+                    } else if (g && typeof g === "object" && g.name) {
+                        const clean = String(g.name).trim();
+                        if (clean)
+                            genreCounts[clean] = (genreCounts[clean] || 0) + 1;
+                    }
                 });
             }
 
@@ -236,10 +253,11 @@ export default function Stats() {
             .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
             .map(([decade, count]) => ({ decade: `${decade}s`, count }));
 
-        // Calculate completion rate
+        // Calculate completion rate - count all movies that have been watched at least once
+        const watchedCount = allMovies.filter((m) => isWatched(m)).length;
         const completionRate =
             totalMovies > 0
-                ? Math.round((statusCounts["Completed"] / totalMovies) * 100)
+                ? Math.round((watchedCount / totalMovies) * 100)
                 : 0;
 
         // Calculate streak based on consecutive days with movies watched
@@ -349,7 +367,6 @@ export default function Stats() {
                     }
                 }
             }
-
         }
 
         // Calculate longest streak using same logic as current streak
@@ -585,6 +602,7 @@ export default function Stats() {
             topGenres,
             sortedDecades,
             completionRate,
+            watchedCount,
             currentStreak,
             longestStreak,
             weeklyCompletions,
@@ -689,11 +707,7 @@ export default function Stats() {
                         icon={<Clock className="w-4 h-4" />}
                     />
                     <QuickStat
-                        value={
-                            stats.sortedStatus.find(
-                                (s) => s.name === "Completed",
-                            )?.count || 0
-                        }
+                        value={stats.watchedCount || 0}
                         label="Completed"
                         icon={<CheckCircle2 className="w-4 h-4" />}
                     />

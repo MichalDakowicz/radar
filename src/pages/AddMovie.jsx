@@ -133,7 +133,7 @@ export default function AddMovie() {
 
         setIsProcessing(true);
         try {
-            await addMovie({
+            const movieData = {
                 imdbId,
                 voteAverage,
                 tmdbId,
@@ -166,7 +166,19 @@ export default function AddMovie() {
                     overall: overallRating,
                 },
                 addedAt: Date.now(),
-            });
+            };
+
+            // Set completedAt only if the movie has been watched
+            if (
+                timesWatched > 0 ||
+                (type === "tv" && tvStatus === "Completed")
+            ) {
+                movieData.completedAt = Date.now();
+            } else {
+                movieData.completedAt = null; // Explicitly ensure no completion date for unwatched items
+            }
+
+            await addMovie(movieData);
             navigate("/");
         } catch (e) {
             console.error("Failed to add movie", e);
