@@ -273,7 +273,7 @@ export default function Browse() {
                 id: `top_rated_movies_${timestamp}_${random}`,
                 title: "Top Rated Movies",
                 fetch: () => getMovies("top_rated"),
-                showIn: ["movies", "picks"],
+                showIn: ["movies"],
             },
             {
                 id: `popular_movies_${timestamp}_${random}`,
@@ -285,13 +285,13 @@ export default function Browse() {
                 id: `tv_popular_${timestamp}_${random}`,
                 title: "Popular TV Shows",
                 fetch: () => getTVShows("popular"),
-                showIn: ["tv", "picks"],
+                showIn: ["tv"],
             },
             {
                 id: `tv_top_rated_${timestamp}_${random}`,
                 title: "Top Rated TV",
                 fetch: () => getTVShows("top_rated"),
-                showIn: ["tv", "picks"],
+                showIn: ["tv"],
             },
             {
                 id: `tv_airing_today_${timestamp}_${random}`,
@@ -341,13 +341,10 @@ export default function Browse() {
                         ? genreNameToId[userGenre.id.toLowerCase()]
                         : userGenre.id;
 
-                // For picks tab, try to find both movie and TV versions
-                const matchingGenres =
-                    activeTab === "picks"
-                        ? allGenres.filter((g) => g.id === genreId)
-                        : allGenres.filter(
-                              (g) => g.id === genreId && g.type === mediaType,
-                          );
+                // Find matching genres for the current tab
+                const matchingGenres = allGenres.filter(
+                    (g) => g.id === genreId && g.type === mediaType,
+                );
 
                 console.log(
                     `Checking genre ${userGenre.name} (${userGenre.id} -> ${genreId}):`,
@@ -496,7 +493,6 @@ export default function Browse() {
 
                 // Only show recommendations that match the current tab
                 const shouldShowRecommendation =
-                    activeTab === "picks" ||
                     (activeTab === "movies" && baseMovie.type === "movie") ||
                     (activeTab === "tv" && baseMovie.type === "tv");
 
@@ -508,16 +504,11 @@ export default function Browse() {
                         );
 
                         // Filter similar items to match the active tab
-                        const filteredSimilar =
-                            activeTab === "picks"
-                                ? similar
-                                : similar.filter(
-                                      (item) =>
-                                          (activeTab === "movies" &&
-                                              item.type === "movie") ||
-                                          (activeTab === "tv" &&
-                                              item.type === "tv"),
-                                  );
+                        const filteredSimilar = similar.filter((item) =>
+                            activeTab === "movies"
+                                ? item.type === "movie"
+                                : item.type === "tv",
+                        );
 
                         if (filteredSimilar && filteredSimilar.length > 0) {
                             categoriesWithRecommendations.push({
@@ -821,7 +812,7 @@ export default function Browse() {
                 <>
                     <div className="sticky top-18 z-40 bg-neutral-950/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
                         <div className="flex justify-center gap-6 md:gap-8">
-                            {["movies", "tv", "picks"].map((tab) => (
+                            {["movies", "tv"].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
@@ -831,11 +822,7 @@ export default function Browse() {
                                             : "text-neutral-500 hover:text-neutral-300"
                                     }`}
                                 >
-                                    {tab === "movies"
-                                        ? "Movies"
-                                        : tab === "tv"
-                                        ? "TV Shows"
-                                        : "Editor Picks"}
+                                    {tab === "movies" ? "Movies" : "TV Shows"}
                                 </button>
                             ))}
                         </div>
