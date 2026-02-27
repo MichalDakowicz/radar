@@ -53,6 +53,7 @@ export default function Settings() {
 
     // Stats State
     const [streakThreshold, setStreakThreshold] = useState(2);
+    const [tvStreakThreshold, setTvStreakThreshold] = useState(5);
     const [loadingStats, setLoadingStats] = useState(true);
 
     const handleGridSizeChange = (newSize) => {
@@ -87,12 +88,20 @@ export default function Settings() {
     useEffect(() => {
         if (!user) return;
         const fetchStats = async () => {
-            const snap = await get(
+            const movieSnap = await get(
                 ref(db, `users/${user.uid}/settings/stats/streakThreshold`),
             );
-            if (snap.exists()) {
-                setStreakThreshold(snap.val());
+            if (movieSnap.exists()) {
+                setStreakThreshold(movieSnap.val());
             }
+
+            const tvSnap = await get(
+                ref(db, `users/${user.uid}/settings/stats/tvStreakThreshold`),
+            );
+            if (tvSnap.exists()) {
+                setTvStreakThreshold(tvSnap.val());
+            }
+
             setLoadingStats(false);
         };
         fetchStats();
@@ -143,6 +152,29 @@ export default function Settings() {
         } catch (e) {
             console.error(e);
             setStreakThreshold(oldVal);
+            toast({
+                title: "Update Failed",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleTvStreakThresholdChange = async (newVal) => {
+        if (newVal === tvStreakThreshold) return;
+        const oldVal = tvStreakThreshold;
+        setTvStreakThreshold(newVal);
+        try {
+            await set(
+                ref(db, `users/${user.uid}/settings/stats/tvStreakThreshold`),
+                newVal,
+            );
+            toast({
+                title: "TV Streak Settings Updated",
+                description: `TV streak threshold set to ${newVal} episodes per week`,
+            });
+        } catch (e) {
+            console.error(e);
+            setTvStreakThreshold(oldVal);
             toast({
                 title: "Update Failed",
                 variant: "destructive",
@@ -505,36 +537,75 @@ export default function Settings() {
                                 Stats
                             </h2>
                         </div>
-                        <div className="p-6">
-                            <div className="mb-4">
-                                <h3 className="font-medium text-white">
-                                    Weekly Streak Threshold
-                                </h3>
-                                <p className="text-sm text-neutral-400">
-                                    Set how many movies per week to maintain
-                                    your streak
-                                </p>
+                        <div className="p-6 space-y-6">
+                            <div>
+                                <div className="mb-4">
+                                    <h3 className="font-medium text-white">
+                                        Movie Streak Threshold
+                                    </h3>
+                                    <p className="text-sm text-neutral-400">
+                                        Set how many movies per week to maintain
+                                        your streak
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="50"
+                                        value={streakThreshold}
+                                        onChange={(e) => {
+                                            const val =
+                                                parseInt(e.target.value) || 1;
+                                            if (val >= 1 && val <= 50) {
+                                                handleStreakThresholdChange(
+                                                    val,
+                                                );
+                                            }
+                                        }}
+                                        disabled={loadingStats}
+                                        className="w-24 px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-center font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                    <span className="text-neutral-400">
+                                        movies per week
+                                    </span>
+                                </div>
                             </div>
 
-                            <div className="flex items-center gap-3">
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="50"
-                                    value={streakThreshold}
-                                    onChange={(e) => {
-                                        const val =
-                                            parseInt(e.target.value) || 1;
-                                        if (val >= 1 && val <= 50) {
-                                            handleStreakThresholdChange(val);
-                                        }
-                                    }}
-                                    disabled={loadingStats}
-                                    className="w-24 px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-center font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                                <span className="text-neutral-400">
-                                    movies per week
-                                </span>
+                            <div>
+                                <div className="mb-4">
+                                    <h3 className="font-medium text-white">
+                                        TV Show Streak Threshold
+                                    </h3>
+                                    <p className="text-sm text-neutral-400">
+                                        Set how many episodes per week to
+                                        maintain your TV streak
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        value={tvStreakThreshold}
+                                        onChange={(e) => {
+                                            const val =
+                                                parseInt(e.target.value) || 1;
+                                            if (val >= 1 && val <= 100) {
+                                                handleTvStreakThresholdChange(
+                                                    val,
+                                                );
+                                            }
+                                        }}
+                                        disabled={loadingStats}
+                                        className="w-24 px-4 py-3 bg-neutral-800 border border-neutral-700 rounded-lg text-white text-center font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    />
+                                    <span className="text-neutral-400">
+                                        episodes per week
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </section>

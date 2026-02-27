@@ -104,7 +104,11 @@ export default function AddMovie() {
                 setNumberOfSeasons(data.numberOfSeasons || 0);
                 setNumberOfEpisodes(data.numberOfEpisodes || 0);
                 if (data.type === "movie" && data.director?.length > 0) {
-                    setDirector(data.director);
+                    // Normalize directors - extract names from objects if needed
+                    const directorNames = data.director.map((d) =>
+                        typeof d === "object" ? d.name : d,
+                    );
+                    setDirector(directorNames);
                 }
                 setSearchResults([]);
             }

@@ -62,8 +62,13 @@ export default function MovieDetails() {
         setAdding(true);
         try {
             // Default data - using new boolean flag system
+            // Normalize directors - extract names from objects if needed
             const movieData = {
                 ...movie,
+                director:
+                    movie.director?.map((d) =>
+                        typeof d === "object" ? d.name : d,
+                    ) || [],
                 status: "Watchlist", // Backward compatibility
                 inWatchlist: true,
                 inProgress: false,
@@ -149,6 +154,11 @@ export default function MovieDetails() {
               : [movie.artist || movie.director]
           ).filter(Boolean);
 
+    // Extract director names for display
+    const directorNames = directors.map((d) =>
+        typeof d === "object" ? d.name : d,
+    );
+
     const availability = Array.isArray(movie.availability)
         ? movie.availability
         : movie.format
@@ -219,7 +229,44 @@ export default function MovieDetails() {
 
                             <div className="text-lg sm:text-xl text-neutral-300 drop-shadow-md flex flex-wrap items-center gap-2">
                                 {directors.length > 0 && (
-                                    <span>{directors.join(", ")}</span>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {directors.map((dir, idx) => {
+                                            const dirName =
+                                                typeof dir === "object"
+                                                    ? dir.name
+                                                    : dir;
+                                            const dirId =
+                                                typeof dir === "object"
+                                                    ? dir.id
+                                                    : null;
+
+                                            return (
+                                                <span
+                                                    key={idx}
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    {dirId ? (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                navigate(
+                                                                    `/director/${dirId}`,
+                                                                );
+                                                            }}
+                                                            className="hover:text-white hover:underline transition-colors"
+                                                        >
+                                                            {dirName}
+                                                        </button>
+                                                    ) : (
+                                                        <span>{dirName}</span>
+                                                    )}
+                                                    {idx <
+                                                        directors.length -
+                                                            1 && <span>,</span>}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
                                 )}
                                 {directors.length > 0 && movie.releaseDate && (
                                     <span>•</span>

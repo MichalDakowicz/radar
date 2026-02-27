@@ -11,9 +11,11 @@ import Settings from "./pages/Settings";
 import Friends from "./pages/Friends";
 import Browse from "./pages/Browse";
 import MovieDetails from "./pages/MovieDetails";
+import DirectorDetails from "./pages/DirectorDetails";
 import EditMovie from "./pages/EditMovie";
 import AddMovie from "./pages/AddMovie";
 import ManageCompletions from "./pages/ManageCompletions";
+import ManageTVCompletions from "./pages/ManageTVCompletions";
 import AppUrlListener from "./components/AppUrlListener";
 import FriendRequestListener from "./features/friends/FriendRequestListener";
 import SwipeNavigator from "./components/layout/SwipeNavigator";
@@ -77,6 +79,14 @@ function App() {
                                 }
                             />
                             <Route
+                                path="/director/:directorId"
+                                element={
+                                    <ProtectedRoute>
+                                        <DirectorDetails />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
                                 path="/friends"
                                 element={
                                     <ProtectedRoute>
@@ -105,6 +115,14 @@ function App() {
                                 element={
                                     <ProtectedRoute>
                                         <ManageCompletions />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/manage-tv-completions"
+                                element={
+                                    <ProtectedRoute>
+                                        <ManageTVCompletions />
                                     </ProtectedRoute>
                                 }
                             />

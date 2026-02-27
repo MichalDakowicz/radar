@@ -15,6 +15,7 @@ import { usePublicMovies } from "../hooks/usePublicMovies";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { useFriendVisibility } from "../hooks/useFriendVisibility";
 import { useActivity, usePublicActivity } from "../hooks/useActivity";
+import { batchSearchDirectors } from "../hooks/useDirectorSearch";
 import { Navbar } from "../components/layout/Navbar";
 import { PublicBottomNav } from "../components/layout/PublicBottomNav";
 import { PublicHeader } from "../components/layout/PublicHeader";
@@ -25,6 +26,7 @@ import { getDisplayStatus, isWatched } from "../lib/movieStatus";
 import { HistoryPill } from "../components/stats/HistoryPill";
 import { QuickStat } from "../components/stats/QuickStat";
 import { StreakCalendar } from "../components/stats/StreakCalendar";
+import { TVStreakCalendar } from "../components/stats/TVStreakCalendar";
 import { ThinProgressBar } from "../components/stats/ThinProgressBar";
 import { SmoothDecadeBar } from "../components/stats/SmoothDecadeBar";
 import { DirectorItem } from "../components/stats/DirectorItem";
@@ -55,18 +57,31 @@ export default function Stats() {
 
     // Streak settings
     const [streakThreshold, setStreakThreshold] = useState(2); // Default: 2 movies per week
+    const [tvStreakThreshold, setTvStreakThreshold] = useState(5); // Default: 5 episodes per week
+    const [directorIds, setDirectorIds] = useState({});
+    const [calendarView, setCalendarView] = useState("movies"); // "movies" or "tv"
 
     useEffect(() => {
         const fetchStreakSettings = async () => {
             if (!user && !userId) return;
             const targetUserId = userId || user.uid;
-            const settingsRef = ref(
+
+            const movieStreakRef = ref(
                 db,
                 `users/${targetUserId}/settings/stats/streakThreshold`,
             );
-            const snapshot = await get(settingsRef);
-            if (snapshot.exists()) {
-                setStreakThreshold(snapshot.val());
+            const movieSnapshot = await get(movieStreakRef);
+            if (movieSnapshot.exists()) {
+                setStreakThreshold(movieSnapshot.val());
+            }
+
+            const tvStreakRef = ref(
+                db,
+                `users/${targetUserId}/settings/stats/tvStreakThreshold`,
+            );
+            const tvSnapshot = await get(tvStreakRef);
+            if (tvSnapshot.exists()) {
+                setTvStreakThreshold(tvSnapshot.val());
             }
         };
         fetchStreakSettings();
@@ -298,10 +313,6 @@ export default function Stats() {
             let streakActive = true;
             let lastWeekWithMovies = null;
 
-            console.log("=== STREAK CALCULATION START ===");
-            console.log("Today:", today.toISOString().split("T")[0]);
-            console.log("Daily completions:", dailyCompletions);
-
             while (streakActive) {
                 const checkKey = `${checkDate.getFullYear()}-${String(
                     checkDate.getMonth() + 1,
@@ -315,16 +326,6 @@ export default function Stats() {
                 const isCurrentWeek =
                     weekStart.getTime() === currentWeekStart.getTime();
 
-                console.log(`\nChecking ${checkKey}:`);
-                console.log(
-                    `  Movies this day: ${dailyCompletions[checkKey] || 0}`,
-                );
-                console.log(
-                    `  Week start: ${weekStart.toISOString().split("T")[0]}`,
-                );
-                console.log(`  Movies this week: ${moviesThisWeek}`);
-                console.log(`  Is current week: ${isCurrentWeek}`);
-
                 // Check if this day has movies
                 if (dailyCompletions[checkKey] > 0) {
                     // Only count if this week meets the milestone OR it's the current week
@@ -333,48 +334,57 @@ export default function Stats() {
                         (isCurrentWeek && moviesThisWeek > 0)
                     ) {
                         currentStreak++;
-                        console.log(
-                            `  ✓ COUNTED! Streak now: ${currentStreak}`,
-                        );
                         lastWeekWithMovies = weekStart.getTime();
-                    } else {
-                        console.log(
-                            `  ✗ Has movies but week doesn't meet criteria`,
-                        );
                     }
                     checkDate.setDate(checkDate.getDate() - 1);
                 } else {
-                    // No movies this day - check if we should continue streak
-                    // Continue if: week has 3+ movies OR it's current week with any activity
                     if (
                         moviesThisWeek >= 3 ||
                         (isCurrentWeek && moviesThisWeek > 0)
                     ) {
-                        console.log(
-                            `  → Skipping (no movies but week qualifies)`,
-                        );
-                        // Don't count this day, but continue checking previous days
                         checkDate.setDate(checkDate.getDate() - 1);
                     } else {
-                        console.log(`  ✗ STREAK ENDED (week doesn't qualify)`);
                         // Week doesn't meet criteria, end streak
                         streakActive = false;
                     }
                 }
             }
 
-            console.log(`\n=== FINAL STREAK: ${currentStreak} ===\n`);
         }
 
-        // Calculate longest streak
-        let tempStreak = 0;
+        // Calculate longest streak using same logic as current streak
         if (Object.keys(dailyCompletions).length > 0) {
             const sortedDates = Object.keys(dailyCompletions).sort();
             const oldestDate = new Date(sortedDates[0]);
             const newestDate = new Date(sortedDates[sortedDates.length - 1]);
 
+            const getWeekStart = (date) => {
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = day === 0 ? 6 : day - 1;
+                d.setDate(d.getDate() - diff);
+                d.setHours(0, 0, 0, 0);
+                return d;
+            };
+
+            const getMoviesInWeek = (weekStart) => {
+                let count = 0;
+                for (let i = 0; i < 7; i++) {
+                    const checkDate = new Date(weekStart);
+                    checkDate.setDate(checkDate.getDate() + i);
+                    const checkKey = `${checkDate.getFullYear()}-${String(
+                        checkDate.getMonth() + 1,
+                    ).padStart(2, "0")}-${String(checkDate.getDate()).padStart(
+                        2,
+                        "0",
+                    )}`;
+                    count += dailyCompletions[checkKey] || 0;
+                }
+                return count;
+            };
+
             let checkDate = new Date(oldestDate);
-            tempStreak = 0;
+            let tempStreak = 0;
 
             while (checkDate <= newestDate) {
                 const checkKey = `${checkDate.getFullYear()}-${String(
@@ -384,11 +394,21 @@ export default function Stats() {
                     "0",
                 )}`;
 
+                const weekStart = getWeekStart(checkDate);
+                const moviesThisWeek = getMoviesInWeek(weekStart);
+
                 if (dailyCompletions[checkKey] > 0) {
-                    tempStreak++;
-                    longestStreak = Math.max(longestStreak, tempStreak);
+                    if (moviesThisWeek >= streakThreshold) {
+                        tempStreak++;
+                        longestStreak = Math.max(longestStreak, tempStreak);
+                    }
                 } else {
-                    tempStreak = 0;
+                    if (moviesThisWeek >= streakThreshold) {
+                        // Continue streak even without movies this day if week meets threshold
+                    } else {
+                        // Week doesn't meet threshold, reset streak
+                        tempStreak = 0;
+                    }
                 }
 
                 checkDate.setDate(checkDate.getDate() + 1);
@@ -418,6 +438,143 @@ export default function Stats() {
             weeklyCompletions[weekKey] = (weeklyCompletions[weekKey] || 0) + 1;
         });
 
+        // Calculate TV show streak based on episodes watched per week
+        const tvShows = allMovies.filter((m) => m.type === "tv");
+        const dailyEpisodes = {};
+
+        tvShows.forEach((show) => {
+            if (show.episodeWatchDates) {
+                Object.entries(show.episodeWatchDates).forEach(
+                    ([episodeKey, timestamp]) => {
+                        const date = new Date(timestamp);
+                        const dateKey = `${date.getFullYear()}-${String(
+                            date.getMonth() + 1,
+                        ).padStart(2, "0")}-${String(date.getDate()).padStart(
+                            2,
+                            "0",
+                        )}`;
+                        dailyEpisodes[dateKey] =
+                            (dailyEpisodes[dateKey] || 0) + 1;
+                    },
+                );
+            }
+        });
+
+        // Calculate TV current streak
+        let currentTVStreak = 0;
+        let longestTVStreak = 0;
+
+        if (Object.keys(dailyEpisodes).length > 0) {
+            let checkDate = new Date(today);
+            let streakActive = true;
+
+            const getWeekStart = (date) => {
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = day === 0 ? 6 : day - 1;
+                d.setDate(d.getDate() - diff);
+                d.setHours(0, 0, 0, 0);
+                return d;
+            };
+
+            const getEpisodesInWeek = (weekStart) => {
+                let count = 0;
+                for (let i = 0; i < 7; i++) {
+                    const checkDate = new Date(weekStart);
+                    checkDate.setDate(checkDate.getDate() + i);
+                    const checkKey = `${checkDate.getFullYear()}-${String(
+                        checkDate.getMonth() + 1,
+                    ).padStart(2, "0")}-${String(checkDate.getDate()).padStart(
+                        2,
+                        "0",
+                    )}`;
+                    count += dailyEpisodes[checkKey] || 0;
+                }
+                return count;
+            };
+
+            const currentWeekStart = new Date(today);
+            const dayOfWeek = currentWeekStart.getDay();
+            const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            currentWeekStart.setDate(currentWeekStart.getDate() - daysToMonday);
+            currentWeekStart.setHours(0, 0, 0, 0);
+
+            while (streakActive) {
+                const checkKey = `${checkDate.getFullYear()}-${String(
+                    checkDate.getMonth() + 1,
+                ).padStart(2, "0")}-${String(checkDate.getDate()).padStart(
+                    2,
+                    "0",
+                )}`;
+
+                const weekStart = getWeekStart(checkDate);
+                const episodesThisWeek = getEpisodesInWeek(weekStart);
+                const isCurrentWeek =
+                    weekStart.getTime() === currentWeekStart.getTime();
+
+                if (dailyEpisodes[checkKey] > 0) {
+                    if (
+                        episodesThisWeek >= tvStreakThreshold ||
+                        (isCurrentWeek && episodesThisWeek > 0)
+                    ) {
+                        currentTVStreak++;
+                    }
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    if (
+                        episodesThisWeek >= tvStreakThreshold ||
+                        (isCurrentWeek && episodesThisWeek > 0)
+                    ) {
+                        checkDate.setDate(checkDate.getDate() - 1);
+                    } else {
+                        streakActive = false;
+                    }
+                }
+            }
+        }
+
+        // Calculate longest TV streak
+        let tempTVStreak = 0;
+        if (Object.keys(dailyEpisodes).length > 0) {
+            const sortedDates = Object.keys(dailyEpisodes).sort();
+            const oldestDate = new Date(sortedDates[0]);
+            const newestDate = new Date(sortedDates[sortedDates.length - 1]);
+
+            let checkDate = new Date(oldestDate);
+            tempTVStreak = 0;
+
+            while (checkDate <= newestDate) {
+                const checkKey = `${checkDate.getFullYear()}-${String(
+                    checkDate.getMonth() + 1,
+                ).padStart(2, "0")}-${String(checkDate.getDate()).padStart(
+                    2,
+                    "0",
+                )}`;
+
+                if (dailyEpisodes[checkKey] > 0) {
+                    tempTVStreak++;
+                    longestTVStreak = Math.max(longestTVStreak, tempTVStreak);
+                } else {
+                    tempTVStreak = 0;
+                }
+
+                checkDate.setDate(checkDate.getDate() + 1);
+            }
+        }
+
+        const weeklyTVCompletions = {};
+        tvShows.forEach((show) => {
+            if (show.episodeWatchDates) {
+                Object.entries(show.episodeWatchDates).forEach(
+                    ([episodeKey, timestamp]) => {
+                        const weekKey = getWeekKey(timestamp);
+                        weeklyTVCompletions[weekKey] =
+                            (weeklyTVCompletions[weekKey] || 0) + 1;
+                    },
+                );
+            }
+        });
+
         return {
             totalMovies,
             sortedStatus,
@@ -431,8 +588,29 @@ export default function Stats() {
             currentStreak,
             longestStreak,
             weeklyCompletions,
+            currentTVStreak,
+            longestTVStreak,
+            weeklyTVCompletions,
         };
-    }, [movies, streakThreshold]);
+    }, [movies, streakThreshold, tvStreakThreshold]);
+
+    // Fetch director IDs when stats are calculated
+    useEffect(() => {
+        async function fetchDirectorIds() {
+            if (
+                !stats ||
+                !stats.topDirectors ||
+                stats.topDirectors.length === 0
+            )
+                return;
+
+            const directorNames = stats.topDirectors.map((d) => d.name);
+            const ids = await batchSearchDirectors(directorNames);
+            setDirectorIds(ids);
+        }
+
+        fetchDirectorIds();
+    }, [stats]);
 
     if (loading) {
         return (
@@ -499,7 +677,7 @@ export default function Stats() {
                 )}
 
                 {/* Fluid Overview Stats */}
-                <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-y-10 gap-x-6 mb-8 border-y border-zinc-800/50 py-10">
+                <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-y-10 gap-x-6 mb-8 border-y border-zinc-800/50 py-10">
                     <QuickStat
                         value={stats.totalMovies}
                         label="Total Items"
@@ -537,29 +715,122 @@ export default function Stats() {
                     />
                     <QuickStat
                         value={stats.currentStreak || 0}
-                        label="Day Streak"
+                        label="Movie Streak"
+                        icon={<Flame className="w-4 h-4" />}
+                    />
+                    <QuickStat
+                        value={stats.currentTVStreak || 0}
+                        label="TV Streak"
                         icon={<Flame className="w-4 h-4" />}
                     />
                 </section>
 
                 <section className="mb-16">
-                    <div className="flex items-center justify-between mb-5">
-                        <div className="flex items-center gap-2">
-                            <Trophy className="w-5 h-5 text-zinc-500" />
-                            <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-400">
-                                Watch Calendar
-                            </h2>
+                    <div className="flex items-center justify-between gap-4">
+                        {/* Mobile: Toggle buttons */}
+                        <div className="lg:hidden flex gap-2">
+                            <button
+                                onClick={() => setCalendarView("movies")}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    calendarView === "movies"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-zinc-800 text-zinc-400 hover:text-white"
+                                }`}
+                            >
+                                Movies
+                            </button>
+                            <button
+                                onClick={() => setCalendarView("tv")}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    calendarView === "tv"
+                                        ? "bg-purple-600 text-white"
+                                        : "bg-zinc-800 text-zinc-400 hover:text-white"
+                                }`}
+                            >
+                                TV Shows
+                            </button>
                         </div>
-                        <div className="text-xs text-zinc-500 flex items-center gap-1">
-                            Current streak: {stats.currentStreak} days
-                            <Flame className="w-3.5 h-3.5 text-orange-500" />
+                        <div className="text-xs text-zinc-500 flex items-center gap-1 lg:hidden">
+                            {calendarView === "movies" ? (
+                                <>
+                                    Current streak: {stats.currentStreak} days
+                                    <Flame className="w-3.5 h-3.5 text-blue-500" />
+                                    <span className="mx-1">•</span>
+                                    Longest: {stats.longestStreak}
+                                </>
+                            ) : (
+                                <>
+                                    Current streak: {stats.currentTVStreak} days
+                                    <Flame className="w-3.5 h-3.5 text-purple-500" />
+                                    <span className="mx-1">•</span>
+                                    Longest: {stats.longestTVStreak}
+                                </>
+                            )}
                         </div>
                     </div>
-                    <StreakCalendar
-                        weeklyCompletions={stats.weeklyCompletions}
-                        threshold={streakThreshold}
-                        userId={!userId ? user?.uid : null}
-                    />
+
+                    {/* Desktop: Side by side calendars */}
+                    <div className="hidden lg:grid lg:grid-cols-2 gap-8">
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-semibold text-zinc-400">
+                                    Movies
+                                </h3>
+                                <div className="text-xs text-zinc-500 flex items-center gap-1">
+                                    {stats.currentStreak} days
+                                    <Flame className="w-3 h-3 text-blue-500" />
+                                    <span className="mx-1">•</span>
+                                    Longest: {stats.longestStreak}
+                                </div>
+                            </div>
+                            <StreakCalendar
+                                weeklyCompletions={stats.weeklyCompletions}
+                                threshold={streakThreshold}
+                                userId={!userId ? user?.uid : null}
+                            />
+                        </div>
+                        <div>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-sm font-semibold text-zinc-400">
+                                    Episodes
+                                </h3>
+                                <div className="text-xs text-zinc-500 flex items-center gap-1">
+                                    {stats.currentTVStreak} days
+                                    <Flame className="w-3 h-3 text-purple-500" />
+                                    <span className="mx-1">•</span>
+                                    Longest: {stats.longestTVStreak}
+                                </div>
+                            </div>
+                            <TVStreakCalendar
+                                weeklyCompletions={stats.weeklyTVCompletions}
+                                threshold={tvStreakThreshold}
+                                userId={!userId ? user?.uid : null}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Mobile: Single calendar with toggle */}
+                    <div className="lg:hidden">
+                        {calendarView === "movies" ? (
+                            <div>
+                                <StreakCalendar
+                                    weeklyCompletions={stats.weeklyCompletions}
+                                    threshold={streakThreshold}
+                                    userId={!userId ? user?.uid : null}
+                                />
+                            </div>
+                        ) : (
+                            <div>
+                                <TVStreakCalendar
+                                    weeklyCompletions={
+                                        stats.weeklyTVCompletions
+                                    }
+                                    threshold={tvStreakThreshold}
+                                    userId={!userId ? user?.uid : null}
+                                />
+                            </div>
+                        )}
+                    </div>
                 </section>
 
                 {/* Main Content Layout */}
@@ -686,6 +957,9 @@ export default function Stats() {
                                             name={director.name}
                                             count={director.count}
                                             max={maxDirectorCount}
+                                            directorId={
+                                                directorIds[director.name]
+                                            }
                                         />
                                     ))}
                                 </div>

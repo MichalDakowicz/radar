@@ -240,8 +240,18 @@ export default function Browse() {
                 return;
             }
             const fullData = await fetchMediaMetadata(item.tmdbId, item.type);
-            await addMovie({
+
+            // Normalize directors - extract names from objects if needed
+            const normalizedData = {
                 ...fullData,
+                director:
+                    fullData.director?.map((d) =>
+                        typeof d === "object" ? d.name : d,
+                    ) || [],
+            };
+
+            await addMovie({
+                ...normalizedData,
                 status: "Watchlist", // Backward compatibility
                 inWatchlist: true,
                 inProgress: false,

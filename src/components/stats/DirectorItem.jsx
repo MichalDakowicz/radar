@@ -1,4 +1,12 @@
-export function DirectorItem({ name, count, max }) {
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { fetchDirectorDetails } from "../../services/tmdb";
+
+export function DirectorItem({ name, count, max, directorId }) {
+    const navigate = useNavigate();
+    const [profileUrl, setProfileUrl] = useState(null);
+    const [loading, setLoading] = useState(true);
+
     const initials = name
         .split(" ")
         .map((n) => n[0])
@@ -6,10 +14,51 @@ export function DirectorItem({ name, count, max }) {
         .substring(0, 2);
     const percent = (count / max) * 100;
 
+    useEffect(() => {
+        async function loadDirectorProfile() {
+            if (!directorId) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const details = await fetchDirectorDetails(directorId);
+                setProfileUrl(details.profileUrl);
+            } catch (error) {
+                console.error("Failed to load director profile:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        loadDirectorProfile();
+    }, [directorId]);
+
+    const handleClick = () => {
+        if (directorId) {
+            navigate(`/director/${directorId}`);
+        }
+    };
+
     return (
-        <div className="flex items-center gap-5 py-3 group cursor-default">
-            <div className="w-12 h-12 shrink-0 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-sm font-bold text-zinc-500 group-hover:bg-zinc-200 group-hover:text-zinc-900 group-hover:border-zinc-200 transition-all duration-300">
-                {initials}
+        <div
+            onClick={handleClick}
+            className={`flex items-center gap-5 py-3 group ${
+                directorId ? "cursor-pointer" : "cursor-default"
+            }`}
+        >
+            <div className="w-12 h-12 shrink-0 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden group-hover:border-zinc-200 transition-all duration-300">
+                {profileUrl ? (
+                    <img
+                        src={profileUrl}
+                        alt={name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-sm font-bold text-zinc-500 group-hover:bg-zinc-200 group-hover:text-zinc-900 transition-all duration-300">
+                        {initials}
+                    </div>
+                )}
             </div>
 
             <div className="flex-1 flex flex-col justify-center">

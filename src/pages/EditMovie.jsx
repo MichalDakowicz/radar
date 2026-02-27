@@ -62,6 +62,7 @@ export default function EditMovie() {
     const [selectedSeason, setSelectedSeason] = useState(1);
     const [seasonData, setSeasonData] = useState(null);
     const [episodesWatched, setEpisodesWatched] = useState({});
+    const [episodeWatchDates, setEpisodeWatchDates] = useState({});
     const [numberOfEpisodes, setNumberOfEpisodes] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -139,6 +140,7 @@ export default function EditMovie() {
             setNumberOfSeasons(movie.number_of_seasons || 0);
             setNumberOfEpisodes(movie.number_of_episodes || 0);
             setEpisodesWatched(movie.episodesWatched || {});
+            setEpisodeWatchDates(movie.episodeWatchDates || {});
         }
     }, [movie]);
 
@@ -156,16 +158,43 @@ export default function EditMovie() {
 
     const toggleEpisodeWatched = (seasonWithType, episodeNum) => {
         const key = `s${seasonWithType}e${episodeNum}`;
-        setEpisodesWatched((prev) => ({ ...prev, [key]: !prev[key] }));
+        setEpisodesWatched((prev) => {
+            const newWatched = { ...prev, [key]: !prev[key] };
+
+            // Update watch dates
+            setEpisodeWatchDates((prevDates) => {
+                const newDates = { ...prevDates };
+                if (newWatched[key]) {
+                    // Episode is now watched, set current timestamp
+                    newDates[key] = Date.now();
+                } else {
+                    // Episode is unwatched, remove the date
+                    delete newDates[key];
+                }
+                return newDates;
+            });
+
+            return newWatched;
+        });
     };
 
     const handleMarkSeasonComplete = () => {
         if (!seasonData?.episodes) return;
         const newWatched = { ...episodesWatched };
+        const newDates = { ...episodeWatchDates };
+        const currentTimestamp = Date.now();
+
         seasonData.episodes.forEach((ep) => {
-            newWatched[`s${selectedSeason}e${ep.episode_number}`] = true;
+            const key = `s${selectedSeason}e${ep.episode_number}`;
+            newWatched[key] = true;
+            // Only set date if not already watched
+            if (!episodesWatched[key]) {
+                newDates[key] = currentTimestamp;
+            }
         });
+
         setEpisodesWatched(newWatched);
+        setEpisodeWatchDates(newDates);
     };
 
     const handleRecalculate = () => {
@@ -216,8 +245,13 @@ export default function EditMovie() {
                 );
                 setNumberOfSeasons(data.numberOfSeasons || 0);
                 setNumberOfEpisodes(data.numberOfEpisodes || 0);
-                if (data.type === "movie" && data.director.length > 0)
-                    setDirector(data.director);
+                if (data.type === "movie" && data.director.length > 0) {
+                    // Normalize directors - extract names from objects if needed
+                    const directorNames = data.director.map((d) =>
+                        typeof d === "object" ? d.name : d,
+                    );
+                    setDirector(directorNames);
+                }
             }
         } catch (err) {
             console.error("Auto-fill failed", err);
@@ -341,6 +375,7 @@ export default function EditMovie() {
                 number_of_seasons: numberOfSeasons,
                 number_of_episodes: numberOfEpisodes,
                 episodesWatched,
+                episodeWatchDates,
                 addedAt: movie.addedAt,
                 updatedAt: Date.now(),
             };
