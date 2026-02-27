@@ -21,7 +21,7 @@ import {
     BarChart3,
 } from "lucide-react";
 import { useMovies } from "../hooks/useMovies";
-import { fetchMediaMetadata } from "../services/tmdb";
+import { fetchMediaMetadata, fetchSimilarMedia } from "../services/tmdb";
 import { Navbar } from "../components/layout/Navbar";
 import { BottomNav } from "../components/layout/BottomNav";
 import { useToast } from "../components/ui/Toast";
@@ -32,6 +32,7 @@ export default function MovieDetails() {
     const navigate = useNavigate();
     const [movie, setMovie] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [similarMovies, setSimilarMovies] = useState([]);
     const { addMovie, removeMovie, movies } = useMovies(); // Access library functions
     const { toast } = useToast();
     const [adding, setAdding] = useState(false);
@@ -43,6 +44,13 @@ export default function MovieDetails() {
             try {
                 const data = await fetchMediaMetadata(tmdbId, type || "movie");
                 setMovie(data);
+
+                // Fetch similar movies
+                const similar = await fetchSimilarMedia(
+                    tmdbId,
+                    type || "movie",
+                );
+                setSimilarMovies(similar);
             } catch (error) {
                 console.error("Failed to load movie details", error);
             } finally {
@@ -533,16 +541,35 @@ export default function MovieDetails() {
                                 Cast
                             </h3>
                             <div className="flex flex-wrap gap-2">
-                                {movie.cast.map((actor, i) => (
-                                    <div
-                                        key={i}
-                                        className="bg-neutral-900 border border-neutral-800 rounded-full px-4 py-2 text-white flex items-center gap-2"
-                                    >
-                                        <span className="font-medium">
-                                            {actor}
-                                        </span>
-                                    </div>
-                                ))}
+                                {movie.cast.map((actor, i) => {
+                                    const actorName =
+                                        typeof actor === "object"
+                                            ? actor.name
+                                            : actor;
+                                    const actorId =
+                                        typeof actor === "object"
+                                            ? actor.id
+                                            : null;
+
+                                    return (
+                                        <div
+                                            key={i}
+                                            onClick={() =>
+                                                actorId &&
+                                                navigate(`/actor/${actorId}`)
+                                            }
+                                            className={`bg-neutral-900 border border-neutral-800 rounded-full px-4 py-2 text-white flex items-center gap-2 ${
+                                                actorId
+                                                    ? "cursor-pointer hover:bg-neutral-800 hover:border-neutral-700 transition-all"
+                                                    : ""
+                                            }`}
+                                        >
+                                            <span className="font-medium">
+                                                {actorName}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -579,14 +606,29 @@ export default function MovieDetails() {
                                 Genres
                             </h3>
                             <div className="flex flex-wrap gap-2">
-                                {movie.genres.map((g) => (
-                                    <span
-                                        key={g}
-                                        className="px-3 py-1 rounded-full bg-neutral-800 text-neutral-300 text-sm border border-neutral-700"
-                                    >
-                                        {g}
-                                    </span>
-                                ))}
+                                {movie.genres.map((g) => {
+                                    const genreName =
+                                        typeof g === "object" ? g.name : g;
+                                    const genreId =
+                                        typeof g === "object" ? g.id : null;
+
+                                    return (
+                                        <span
+                                            key={genreId || genreName}
+                                            onClick={() =>
+                                                genreId &&
+                                                navigate(`/genre/${genreId}`)
+                                            }
+                                            className={`px-3 py-1 rounded-full bg-neutral-800 text-neutral-300 text-sm border border-neutral-700 ${
+                                                genreId
+                                                    ? "cursor-pointer hover:bg-neutral-700 hover:border-neutral-600 transition-all"
+                                                    : ""
+                                            }`}
+                                        >
+                                            {genreName}
+                                        </span>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -609,6 +651,56 @@ export default function MovieDetails() {
                                         </div>
                                     );
                                 })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Similar Movies */}
+                    {similarMovies.length > 0 && (
+                        <div className="space-y-4">
+                            <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                                <Clapperboard className="text-blue-500" />
+                                Similar {type === "tv" ? "Shows" : "Movies"}
+                            </h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                {similarMovies.map((similar) => (
+                                    <div
+                                        key={similar.tmdbId}
+                                        onClick={() =>
+                                            navigate(
+                                                `/movie/${similar.tmdbId}/${similar.type}`,
+                                            )
+                                        }
+                                        className="group cursor-pointer"
+                                    >
+                                        <div className="aspect-2/3 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-800 group-hover:border-blue-500 transition-all group-hover:scale-105">
+                                            {similar.coverUrl ? (
+                                                <img
+                                                    src={similar.coverUrl}
+                                                    alt={similar.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-neutral-600">
+                                                    <Clapperboard size={32} />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="mt-2 space-y-1">
+                                            <h4 className="text-sm font-medium text-white line-clamp-2 group-hover:text-blue-400 transition-colors">
+                                                {similar.title}
+                                            </h4>
+                                            {similar.releaseDate && (
+                                                <p className="text-xs text-neutral-500">
+                                                    {similar.releaseDate.substring(
+                                                        0,
+                                                        4,
+                                                    )}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}

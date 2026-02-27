@@ -9,6 +9,8 @@ export default function ScrollingRow({
     onAdd,
     onRemove,
     isAdded,
+    highlight = false,
+    isDiscovery = false,
 }) {
     const rowRef = useRef(null);
     const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -77,9 +79,35 @@ export default function ScrollingRow({
     if (!items || items.length === 0) return null;
 
     return (
-        <div className="space-y-3 my-8 w-full group/row pt-6">
-            <h2 className="text-xl md:text-2xl font-semibold text-white/90 hover:text-white transition-colors cursor-pointer inline-flex items-center gap-2 group-hover:text-blue-400 pl-6 md:pl-16">
+        <div
+            className={`space-y-3 my-8 w-full group/row pt-6 ${
+                highlight
+                    ? "bg-gradient-to-r from-blue-900/10 via-purple-900/10 to-blue-900/10 py-8 rounded-lg"
+                    : isDiscovery
+                    ? "bg-gradient-to-r from-green-900/10 via-emerald-900/10 to-green-900/10 py-8 rounded-lg"
+                    : ""
+            }`}
+        >
+            <h2
+                className={`text-xl md:text-2xl font-semibold transition-colors cursor-pointer inline-flex items-center gap-2 pl-6 md:pl-16 ${
+                    highlight
+                        ? "text-blue-400 hover:text-blue-300"
+                        : isDiscovery
+                        ? "text-green-400 hover:text-green-300"
+                        : "text-white/90 hover:text-white group-hover:text-blue-400"
+                }`}
+            >
                 {title}
+                {highlight && (
+                    <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-full">
+                        For You
+                    </span>
+                )}
+                {isDiscovery && (
+                    <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded-full">
+                        New for You
+                    </span>
+                )}
             </h2>
 
             <div className="relative w-full">

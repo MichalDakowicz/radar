@@ -4,6 +4,7 @@ import EditMovieMetadata from "./EditMovieMetadata";
 import EditMovieCastCrew from "./EditMovieCastCrew";
 import EditMovieAvailability from "./EditMovieAvailability";
 import EditMovieWatchStatus from "./EditMovieWatchStatus";
+import EditMovieSimilar from "./EditMovieSimilar";
 
 export default function EditMovieMainTab({
     tmdbId,
@@ -107,6 +108,9 @@ export default function EditMovieMainTab({
                 availability={availability}
                 toggleAvailability={toggleAvailability}
             />
+
+            {/* Similar Movies/Shows */}
+            {tmdbId && <EditMovieSimilar tmdbId={tmdbId} type={type} />}
 
             {/* Delete Button */}
             <div className="pt-8 border-t border-neutral-800">

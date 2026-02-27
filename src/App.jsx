@@ -12,6 +12,8 @@ import Friends from "./pages/Friends";
 import Browse from "./pages/Browse";
 import MovieDetails from "./pages/MovieDetails";
 import DirectorDetails from "./pages/DirectorDetails";
+import ActorDetails from "./pages/ActorDetails";
+import GenreDetails from "./pages/GenreDetails";
 import EditMovie from "./pages/EditMovie";
 import AddMovie from "./pages/AddMovie";
 import ManageCompletions from "./pages/ManageCompletions";
@@ -83,6 +85,22 @@ function App() {
                                 element={
                                     <ProtectedRoute>
                                         <DirectorDetails />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/actor/:actorId"
+                                element={
+                                    <ProtectedRoute>
+                                        <ActorDetails />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/genre/:genreId"
+                                element={
+                                    <ProtectedRoute>
+                                        <GenreDetails />
                                     </ProtectedRoute>
                                 }
                             />

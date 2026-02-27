@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Loader2 } from "lucide-react";
 import {
@@ -7,6 +7,8 @@ import {
     getTrending,
     getMovies,
     getTVShows,
+    getSimilarMovies,
+    getMoviesByGenre,
 } from "../services/tmdb";
 import { useMovies } from "../hooks/useMovies";
 import { useToast } from "../components/ui/Toast";
@@ -14,7 +16,7 @@ import { Navbar } from "../components/layout/Navbar";
 import { BottomNav } from "../components/layout/BottomNav";
 import HeroCarousel from "../features/movies/HeroCarousel";
 import ScrollingRow from "../features/movies/ScrollingRow";
-import { Plus, Trash2, Star, Check } from "lucide-react";
+import { Plus, Trash2, Star } from "lucide-react";
 import { useRestoredState, useSaveScrollPosition } from "../hooks/usePageState";
 
 function SearchResultsGrid({
@@ -143,15 +145,14 @@ export default function Browse() {
     // Tab State
     const [activeTab, setActiveTab] = useState(
         restoredState?.activeTab || "movies",
-    ); // 'movies', 'tv', 'picks'
+    );
 
     // Data State
     const [heroContent, setHeroContent] = useState([]);
-    const [trending, setTrending] = useState([]); // Used for rows
-    const [upcoming, setUpcoming] = useState([]);
-    const [topRated, setTopRated] = useState([]);
-    const [tvPopular, setTvPopular] = useState([]);
-    const [tvTopRated, setTvTopRated] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [loadingCategories, setLoadingCategories] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [hasMoreContent, setHasMoreContent] = useState(true);
 
     const [addingId, setAddingId] = useState(null);
     const [removingId, setRemovingId] = useState(null);
@@ -160,50 +161,339 @@ export default function Browse() {
     const { addMovie, removeMovie, movies } = useMovies();
     const { toast } = useToast();
 
+    // Get user's highly rated movies for recommendations
+    const topRatedUserMovies = useMemo(() => {
+        return movies
+            .filter((m) => m.ratings?.overall >= 4 && m.watched)
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 3);
+    }, [movies]);
+
+    // Analyze user's favorite genres from their library
+    const { userFavoriteGenres, allUserGenres } = useMemo(() => {
+        const genreCount = {};
+
+        movies.forEach((movie) => {
+            if (movie.genres && Array.isArray(movie.genres)) {
+                movie.genres.forEach((genre) => {
+                    const genreId =
+                        typeof genre === "object" ? genre.id : genre;
+                    const genreName =
+                        typeof genre === "object" ? genre.name : genre;
+
+                    if (!genreCount[genreId]) {
+                        genreCount[genreId] = {
+                            id: genreId,
+                            name: genreName,
+                            count: 0,
+                        };
+                    }
+                    genreCount[genreId].count++;
+                });
+            }
+        });
+
+        const sortedGenres = Object.values(genreCount).sort(
+            (a, b) => b.count - a.count,
+        );
+
+        return {
+            userFavoriteGenres: sortedGenres.slice(0, 5), // Top 5 for display
+            allUserGenres: sortedGenres, // All genres with counts
+        };
+    }, [movies]);
+
     // Save scroll position continuously
     useSaveScrollPosition("browse");
+
+    // All available genres with their IDs
+    const allGenres = useMemo(
+        () => [
+            { id: 28, name: "Action", type: "movie" },
+            { id: 12, name: "Adventure", type: "movie" },
+            { id: 16, name: "Animation", type: "movie" },
+            { id: 35, name: "Comedy", type: "movie" },
+            { id: 80, name: "Crime", type: "movie" },
+            { id: 99, name: "Documentary", type: "movie" },
+            { id: 18, name: "Drama", type: "movie" },
+            { id: 10751, name: "Family", type: "movie" },
+            { id: 14, name: "Fantasy", type: "movie" },
+            { id: 36, name: "History", type: "movie" },
+            { id: 27, name: "Horror", type: "movie" },
+            { id: 10402, name: "Music", type: "movie" },
+            { id: 9648, name: "Mystery", type: "movie" },
+            { id: 10749, name: "Romance", type: "movie" },
+            { id: 878, name: "Sci-Fi", type: "movie" },
+            { id: 53, name: "Thriller", type: "movie" },
+            { id: 10752, name: "War", type: "movie" },
+            { id: 37, name: "Western", type: "movie" },
+            { id: 10759, name: "Action & Adventure", type: "tv" },
+            { id: 16, name: "Animation", type: "tv" },
+            { id: 35, name: "Comedy", type: "tv" },
+            { id: 80, name: "Crime", type: "tv" },
+            { id: 99, name: "Documentary", type: "tv" },
+            { id: 18, name: "Drama", type: "tv" },
+            { id: 10751, name: "Family", type: "tv" },
+            { id: 10762, name: "Kids", type: "tv" },
+            { id: 9648, name: "Mystery", type: "tv" },
+            { id: 10765, name: "Sci-Fi & Fantasy", type: "tv" },
+        ],
+        [],
+    );
+
+    // Function to generate categories
+    const generateCategories = async () => {
+        const baseCategories = [
+            {
+                id: "trending",
+                title: "Trending Now",
+                fetch: () => getTrending(),
+                filter: (items) =>
+                    activeTab === "movies"
+                        ? items.filter((i) => i.type === "movie")
+                        : activeTab === "tv"
+                        ? items.filter((i) => i.type === "tv")
+                        : items,
+            },
+            {
+                id: "top_rated_movies",
+                title: "Top Rated Movies",
+                fetch: () => getMovies("top_rated"),
+                showIn: ["movies", "picks"],
+            },
+            {
+                id: "popular_movies",
+                title: "Popular Movies",
+                fetch: () => getMovies("popular"),
+                showIn: ["movies"],
+            },
+            {
+                id: "tv_popular",
+                title: "Popular TV Shows",
+                fetch: () => getTVShows("popular"),
+                showIn: ["tv", "picks"],
+            },
+            {
+                id: "tv_top_rated",
+                title: "Top Rated TV",
+                fetch: () => getTVShows("top_rated"),
+                showIn: ["tv", "picks"],
+            },
+            {
+                id: "tv_airing_today",
+                title: "Airing Today",
+                fetch: () => getTVShows("airing_today"),
+                showIn: ["tv"],
+            },
+            {
+                id: "tv_on_air",
+                title: "Currently Airing",
+                fetch: () => getTVShows("on_the_air"),
+                showIn: ["tv"],
+            },
+        ];
+
+        const genreCategories = [];
+        const usedGenreIds = new Set(); // Track used genres to prevent duplicates
+
+        if (userFavoriteGenres.length > 0) {
+            userFavoriteGenres.forEach((userGenre) => {
+                const mediaType = activeTab === "tv" ? "tv" : "movie";
+                const matchingGenre = allGenres.find(
+                    (g) =>
+                        g.id === userGenre.id &&
+                        (activeTab === "picks" || g.type === mediaType),
+                );
+
+                if (matchingGenre) {
+                    usedGenreIds.add(matchingGenre.id); // Mark as used
+                    genreCategories.push({
+                        id: `genre_${matchingGenre.id}_${
+                            matchingGenre.type
+                        }_${Date.now()}`,
+                        title: `${matchingGenre.name} ${
+                            matchingGenre.type === "tv" ? "Shows" : "Movies"
+                        }`,
+                        fetch: () =>
+                            getMoviesByGenre(
+                                matchingGenre.id,
+                                matchingGenre.type,
+                            ),
+                        showIn: activeTab === "picks" ? ["picks"] : [activeTab],
+                        isUserPreference: true,
+                    });
+                }
+            });
+        }
+
+        const mediaType = activeTab === "tv" ? "tv" : "movie";
+
+        // Get user's genres with 15+ movies (these are truly popular for them)
+        const significantUserGenreIds = allUserGenres
+            .filter((g) => g.count >= 15)
+            .map((g) => g.id);
+
+        // Filter for truly unexplored genres
+        const discoveryGenres = allGenres.filter((g) => {
+            // Must match the active tab
+            if (activeTab !== "picks" && g.type !== mediaType) return false;
+
+            // Must not be already used in the page
+            if (usedGenreIds.has(g.id)) return false;
+
+            // Must not be a significant genre for the user (15+ movies)
+            if (significantUserGenreIds.includes(g.id)) return false;
+
+            // Check if user has this genre at all
+            const userGenre = allUserGenres.find((ug) => ug.id === g.id);
+
+            // Only include if user has less than 10 movies in this genre (or none at all)
+            return !userGenre || userGenre.count < 10;
+        });
+
+        const randomGenreCount = Math.floor(Math.random() * 2) + 2;
+        const shuffledRandomGenres = [...discoveryGenres].sort(
+            () => 0.5 - Math.random(),
+        );
+
+        shuffledRandomGenres.slice(0, randomGenreCount).forEach((genre) => {
+            if (!usedGenreIds.has(genre.id)) {
+                usedGenreIds.add(genre.id); // Mark as used to prevent duplicates
+                genreCategories.push({
+                    id: `genre_${genre.id}_${
+                        genre.type
+                    }_random_${Date.now()}_${Math.random()}`,
+                    title: `Discover ${genre.name}`,
+                    fetch: () => getMoviesByGenre(genre.id, genre.type),
+                    showIn: activeTab === "picks" ? ["picks"] : [activeTab],
+                    isDiscovery: true,
+                });
+            }
+        });
+
+        const allCategories = [...baseCategories, ...genreCategories];
+        const relevantCategories = allCategories.filter(
+            (cat) => !cat.showIn || cat.showIn.includes(activeTab),
+        );
+        const shuffled = [...relevantCategories].sort(
+            () => 0.5 - Math.random(),
+        );
+
+        const categoriesWithData = await Promise.all(
+            shuffled.map(async (cat) => {
+                try {
+                    let items = await cat.fetch();
+                    if (cat.filter) {
+                        items = cat.filter(items);
+                    }
+                    return {
+                        ...cat,
+                        items: items.slice(0, 20),
+                    };
+                } catch (error) {
+                    console.error(`Error fetching ${cat.title}:`, error);
+                    return null;
+                }
+            }),
+        );
+
+        const validCategories = categoriesWithData.filter(
+            (cat) => cat && cat.items.length > 0,
+        );
+
+        const categoriesWithRecommendations = [];
+        let recommendationIndex = 0;
+
+        for (let i = 0; i < validCategories.length; i++) {
+            categoriesWithRecommendations.push(validCategories[i]);
+
+            if (
+                (i + 1) % (2 + Math.floor(Math.random() * 2)) === 0 &&
+                recommendationIndex < topRatedUserMovies.length
+            ) {
+                const baseMovie = topRatedUserMovies[recommendationIndex];
+                if (baseMovie && baseMovie.tmdbId) {
+                    try {
+                        const similar = await getSimilarMovies(
+                            baseMovie.tmdbId,
+                            baseMovie.type || "movie",
+                        );
+                        if (similar && similar.length > 0) {
+                            categoriesWithRecommendations.push({
+                                id: `similar_${baseMovie.tmdbId}_${Date.now()}`,
+                                title: `Because you liked "${baseMovie.title}"`,
+                                items: similar.slice(0, 20),
+                                isRecommendation: true,
+                            });
+                        }
+                    } catch (error) {
+                        console.error("Error fetching similar movies:", error);
+                    }
+                    recommendationIndex++;
+                }
+            }
+        }
+
+        return categoriesWithRecommendations;
+    };
 
     // Fetch Initial Data
     useEffect(() => {
         const loadDiscoverData = async () => {
-            // Parallel fetching for speed
-            const [trend, upc, top, tvPop, tvTop] = await Promise.all([
-                getTrending(),
-                getMovies("upcoming"),
-                getMovies("top_rated"),
-                getTVShows("popular"),
-                getTVShows("top_rated"),
-            ]);
+            setLoadingCategories(true);
+            setHasMoreContent(true);
+            try {
+                const newCategories = await generateCategories();
+                setCategories(newCategories);
 
-            setTrending(trend);
-            setUpcoming(upc);
-            setTopRated(top);
-            setTvPopular(tvPop);
-            setTvTopRated(tvTop);
-
-            // Set Hero Content initially to Trending (or mix)
-            setHeroContent(trend.slice(0, 8));
+                if (newCategories.length > 0) {
+                    setHeroContent(newCategories[0].items.slice(0, 6));
+                }
+            } catch (error) {
+                console.error("Error loading discover data:", error);
+            } finally {
+                setLoadingCategories(false);
+            }
         };
-        loadDiscoverData();
-    }, []);
 
-    // Update Hero based on Tab
-    useEffect(() => {
-        if (activeTab === "movies") {
-            setHeroContent(
-                trending.filter((i) => i.type === "movie").slice(0, 6),
-            );
-        } else if (activeTab === "tv") {
-            setHeroContent(tvPopular.slice(0, 6));
-        } else {
-            // Editor Picks -> Maybe Top Rated Mixed
-            setHeroContent(
-                [...topRated, ...tvTopRated]
-                    .sort(() => 0.5 - Math.random())
-                    .slice(0, 6),
-            );
+        loadDiscoverData();
+    }, [activeTab]);
+
+    // Load more categories
+    const loadMoreCategories = async () => {
+        if (loadingMore || !hasMoreContent || query.trim()) return;
+
+        setLoadingMore(true);
+        try {
+            const newCategories = await generateCategories();
+            setCategories((prev) => [...prev, ...newCategories]);
+        } catch (error) {
+            console.error("Error loading more categories:", error);
+        } finally {
+            setLoadingMore(false);
         }
-    }, [activeTab, trending, tvPopular, topRated, tvTopRated]);
+    };
+
+    // Infinite scroll
+    useEffect(() => {
+        if (query.trim()) return;
+
+        const handleScroll = () => {
+            const scrollTop = window.scrollY;
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+
+            if (
+                scrollTop + windowHeight >= documentHeight - 800 &&
+                !loadingMore
+            ) {
+                loadMoreCategories();
+            }
+        };
+
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, [query, loadingMore, hasMoreContent, categories]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -241,7 +531,6 @@ export default function Browse() {
             }
             const fullData = await fetchMediaMetadata(item.tmdbId, item.type);
 
-            // Normalize directors - extract names from objects if needed
             const normalizedData = {
                 ...fullData,
                 director:
@@ -252,7 +541,7 @@ export default function Browse() {
 
             await addMovie({
                 ...normalizedData,
-                status: "Watchlist", // Backward compatibility
+                status: "Watchlist",
                 inWatchlist: true,
                 inProgress: false,
                 watched: false,
@@ -323,7 +612,6 @@ export default function Browse() {
 
     const isAdded = (tmdbId) => movies.some((m) => m.tmdbId == tmdbId);
 
-    // Save current state to sessionStorage
     useEffect(() => {
         const currentState = {
             query,
@@ -341,101 +629,57 @@ export default function Browse() {
         }
     }, [query, activeTab]);
 
-    // Restore scroll position on mount if we have restored state
     useEffect(() => {
         if (restoredState?.scrollPosition) {
             setTimeout(() => {
                 window.scrollTo(0, restoredState.scrollPosition);
             }, 100);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Render Content based on Tab
     const renderTabContent = () => {
-        if (activeTab === "movies") {
+        if (loadingCategories) {
             return (
-                <div className="animate-in fade-in duration-500">
-                    <ScrollingRow
-                        title="Trending Now"
-                        items={trending.filter((i) => i.type === "movie")}
-                        onMovieClick={handleViewDetails}
-                        onAdd={handleQuickAdd}
-                        onRemove={handleRemove}
-                        isAdded={isAdded}
-                    />
-                    <ScrollingRow
-                        title="Top Rated Movies"
-                        items={topRated}
-                        onMovieClick={handleViewDetails}
-                        onAdd={handleQuickAdd}
-                        onRemove={handleRemove}
-                        isAdded={isAdded}
-                    />
-                </div>
-            );
-        } else if (activeTab === "tv") {
-            return (
-                <div className="animate-in fade-in duration-500">
-                    <ScrollingRow
-                        title="Popular TV Shows"
-                        items={tvPopular}
-                        onMovieClick={handleViewDetails}
-                        onAdd={handleQuickAdd}
-                        onRemove={handleRemove}
-                        isAdded={isAdded}
-                    />
-                    <ScrollingRow
-                        title="Top Rated TV"
-                        items={tvTopRated}
-                        onMovieClick={handleViewDetails}
-                        onAdd={handleQuickAdd}
-                        onRemove={handleRemove}
-                        isAdded={isAdded}
-                    />
-                    <ScrollingRow
-                        title="Trending This Week"
-                        items={trending.filter((i) => i.type === "tv")}
-                        onMovieClick={handleViewDetails}
-                        onAdd={handleQuickAdd}
-                        onRemove={handleRemove}
-                        isAdded={isAdded}
-                    />
-                </div>
-            );
-        } else {
-            return (
-                <div className="animate-in fade-in duration-500">
-                    <ScrollingRow
-                        title="Critically Acclaimed"
-                        items={[...topRated, ...tvTopRated]
-                            .sort((a, b) => b.voteAverage - a.voteAverage)
-                            .slice(0, 15)}
-                        onMovieClick={handleViewDetails}
-                        onAdd={handleQuickAdd}
-                        onRemove={handleRemove}
-                        isAdded={isAdded}
-                    />
-                    <ScrollingRow
-                        title="Hidden Gems"
-                        items={[...upcoming, ...trending]
-                            .sort(() => 0.5 - Math.random())
-                            .slice(0, 15)}
-                        onMovieClick={handleViewDetails}
-                        onAdd={handleQuickAdd}
-                        onRemove={handleRemove}
-                        isAdded={isAdded}
-                    />
+                <div className="flex items-center justify-center py-24">
+                    <Loader2 className="animate-spin text-blue-500" size={48} />
                 </div>
             );
         }
+
+        return (
+            <div className="animate-in fade-in duration-500 space-y-8">
+                {categories.map((category) => (
+                    <ScrollingRow
+                        key={category.id}
+                        title={category.title}
+                        items={category.items}
+                        onMovieClick={handleViewDetails}
+                        onAdd={handleQuickAdd}
+                        onRemove={handleRemove}
+                        isAdded={isAdded}
+                        highlight={category.isRecommendation}
+                        isDiscovery={category.isDiscovery}
+                    />
+                ))}
+                {loadingMore && (
+                    <div className="flex items-center justify-center py-12">
+                        <Loader2
+                            className="animate-spin text-blue-500"
+                            size={36}
+                        />
+                        <span className="ml-3 text-neutral-400">
+                            Loading more...
+                        </span>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     return (
         <div className="min-h-screen bg-black pb-12 font-sans text-white">
             <Navbar />
 
-            {/* Hero Section - only show when not searching */}
             {!query.trim() && (
                 <HeroCarousel
                     items={heroContent}
@@ -446,7 +690,6 @@ export default function Browse() {
                 />
             )}
 
-            {/* Search Bar - always visible */}
             <div className="px-4 md:px-12 relative z-10 pt-8">
                 <div className="relative max-w-xl mx-auto">
                     <Search
@@ -471,10 +714,8 @@ export default function Browse() {
                 </div>
             </div>
 
-            {/* Content Container - if query exists, hide discover view */}
             {!query.trim() && (
                 <>
-                    {/* Tabs */}
                     <div className="sticky top-15 z-40 bg-black/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
                         <div className="flex justify-center gap-6 md:gap-8">
                             {["movies", "tv", "picks"].map((tab) => (
@@ -497,14 +738,12 @@ export default function Browse() {
                         </div>
                     </div>
 
-                    {/* Main Content Area */}
                     <div className="relative z-10 -mt-10 md:mt-0 pb-12 bg-linear-to-t from-black via-black to-transparent">
                         {renderTabContent()}
                     </div>
                 </>
             )}
 
-            {/* Search Results Overlay */}
             {query.trim() && (
                 <div className="animate-in fade-in slide-in-from-bottom-5 duration-300">
                     {results.length > 0 ? (

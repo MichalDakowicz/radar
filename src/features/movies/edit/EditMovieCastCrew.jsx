@@ -3,6 +3,28 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { batchSearchDirectors } from "../../../hooks/useDirectorSearch";
 
+const GENRE_IDS = {
+    Action: 28,
+    Adventure: 12,
+    Animation: 16,
+    Comedy: 35,
+    Crime: 80,
+    Documentary: 99,
+    Drama: 18,
+    Family: 10751,
+    Fantasy: 14,
+    History: 36,
+    Horror: 27,
+    Music: 10402,
+    Mystery: 9648,
+    Romance: 10749,
+    "Science Fiction": 878,
+    "TV Movie": 10770,
+    Thriller: 53,
+    War: 10752,
+    Western: 37,
+};
+
 export default function EditMovieCastCrew({
     director,
     directorInput,
@@ -107,14 +129,30 @@ export default function EditMovieCastCrew({
                         Cast
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                        {cast.map((actor, i) => (
-                            <div
-                                key={i}
-                                className="bg-neutral-900 border border-neutral-800 rounded-full px-4 py-2 text-white flex items-center gap-2"
-                            >
-                                <span className="font-medium">{actor}</span>
-                            </div>
-                        ))}
+                        {cast.map((actor, i) => {
+                            const actorName =
+                                typeof actor === "object" ? actor.name : actor;
+                            const actorId =
+                                typeof actor === "object" ? actor.id : null;
+
+                            return (
+                                <div
+                                    key={i}
+                                    onClick={() =>
+                                        actorId && navigate(`/actor/${actorId}`)
+                                    }
+                                    className={`bg-neutral-900 border border-neutral-800 rounded-full px-4 py-2 text-white flex items-center gap-2 ${
+                                        actorId
+                                            ? "cursor-pointer hover:bg-neutral-800 hover:border-neutral-700 transition-all"
+                                            : ""
+                                    }`}
+                                >
+                                    <span className="font-medium">
+                                        {actorName}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -125,14 +163,28 @@ export default function EditMovieCastCrew({
                         Genres
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                        {genres.map((g) => (
-                            <span
-                                key={g}
-                                className="px-3 py-1 rounded-full bg-neutral-800 text-neutral-300 text-sm border border-neutral-700"
-                            >
-                                {g}
-                            </span>
-                        ))}
+                        {genres.map((g) => {
+                            const genreName =
+                                typeof g === "object" ? g.name : g;
+                            const genreId =
+                                typeof g === "object" ? g.id : GENRE_IDS[g];
+
+                            return (
+                                <span
+                                    key={genreId || genreName}
+                                    onClick={() =>
+                                        genreId && navigate(`/genre/${genreId}`)
+                                    }
+                                    className={`px-3 py-1 rounded-full bg-neutral-800 text-neutral-300 text-sm border border-neutral-700 ${
+                                        genreId
+                                            ? "cursor-pointer hover:bg-neutral-700 hover:border-neutral-600 transition-all"
+                                            : ""
+                                    }`}
+                                >
+                                    {genreName}
+                                </span>
+                            );
+                        })}
                     </div>
                 </div>
             )}

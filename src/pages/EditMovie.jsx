@@ -526,24 +526,42 @@ export default function EditMovie() {
                                     Genres
                                 </label>
                                 <div className="flex flex-wrap gap-2 mb-3 min-h-8">
-                                    {genres.map((g, i) => (
-                                        <span
-                                            key={i}
-                                            className="bg-neutral-800 text-neutral-300 text-sm px-3 py-1.5 rounded-full flex items-center gap-2 border border-neutral-700"
-                                        >
-                                            {g}
-                                            {!tmdbId && (
-                                                <button
-                                                    onClick={() =>
-                                                        removeGenre(i)
-                                                    }
-                                                    className="hover:text-red-400"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            )}
-                                        </span>
-                                    ))}
+                                    {genres.map((g, i) => {
+                                        const genreName =
+                                            typeof g === "object" ? g.name : g;
+                                        const genreId =
+                                            typeof g === "object" ? g.id : null;
+
+                                        return (
+                                            <span
+                                                key={i}
+                                                onClick={() =>
+                                                    genreId &&
+                                                    navigate(
+                                                        `/genre/${genreId}`,
+                                                    )
+                                                }
+                                                className={`bg-neutral-800 text-neutral-300 text-sm px-3 py-1.5 rounded-full flex items-center gap-2 border border-neutral-700 ${
+                                                    genreId
+                                                        ? "cursor-pointer hover:bg-neutral-700 hover:border-neutral-600"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {genreName}
+                                                {!tmdbId && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            removeGenre(i);
+                                                        }}
+                                                        className="hover:text-red-400"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
+                                            </span>
+                                        );
+                                    })}
                                 </div>
                                 {!tmdbId && (
                                     <div className="flex gap-2">
@@ -576,24 +594,42 @@ export default function EditMovie() {
                                     Cast
                                 </label>
                                 <div className="flex flex-wrap gap-2 mb-3 min-h-8">
-                                    {cast.map((c, i) => (
-                                        <span
-                                            key={i}
-                                            className="bg-neutral-800 text-neutral-300 text-sm px-3 py-1.5 rounded-full flex items-center gap-2 border border-neutral-700"
-                                        >
-                                            {c}
-                                            {!tmdbId && (
-                                                <button
-                                                    onClick={() =>
-                                                        removeCast(i)
-                                                    }
-                                                    className="hover:text-red-400"
-                                                >
-                                                    <X size={14} />
-                                                </button>
-                                            )}
-                                        </span>
-                                    ))}
+                                    {cast.map((c, i) => {
+                                        const actorName =
+                                            typeof c === "object" ? c.name : c;
+                                        const actorId =
+                                            typeof c === "object" ? c.id : null;
+
+                                        return (
+                                            <span
+                                                key={i}
+                                                onClick={() =>
+                                                    actorId &&
+                                                    navigate(
+                                                        `/actor/${actorId}`,
+                                                    )
+                                                }
+                                                className={`bg-neutral-800 text-neutral-300 text-sm px-3 py-1.5 rounded-full flex items-center gap-2 border border-neutral-700 ${
+                                                    actorId
+                                                        ? "cursor-pointer hover:bg-neutral-700 hover:border-neutral-600"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {actorName}
+                                                {!tmdbId && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            removeCast(i);
+                                                        }}
+                                                        className="hover:text-red-400"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
+                                            </span>
+                                        );
+                                    })}
                                 </div>
                                 {!tmdbId && (
                                     <div className="flex gap-2">

@@ -93,7 +93,10 @@ export async function fetchMediaMetadata(tmdbId, type = "movie") {
                     ?.filter((person) => person.job === "Director")
                     .map((person) => ({ id: person.id, name: person.name })) ||
                 [];
-            cast = data.credits?.cast?.slice(0, 5).map((p) => p.name) || [];
+            cast =
+                data.credits?.cast
+                    ?.slice(0, 5)
+                    .map((p) => ({ id: p.id, name: p.name })) || [];
         } else {
             // For TV, use created_by or explicit creators.
             // Note: TV shows might not have a "Director" per se for the whole show.
@@ -103,7 +106,10 @@ export async function fetchMediaMetadata(tmdbId, type = "movie") {
 
             // aggregate_credits is better for TV shows to get main cast across seasons
             const credits = data.aggregate_credits || data.credits;
-            cast = credits?.cast?.slice(0, 5).map((p) => p.name) || [];
+            cast =
+                credits?.cast
+                    ?.slice(0, 5)
+                    .map((p) => ({ id: p.id, name: p.name })) || [];
         }
 
         // Runtime logic
@@ -130,7 +136,9 @@ export async function fetchMediaMetadata(tmdbId, type = "movie") {
                 ? `${IMAGE_BASE_URL}${data.poster_path}`
                 : null,
             overview: data.overview || "",
-            genres: data.genres ? data.genres.map((g) => g.name) : [],
+            genres: data.genres
+                ? data.genres.map((g) => ({ id: g.id, name: g.name }))
+                : [],
             runtime: runtime,
             cast: cast,
             availability: availability,
@@ -354,6 +362,193 @@ export async function searchDirectors(query) {
             }));
     } catch (error) {
         console.error("TMDB Search Directors Error:", error);
+        return [];
+    }
+}
+
+// Fetch actor/person details
+export async function fetchActorDetails(personId) {
+    if (!personId) return null;
+
+    try {
+        const res = await fetch(`${BASE_URL}/person/${personId}`, { headers });
+        if (!res.ok) throw new Error("Failed to fetch actor details");
+        const data = await res.json();
+
+        return {
+            id: data.id,
+            name: data.name,
+            biography: data.biography || "",
+            birthday: data.birthday || null,
+            placeOfBirth: data.place_of_birth || null,
+            profileUrl: data.profile_path
+                ? `${IMAGE_BASE_URL}${data.profile_path}`
+                : null,
+            knownForDepartment: data.known_for_department || null,
+            popularity: data.popularity || 0,
+        };
+    } catch (error) {
+        console.error("TMDB Actor Details Error:", error);
+        throw error;
+    }
+}
+
+// Fetch movies with an actor
+export async function fetchActorMovies(personId, page = 1) {
+    if (!personId) return { movies: [], totalPages: 1 };
+
+    try {
+        const res = await fetch(
+            `${BASE_URL}/person/${personId}/movie_credits`,
+            { headers },
+        );
+        if (!res.ok) throw new Error("Failed to fetch actor movies");
+        const data = await res.json();
+
+        // Get cast credits and sort by popularity
+        const allMovies =
+            data.cast
+                ?.map((movie) => ({
+                    tmdbId: movie.id,
+                    type: "movie",
+                    title: movie.title,
+                    releaseDate: movie.release_date || null,
+                    coverUrl: movie.poster_path
+                        ? `${IMAGE_BASE_URL}${movie.poster_path}`
+                        : null,
+                    overview: movie.overview || "",
+                    voteAverage: movie.vote_average || 0,
+                    voteCount: movie.vote_count || 0,
+                    character: movie.character || "",
+                    popularity: movie.popularity || 0,
+                }))
+                .sort((a, b) => b.popularity - a.popularity) || [];
+
+        // Paginate: 20 per page
+        const pageSize = 20;
+        const totalPages = Math.ceil(allMovies.length / pageSize);
+        const startIndex = (page - 1) * pageSize;
+        const movies = allMovies.slice(startIndex, startIndex + pageSize);
+
+        return { movies, totalPages, totalCount: allMovies.length };
+    } catch (error) {
+        console.error("TMDB Actor Movies Error:", error);
+        return { movies: [], totalPages: 1, totalCount: 0 };
+    }
+}
+
+// Fetch movies by genre
+export async function fetchGenreMovies(genreId, page = 1) {
+    if (!genreId) return { movies: [], totalPages: 1 };
+
+    try {
+        const res = await fetch(
+            `${BASE_URL}/discover/movie?with_genres=${genreId}&sort_by=vote_average.desc&vote_count.gte=100&page=${page}`,
+            { headers },
+        );
+        if (!res.ok) throw new Error("Failed to fetch genre movies");
+        const data = await res.json();
+
+        const movies = data.results.map((movie) => ({
+            tmdbId: movie.id,
+            type: "movie",
+            title: movie.title,
+            releaseDate: movie.release_date || null,
+            coverUrl: movie.poster_path
+                ? `${IMAGE_BASE_URL}${movie.poster_path}`
+                : null,
+            overview: movie.overview || "",
+            voteAverage: movie.vote_average || 0,
+            voteCount: movie.vote_count || 0,
+        }));
+
+        return {
+            movies,
+            totalPages: data.total_pages,
+            totalCount: data.total_results,
+        };
+    } catch (error) {
+        console.error("TMDB Genre Movies Error:", error);
+        return { movies: [], totalPages: 1, totalCount: 0 };
+    }
+}
+
+// Fetch similar movies/TV shows
+export async function fetchSimilarMedia(tmdbId, type = "movie") {
+    if (!tmdbId) return [];
+
+    try {
+        const endpoint =
+            type === "tv" ? `tv/${tmdbId}/similar` : `movie/${tmdbId}/similar`;
+        const res = await fetch(`${BASE_URL}/${endpoint}`, { headers });
+        if (!res.ok) throw new Error("Failed to fetch similar media");
+        const data = await res.json();
+
+        return data.results.slice(0, 12).map((item) => ({
+            tmdbId: item.id,
+            type: type,
+            title: item.title || item.name,
+            releaseDate: item.release_date || item.first_air_date || null,
+            coverUrl: item.poster_path
+                ? `${IMAGE_BASE_URL}${item.poster_path}`
+                : null,
+            overview: item.overview || "",
+            voteAverage: item.vote_average || 0,
+            voteCount: item.vote_count || 0,
+        }));
+    } catch (error) {
+        console.error("TMDB Similar Media Error:", error);
+        return [];
+    }
+}
+
+// Alias for Browse page recommendations
+export const getSimilarMovies = fetchSimilarMedia;
+
+// Fetch movies by genre
+export async function getMoviesByGenre(genreId, type = "movie") {
+    if (!genreId) return [];
+
+    try {
+        const endpoint = type === "tv" ? "discover/tv" : "discover/movie";
+        const res = await fetch(
+            `${BASE_URL}/${endpoint}?with_genres=${genreId}&sort_by=popularity.desc&vote_count.gte=100`,
+            { headers },
+        );
+        if (!res.ok) throw new Error("Failed to fetch genre movies");
+        const data = await res.json();
+
+        return data.results.slice(0, 20).map((item) => ({
+            tmdbId: item.id,
+            type: type,
+            title: item.title || item.name,
+            releaseDate: item.release_date || item.first_air_date || null,
+            coverUrl: item.poster_path
+                ? `${IMAGE_BASE_URL}${item.poster_path}`
+                : null,
+            backdropUrl: item.backdrop_path
+                ? `${IMAGE_ORIGINAL_URL}${item.backdrop_path}`
+                : null,
+            overview: item.overview || "",
+            voteAverage: item.vote_average || 0,
+            voteCount: item.vote_count || 0,
+        }));
+    } catch (error) {
+        console.error("TMDB Genre Movies Error:", error);
+        return [];
+    }
+}
+
+// Get all available genres
+export async function getGenres(type = "movie") {
+    try {
+        const endpoint = type === "tv" ? "genre/tv/list" : "genre/movie/list";
+        const res = await fetch(`${BASE_URL}/${endpoint}`, { headers });
+        if (!res.ok) throw new Error("Failed to fetch genres");
+        const data = await res.json();
+        return data.genres;
+    } catch (error) {
+        console.error("TMDB Genres Error:", error);
         return [];
     }
 }
