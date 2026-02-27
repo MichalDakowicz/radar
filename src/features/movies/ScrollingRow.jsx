@@ -13,7 +13,7 @@ export default function ScrollingRow({
     isDiscovery = false,
 }) {
     const rowRef = useRef(null);
-    const [showLeftArrow, setShowLeftArrow] = useState(false);
+    const[showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(false);
 
     const checkScroll = () => {
@@ -27,30 +27,15 @@ export default function ScrollingRow({
         }
     };
 
-    const handleTouchStart = () => {
-        // Simple touch start handler for potential future use
-    };
-
-    const handleTouchEnd = () => {
-        // Simple touch end handler for potential future use
-    };
-
-    const handleWheel = (e) => {
-        // If scrolling horizontally, prevent page scroll
-        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-            e.stopPropagation();
-        }
-    };
-
     useEffect(() => {
         const el = rowRef.current;
         if (el) {
-            el.addEventListener("scroll", checkScroll);
+            // FIX 1: Added { passive: true } to tell the browser this listener 
+            // won't prevent scrolling, allowing the page to scroll smoothly.
+            el.addEventListener("scroll", checkScroll, { passive: true });
 
-            // Initial check after a short delay to ensure content is loaded
             const timer = setTimeout(checkScroll, 100);
 
-            // Also check when the element resizes (content loads)
             const resizeObserver = new ResizeObserver(() => {
                 setTimeout(checkScroll, 50);
             });
@@ -62,7 +47,7 @@ export default function ScrollingRow({
                 resizeObserver.disconnect();
             };
         }
-    }, [items]); // Re-run when items change
+    }, [items]);
 
     const scroll = (direction) => {
         if (rowRef.current) {
@@ -112,15 +97,15 @@ export default function ScrollingRow({
 
             <div className="relative w-full">
                 <div
-                    className={`absolute left-0 top-0 bottom-0 z-30 w-12 md:w-20 bg-gradient-to-r from-black/80 to-transparent flex items-center justify-center transition-opacity duration-300`}
+                    className="absolute left-0 top-0 bottom-0 z-30 w-12 md:w-20 bg-gradient-to-r from-black/80 to-transparent flex items-center justify-center transition-opacity duration-300 pointer-events-none"
                     style={{
                         opacity: showLeftArrow ? 1 : 0,
-                        pointerEvents: showLeftArrow ? "auto" : "none",
                     }}
                 >
                     <button
                         onClick={() => scroll("left")}
-                        className="hover:scale-125 transition-transform bg-black/60 rounded-full p-2 md:bg-transparent md:p-0"
+                        disabled={!showLeftArrow}
+                        className="hover:scale-125 transition-transform bg-black/60 rounded-full p-2 md:bg-transparent md:p-0 pointer-events-auto disabled:cursor-default"
                     >
                         <ChevronLeft
                             className="text-white drop-shadow-lg"
@@ -132,23 +117,19 @@ export default function ScrollingRow({
                 <div
                     ref={rowRef}
                     data-scrollable="true"
-                    className="flex gap-4 overflow-x-auto scrollbar-hide px-6 md:px-16 pb-4 pt-4 snap-x snap-mandatory w-full"
+                    // FIX 2: Removed snap-x, snap-mandatory, and overflow-y-hidden. 
+                    // Added overflow-y-visible.
+                    className="flex gap-4 overflow-x-auto overflow-y-visible scrollbar-hide px-6 md:px-16 pb-4 pt-4 w-full overscroll-x-contain"
                     style={{
                         scrollbarWidth: "none",
                         msOverflowStyle: "none",
-                        touchAction: "pan-y pan-x", // Allow both horizontal and vertical panning
-                        WebkitOverflowScrolling: "touch", // Smooth scrolling on iOS
-                        overscrollBehavior: "contain", // Prevent scroll chaining
                     }}
-                    onTouchStart={handleTouchStart}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchCancel={handleTouchEnd}
-                    onWheel={handleWheel}
                 >
                     {items.map((movie) => (
                         <div
                             key={movie.tmdbId}
-                            className="w-35 md:w-[200px] flex-none snap-start transition-transform duration-300 hover:z-20"
+                            // FIX 3: Removed snap-start to free up touch axis
+                            className="w-35 md:w-[200px] flex-none transition-transform duration-300 hover:z-20"
                         >
                             <MovieCard
                                 movie={movie}
@@ -167,15 +148,15 @@ export default function ScrollingRow({
                 </div>
 
                 <div
-                    className="absolute right-0 top-0 bottom-0 z-30 w-12 md:w-16 bg-gradient-to-l from-black/80 to-transparent flex items-center justify-center transition-opacity duration-300"
+                    className="absolute right-0 top-0 bottom-0 z-30 w-12 md:w-16 bg-gradient-to-l from-black/80 to-transparent flex items-center justify-center transition-opacity duration-300 pointer-events-none"
                     style={{
                         opacity: showRightArrow ? 1 : 0,
-                        pointerEvents: showRightArrow ? "auto" : "none",
                     }}
                 >
                     <button
                         onClick={() => scroll("right")}
-                        className="hover:scale-125 transition-transform bg-black/60 rounded-full p-2 md:bg-transparent md:p-0"
+                        disabled={!showRightArrow}
+                        className="hover:scale-125 transition-transform bg-black/60 rounded-full p-2 md:bg-transparent md:p-0 pointer-events-auto disabled:cursor-default"
                     >
                         <ChevronRight
                             className="text-white drop-shadow-lg"

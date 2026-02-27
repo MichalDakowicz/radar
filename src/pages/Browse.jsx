@@ -819,7 +819,7 @@ export default function Browse() {
 
             {!query.trim() && (
                 <>
-                    <div className="sticky top-18 z-40 bg-neutral-950/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
+                    <div className="sticky top-15 z-40 bg-neutral-950/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
                         <div className="flex justify-center gap-6 md:gap-8">
                             {["movies", "tv"].map((tab) => (
                                 <button
