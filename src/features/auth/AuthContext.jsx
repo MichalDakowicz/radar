@@ -69,9 +69,7 @@ export function AuthProvider({ children }) {
   const login = async () => {
     if (Capacitor.isNativePlatform()) {
       try {
-        console.log("Starting Native Google Sign-In...");
         const googleUser = await GoogleAuth.signIn();
-        console.log("Google Sign-In Success:", JSON.stringify(googleUser));
         
         const idToken = googleUser.authentication?.idToken;
         if (!idToken) {
@@ -79,9 +77,7 @@ export function AuthProvider({ children }) {
         }
 
         const credential = GoogleAuthProvider.credential(idToken);
-        console.log("Signing in with Credential...");
         await signInWithCredential(auth, credential);
-        console.log("Firebase Sign-In Complete");
       } catch (error) {
         console.error("Native Google Sign-In failed", error);
         alert(`Login Failed: ${error.message || JSON.stringify(error)}`);

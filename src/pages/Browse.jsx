@@ -16,8 +16,9 @@ import { Navbar } from "../components/layout/Navbar";
 import { BottomNav } from "../components/layout/BottomNav";
 import HeroCarousel from "../features/movies/HeroCarousel";
 import ScrollingRow from "../features/movies/ScrollingRow";
-import { Plus, Trash2, Star } from "lucide-react";
+import { Plus, Trash2, Star, Film, Tv } from "lucide-react";
 import { useRestoredState, useSaveScrollPosition } from "../hooks/usePageState";
+import { useRef, useCallback } from "react";
 
 function SearchResultsGrid({
     items,
@@ -38,9 +39,8 @@ function SearchResultsGrid({
                     <div
                         key={item.tmdbId}
                         onClick={() => onSelect(item)}
-                        className={`group relative bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800 hover:border-neutral-700 transition-colors cursor-pointer ${
-                            added ? "opacity-50 grayscale" : ""
-                        }`}
+                        className={`group relative bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800 hover:border-neutral-700 transition-colors cursor-pointer ${added ? "opacity-50 grayscale" : ""
+                            }`}
                     >
                         <div className="aspect-2/3 relative">
                             {item.coverUrl ? (
@@ -266,8 +266,8 @@ export default function Browse() {
                     activeTab === "movies"
                         ? items.filter((i) => i.type === "movie")
                         : activeTab === "tv"
-                        ? items.filter((i) => i.type === "tv")
-                        : items,
+                            ? items.filter((i) => i.type === "tv")
+                            : items,
             },
             {
                 id: `top_rated_movies_${timestamp}_${random}`,
@@ -316,21 +316,18 @@ export default function Browse() {
         const baseCategories =
             relevantBaseCategories.length > 0
                 ? [
-                      relevantBaseCategories[
-                          Math.floor(
-                              Math.random() * relevantBaseCategories.length,
-                          )
-                      ],
-                  ]
+                    relevantBaseCategories[
+                    Math.floor(
+                        Math.random() * relevantBaseCategories.length,
+                    )
+                    ],
+                ]
                 : [];
 
         const genreCategories = [];
         const usedDiscoveryGenreIds = new Set();
 
         // Add user's favorite genres (NOT marked as discovery)
-        console.log("User favorite genres:", userFavoriteGenres);
-        console.log("Active tab:", activeTab);
-
         if (userFavoriteGenres.length > 0) {
             userFavoriteGenres.forEach((userGenre) => {
                 const mediaType = activeTab === "tv" ? "tv" : "movie";
@@ -346,22 +343,13 @@ export default function Browse() {
                     (g) => g.id === genreId && g.type === mediaType,
                 );
 
-                console.log(
-                    `Checking genre ${userGenre.name} (${userGenre.id} -> ${genreId}):`,
-                    matchingGenres.length > 0
-                        ? `FOUND ${matchingGenres.length}`
-                        : "NOT FOUND",
-                );
-
                 // Add each matching genre (could be both movie and TV for picks tab)
                 matchingGenres.forEach((matchingGenre) => {
                     genreCategories.push({
-                        id: `genre_fav_${matchingGenre.id}_${
-                            matchingGenre.type
-                        }_${timestamp}_${random}_${Math.random()}`,
-                        title: `${matchingGenre.name} ${
-                            matchingGenre.type === "tv" ? "Shows" : "Movies"
-                        }`,
+                        id: `genre_fav_${matchingGenre.id}_${matchingGenre.type
+                            }_${timestamp}_${random}_${Math.random()}`,
+                        title: `${matchingGenre.name} ${matchingGenre.type === "tv" ? "Shows" : "Movies"
+                            }`,
                         fetch: () =>
                             getMoviesByGenre(
                                 matchingGenre.id,
@@ -372,11 +360,6 @@ export default function Browse() {
                 });
             });
         }
-
-        console.log(
-            "Genre categories after user favorites:",
-            genreCategories.length,
-        );
 
         const mediaType = activeTab === "tv" ? "tv" : "movie";
 
@@ -391,19 +374,10 @@ export default function Browse() {
             })
             .filter((id) => id !== undefined); // Remove any that couldn't be mapped
 
-        console.log(
-            "Significant user genre IDs (15+ movies):",
-            significantUserGenreIds,
-        );
-        console.log("All user genres:", allUserGenres);
-
         // Filter for unexplored genres (for discovery only)
         const discoveryGenres = allGenres.filter((g) => {
             if (activeTab !== "picks" && g.type !== mediaType) return false;
             if (significantUserGenreIds.includes(g.id)) {
-                console.log(
-                    `Excluding ${g.name} (${g.id}) - significant genre`,
-                );
                 return false;
             }
 
@@ -418,19 +392,8 @@ export default function Browse() {
 
             const shouldInclude = !userGenre || userGenre.count < 10;
 
-            if (!shouldInclude && userGenre) {
-                console.log(
-                    `Excluding ${g.name} (${g.id}) - user has ${userGenre.count} movies`,
-                );
-            }
-
             return shouldInclude;
         });
-
-        console.log(
-            "Discovery genres available:",
-            discoveryGenres.map((g) => `${g.name} (${g.id})`),
-        );
 
         const randomGenreCount = Math.floor(Math.random() * 2) + 2;
         const shuffledRandomGenres = [...discoveryGenres].sort(
@@ -441,9 +404,8 @@ export default function Browse() {
             if (!usedDiscoveryGenreIds.has(genre.id)) {
                 usedDiscoveryGenreIds.add(genre.id);
                 genreCategories.push({
-                    id: `genre_disc_${genre.id}_${
-                        genre.type
-                    }_${timestamp}_${Math.random()}`,
+                    id: `genre_disc_${genre.id}_${genre.type
+                        }_${timestamp}_${Math.random()}`,
                     title: `Discover ${genre.name}`,
                     fetch: () => getMoviesByGenre(genre.id, genre.type),
                     isDiscovery: true, // Marked as discovery with green badge
@@ -512,9 +474,8 @@ export default function Browse() {
 
                         if (filteredSimilar && filteredSimilar.length > 0) {
                             categoriesWithRecommendations.push({
-                                id: `similar_${
-                                    baseMovie.tmdbId
-                                }_${timestamp}_${Math.random()}`,
+                                id: `similar_${baseMovie.tmdbId
+                                    }_${timestamp}_${Math.random()}`,
                                 title: `Because you liked "${baseMovie.title}"`,
                                 items: filteredSimilar.slice(0, 20),
                                 isRecommendation: true,
@@ -568,26 +529,23 @@ export default function Browse() {
         }
     };
 
-    // Infinite scroll
-    useEffect(() => {
-        if (query.trim()) return;
+    // Load more intersection observer implementation
+    const observer = useRef();
+    const lastElementRef = useCallback(
+        (node) => {
+            if (loadingMore || !hasMoreContent || query.trim()) return;
+            if (observer.current) observer.current.disconnect();
 
-        const handleScroll = () => {
-            const scrollTop = window.scrollY;
-            const windowHeight = window.innerHeight;
-            const documentHeight = document.documentElement.scrollHeight;
+            observer.current = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreCategories();
+                }
+            }, { rootMargin: "400px" }); // Pre-load slightly before reaching the bottom
 
-            if (
-                scrollTop + windowHeight >= documentHeight - 800 &&
-                !loadingMore
-            ) {
-                loadMoreCategories();
-            }
-        };
-
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, [query, loadingMore, hasMoreContent, categories]);
+            if (node) observer.current.observe(node);
+        },
+        [loadingMore, hasMoreContent, query, activeTab], // loadMoreCategories is inherently bound to these so we don't strictly need it in deps, but include logic variables
+    );
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -750,27 +708,31 @@ export default function Browse() {
         }
 
         return (
-            <div className="animate-in fade-in duration-500 space-y-8">
-                {categories.map((category) => (
-                    <ScrollingRow
-                        key={category.id}
-                        title={category.title}
-                        items={category.items}
-                        onMovieClick={handleViewDetails}
-                        onAdd={handleQuickAdd}
-                        onRemove={handleRemove}
-                        isAdded={isAdded}
-                        highlight={category.isRecommendation}
-                        isDiscovery={category.isDiscovery}
-                    />
-                ))}
+            <div className="animate-in fade-in duration-500 space-y-12">
+                {categories.map((category, index) => {
+                    const isLast = index === categories.length - 1;
+                    return (
+                        <div key={category.id} ref={isLast ? lastElementRef : null}>
+                            <ScrollingRow
+                                title={category.title}
+                                items={category.items}
+                                onMovieClick={handleViewDetails}
+                                onAdd={handleQuickAdd}
+                                onRemove={handleRemove}
+                                isAdded={isAdded}
+                                highlight={category.isRecommendation}
+                                isDiscovery={category.isDiscovery}
+                            />
+                        </div>
+                    );
+                })}
                 {loadingMore && (
-                    <div className="flex items-center justify-center py-12">
+                    <div className="flex items-center justify-center py-12 pb-24">
                         <Loader2
-                            className="animate-spin text-blue-500"
+                            className="animate-spin text-zinc-500"
                             size={36}
                         />
-                        <span className="ml-3 text-neutral-400">
+                        <span className="ml-3 text-zinc-500 font-medium tracking-wide">
                             Loading more...
                         </span>
                     </div>
@@ -780,7 +742,7 @@ export default function Browse() {
     };
 
     return (
-        <div className="min-h-screen bg-black pb-12 font-sans text-white">
+        <div className="min-h-screen bg-[#09090b] pb-20 font-sans text-zinc-100 selection:bg-zinc-800">
             <Navbar />
 
             {!query.trim() && (
@@ -793,81 +755,93 @@ export default function Browse() {
                 />
             )}
 
-            <div className="px-4 md:px-12 relative z-10 pt-8">
-                <div className="relative max-w-xl mx-auto">
-                    <Search
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500"
-                        size={18}
-                    />
-                    <input
-                        type="text"
-                        className="w-full h-10 rounded-lg bg-neutral-900 border border-neutral-800 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        placeholder="Find movies & TV shows..."
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                    />
-                    {loading && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                            <Loader2
-                                className="animate-spin text-neutral-400"
-                                size={18}
-                            />
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {!query.trim() && (
-                <>
-                    <div className="sticky top-15 z-40 bg-neutral-950/80 backdrop-blur-md py-2 border-b border-white/10 md:mt-0">
-                        <div className="flex justify-center gap-6 md:gap-8">
-                            {["movies", "tv"].map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => setActiveTab(tab)}
-                                    className={`text-lg md:text-xl font-bold px-4 py-2 rounded-full transition-all duration-300 ${
-                                        activeTab === tab
-                                            ? "text-white scale-110 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]"
-                                            : "text-neutral-500 hover:text-neutral-300"
-                                    }`}
-                                >
-                                    {tab === "movies" ? "Movies" : "TV Shows"}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="relative z-10 -mt-10 md:mt-0 pb-12 bg-linear-to-t from-black via-black to-transparent">
-                        {renderTabContent()}
-                    </div>
-                </>
-            )}
-
-            {query.trim() && (
-                <div className="animate-in fade-in slide-in-from-bottom-5 duration-300">
-                    {results.length > 0 ? (
-                        <SearchResultsGrid
-                            items={results}
-                            onAdd={handleQuickAdd}
-                            onRemove={handleRemove}
-                            onSelect={handleViewDetails}
-                            addingId={addingId}
-                            removingId={removingId}
-                            isAdded={isAdded}
+            <main className="mx-auto max-w-screen-2xl relative z-10">
+                <div className="px-4 sm:px-6 pt-8 pb-4">
+                    <div className="relative max-w-2xl mx-auto">
+                        <Search
+                            className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+                            size={20}
                         />
-                    ) : (
-                        !loading && (
-                            <div className="text-center py-24 text-neutral-500">
-                                <Search
-                                    size={48}
-                                    className="mx-auto mb-4 opacity-50"
+                        <input
+                            type="text"
+                            className="w-full h-12 rounded-xl bg-zinc-900 border border-zinc-800 pl-11 pr-4 text-[15px] font-medium text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-zinc-500 shadow-sm"
+                            placeholder="Find movies & TV shows..."
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                        />
+                        {loading && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                <Loader2
+                                    className="animate-spin text-neutral-400"
+                                    size={18}
                                 />
-                                <p>No results found for "{query}"</p>
                             </div>
-                        )
-                    )}
+                        )}
+                    </div>
                 </div>
-            )}
+
+                {!query.trim() && (
+                    <>
+                        <div className="sticky top-[56px] sm:top-[62px] z-40 bg-[#09090b]/90 backdrop-blur-xl border-b border-zinc-800/50 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-8 support-[backdrop-filter]:bg-[#09090b]/80">
+                            <div className="flex justify-center max-w-md mx-auto py-3">
+                                <div className="flex w-full items-center p-1 bg-zinc-900/80 border border-zinc-800 rounded-lg">
+                                    {[
+                                        { id: "movies", label: "Movies", icon: Film },
+                                        { id: "tv", label: "TV Shows", icon: Tv }
+                                    ].map((tab) => {
+                                        const Icon = tab.icon;
+                                        const isActive = activeTab === tab.id;
+                                        return (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => setActiveTab(tab.id)}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-semibold transition-all duration-200 ${isActive
+                                                    ? "bg-zinc-800 text-white shadow hover:bg-zinc-700"
+                                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                                                    }`}
+                                            >
+                                                <Icon size={16} className={isActive ? "text-blue-400" : ""} />
+                                                {tab.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative z-10 pb-8">
+                            {renderTabContent()}
+                        </div>
+                    </>
+                )}
+
+                {query.trim() && (
+                    <div className="animate-in fade-in slide-in-from-bottom-5 duration-300 px-4 sm:px-6">
+                        {results.length > 0 ? (
+                            <SearchResultsGrid
+                                items={results}
+                                onAdd={handleQuickAdd}
+                                onRemove={handleRemove}
+                                onSelect={handleViewDetails}
+                                addingId={addingId}
+                                removingId={removingId}
+                                isAdded={isAdded}
+                            />
+                        ) : (
+                            !loading && (
+                                <div className="text-center py-32 text-zinc-500 border-2 border-dashed border-zinc-800/50 rounded-2xl mx-auto max-w-2xl mt-8">
+                                    <Search
+                                        size={48}
+                                        className="mx-auto mb-4 opacity-30 text-zinc-600"
+                                    />
+                                    <h3 className="text-lg font-semibold text-zinc-300 mb-1">No matches found</h3>
+                                    <p className="text-sm">We couldn't find anything for "{query}"</p>
+                                </div>
+                            )
+                        )}
+                    </div>
+                )}
+            </main>
 
             <BottomNav />
         </div>

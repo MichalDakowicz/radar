@@ -9,13 +9,11 @@ const AppUrlListener = () => {
 
   useEffect(() => {
     const handleUrlOpen = (data) => {
-      console.log('App URL opened:', data.url);
       try {
         const url = new URL(data.url);
         // Handle both https://domain/u/id and custom schemes if you add them later
         if (url.pathname.startsWith('/u/')) {
           const path = url.pathname + url.search + url.hash;
-          console.log('Navigating to:', path);
           navigate(path);
         }
       } catch (e) {
@@ -39,7 +37,6 @@ const AppUrlListener = () => {
                  try {
                      const url = new URL(launchUrl.url);
                      if (url.pathname.startsWith('/u/')) {
-                         console.log("Handling launch URL:", launchUrl.url);
                          handleUrlOpen(launchUrl);
                      }
                  } catch (e) {

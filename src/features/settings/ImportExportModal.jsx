@@ -107,7 +107,6 @@ export default function ImportExportModal({ isOpen, onClose, movies, addMovie, r
             }
         }
     } catch (e) {
-        console.log("Not valid JSON, trying CSV/Text line mode", e);
     }
 
     // FALLBACK: CSV / LINE MODE

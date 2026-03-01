@@ -13,7 +13,7 @@ export default function ScrollingRow({
     isDiscovery = false,
 }) {
     const rowRef = useRef(null);
-    const[showLeftArrow, setShowLeftArrow] = useState(false);
+    const [showLeftArrow, setShowLeftArrow] = useState(false);
     const [showRightArrow, setShowRightArrow] = useState(false);
 
     const checkScroll = () => {
@@ -29,24 +29,36 @@ export default function ScrollingRow({
 
     useEffect(() => {
         const el = rowRef.current;
-        if (el) {
-            // FIX 1: Added { passive: true } to tell the browser this listener 
-            // won't prevent scrolling, allowing the page to scroll smoothly.
-            el.addEventListener("scroll", checkScroll, { passive: true });
+        if (!el) return;
 
-            const timer = setTimeout(checkScroll, 100);
+        let ticking = false;
 
-            const resizeObserver = new ResizeObserver(() => {
-                setTimeout(checkScroll, 50);
-            });
-            resizeObserver.observe(el);
+        const onScroll = () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    checkScroll();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        };
 
-            return () => {
-                el.removeEventListener("scroll", checkScroll);
-                clearTimeout(timer);
-                resizeObserver.disconnect();
-            };
-        }
+        // FIX 1: Added { passive: true } to tell the browser this listener 
+        // won't prevent scrolling, allowing the page to scroll smoothly.
+        el.addEventListener("scroll", onScroll, { passive: true });
+
+        const timer = setTimeout(checkScroll, 100);
+
+        const resizeObserver = new ResizeObserver(() => {
+            setTimeout(checkScroll, 50);
+        });
+        resizeObserver.observe(el);
+
+        return () => {
+            el.removeEventListener("scroll", onScroll);
+            clearTimeout(timer);
+            resizeObserver.disconnect();
+        };
     }, [items]);
 
     const scroll = (direction) => {
@@ -65,22 +77,15 @@ export default function ScrollingRow({
 
     return (
         <div
-            className={`space-y-3 my-8 w-full group/row pt-6 ${
-                highlight
-                    ? "bg-gradient-to-r from-blue-900/10 via-purple-900/10 to-blue-900/10 py-8 rounded-lg"
-                    : isDiscovery
-                    ? "bg-gradient-to-r from-green-900/10 via-emerald-900/10 to-green-900/10 py-8 rounded-lg"
-                    : ""
-            }`}
+            className={`space-y-3 my-8 w-full group/row pt-6`}
         >
             <h2
-                className={`text-xl md:text-2xl font-semibold transition-colors cursor-pointer inline-flex items-center gap-2 pl-6 md:pl-16 ${
-                    highlight
-                        ? "text-blue-400 hover:text-blue-300"
-                        : isDiscovery
+                className={`text-xl md:text-2xl font-semibold transition-colors cursor-pointer inline-flex items-center gap-2 pl-6 md:pl-16 ${highlight
+                    ? "text-blue-400 hover:text-blue-300"
+                    : isDiscovery
                         ? "text-green-400 hover:text-green-300"
                         : "text-white/90 hover:text-white group-hover:text-blue-400"
-                }`}
+                    }`}
             >
                 {title}
                 {highlight && (
@@ -97,7 +102,7 @@ export default function ScrollingRow({
 
             <div className="relative w-full">
                 <div
-                    className="absolute left-0 top-0 bottom-0 z-30 w-12 md:w-20 bg-gradient-to-r from-black/80 to-transparent flex items-center justify-center transition-opacity duration-300 pointer-events-none"
+                    className="absolute left-0 top-0 bottom-0 z-30 w-12 md:w-20 bg-linear-to-r from-black/80 to-transparent flex items-center justify-center transition-opacity duration-300 pointer-events-none"
                     style={{
                         opacity: showLeftArrow ? 1 : 0,
                     }}
@@ -117,9 +122,7 @@ export default function ScrollingRow({
                 <div
                     ref={rowRef}
                     data-scrollable="true"
-                    // FIX 2: Removed snap-x, snap-mandatory, and overflow-y-hidden. 
-                    // Added overflow-y-visible.
-                    className="flex gap-4 overflow-x-auto overflow-y-visible scrollbar-hide px-6 md:px-16 pb-4 pt-4 w-full overscroll-x-contain"
+                    className="flex gap-4 overflow-x-auto overflow-y-hidden scrollbar-hide px-6 md:px-16 pb-4 pt-4 w-full touch-pan-x touch-pan-y"
                     style={{
                         scrollbarWidth: "none",
                         msOverflowStyle: "none",
@@ -128,8 +131,7 @@ export default function ScrollingRow({
                     {items.map((movie) => (
                         <div
                             key={movie.tmdbId}
-                            // FIX 3: Removed snap-start to free up touch axis
-                            className="w-35 md:w-[200px] flex-none transition-transform duration-300 hover:z-20"
+                            className="w-35 md:w-50 flex-none transition-transform duration-300 hover:z-20"
                         >
                             <MovieCard
                                 movie={movie}
@@ -148,7 +150,7 @@ export default function ScrollingRow({
                 </div>
 
                 <div
-                    className="absolute right-0 top-0 bottom-0 z-30 w-12 md:w-16 bg-gradient-to-l from-black/80 to-transparent flex items-center justify-center transition-opacity duration-300 pointer-events-none"
+                    className="absolute right-0 top-0 bottom-0 z-30 w-12 md:w-16 bg-linear-to-l from-black/80 to-transparent flex items-center justify-center transition-opacity duration-300 pointer-events-none"
                     style={{
                         opacity: showRightArrow ? 1 : 0,
                     }}
