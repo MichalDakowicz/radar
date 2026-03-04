@@ -4,10 +4,45 @@ import { db } from "../lib/firebase";
 import { useAuth } from "../features/auth/AuthContext";
 import { migrateStatus } from "../lib/movieStatus";
 
+const MOVIES_CACHE_PREFIX = "radar_movies_";
+// In-memory cache so re-mounting components skip localStorage parsing
+const globalMoviesCache = new Map();
+
+function readMoviesCache(uid) {
+    if (globalMoviesCache.has(uid)) return globalMoviesCache.get(uid);
+    try {
+        const raw = localStorage.getItem(MOVIES_CACHE_PREFIX + uid);
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (parsed) globalMoviesCache.set(uid, parsed);
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+function writeMoviesCache(uid, movies) {
+    globalMoviesCache.set(uid, movies);
+    try {
+        localStorage.setItem(MOVIES_CACHE_PREFIX + uid, JSON.stringify(movies));
+    } catch {
+        // Storage quota exceeded or unavailable — silently ignore
+    }
+}
+
 export function useMovies() {
     const { user } = useAuth();
-    const [movies, setMovies] = useState([]);
-    const [loading, setLoading] = useState(true);
+
+    // Initialise synchronously from cache — AuthProvider guarantees user is
+    // already resolved before children render, so user.uid is available here.
+    const [movies, setMovies] = useState(() => {
+        if (!user) return [];
+        return readMoviesCache(user.uid) || [];
+    });
+    const [loading, setLoading] = useState(() => {
+        if (!user) return false;
+        const cached = readMoviesCache(user.uid);
+        return !cached || cached.length === 0;
+    });
 
     useEffect(() => {
         if (!user) {
@@ -34,8 +69,10 @@ export function useMovies() {
                 // Sort by addedAt desc by default
                 loadedMovies.sort((a, b) => b.addedAt - a.addedAt);
                 setMovies(loadedMovies);
+                writeMoviesCache(user.uid, loadedMovies);
             } else {
                 setMovies([]);
+                writeMoviesCache(user.uid, []);
             }
             setLoading(false);
         });
