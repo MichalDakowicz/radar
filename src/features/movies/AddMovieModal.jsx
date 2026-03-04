@@ -52,6 +52,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
       ending: 0,
       enjoyment: 0
   });
+  const [seasonRatings, setSeasonRatings] = useState({});
   
   const [error, setError] = useState("");
 
@@ -104,6 +105,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
         ending: 0,
         enjoyment: 0
     });
+    setSeasonRatings({});
   };
 
   // Sync state when preview changes
@@ -174,10 +176,18 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
   };
 
   const handleRecalculate = () => {
-     const val = Object.values(ratings).filter(v => v > 0);
-     if (val.length > 0) {
-         const avg = val.reduce((a,b) => a+b, 0) / val.length;
-         setOverallRating(parseFloat(avg.toFixed(1)));
+     if (type === "tv") {
+         const val = Object.values(seasonRatings).filter(v => v > 0);
+         if (val.length > 0) {
+             const avg = val.reduce((a,b) => a+b, 0) / val.length;
+             setOverallRating(parseFloat(avg.toFixed(1)));
+         }
+     } else {
+         const val = Object.values(ratings).filter(v => v > 0);
+         if (val.length > 0) {
+             const avg = val.reduce((a,b) => a+b, 0) / val.length;
+             setOverallRating(parseFloat(avg.toFixed(1)));
+         }
      }
   };
 
@@ -211,7 +221,9 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
       notes,
       number_of_episodes: numberOfEpisodes,
       number_of_seasons: numberOfSeasons,
-      ratings: {
+      ratings: type === "tv"
+          ? { overall: overallRating, seasons: seasonRatings }
+          : {
           ...ratings,
           overall: overallRating
       },
@@ -546,7 +558,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
                     <div className="space-y-6">
                         {/* Ratings */}
                         <div>
-                            <label className="block text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">Complex Rating Details</label>
+                            <label className="block text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">Rating Details</label>
                             
                             <div className="bg-neutral-800/30 p-4 rounded-xl border border-neutral-800 mb-4 flex items-center justify-between">
                                 <StarRating 
@@ -554,7 +566,7 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
                                     value={overallRating}
                                     onChange={(val) => {
                                         setOverallRating(val);
-                                        if (val === 0) {
+                                        if (val === 0 && type !== "tv") {
                                             setRatings(prev => Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: 0 }), {}));
                                         }
                                     }}
@@ -564,23 +576,37 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
                                     type="button"
                                     onClick={handleRecalculate}
                                     className="p-2 text-neutral-400 hover:text-white bg-neutral-700/50 hover:bg-neutral-700 rounded-lg transition-colors"
-                                    title="Recalculate from categories"
+                                    title={type === "tv" ? "Average from seasons" : "Recalculate from categories"}
                                 >
                                     <Calculator size={16} />
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-2 bg-neutral-800/50 p-4 rounded-xl border border-neutral-800">
-                                {Object.entries(ratings).map(([key, val]) => (
-                                    <StarRating 
-                                        key={key}
-                                        label={key}
-                                        value={val}
-                                        onChange={(newVal) => setRatings(prev => ({ ...prev, [key]: newVal }))}
-                                        showInput={false}
-                                    />
-                                ))}
-                            </div>
+                            {type === "tv" ? (
+                                <div className="grid grid-cols-1 gap-2 bg-neutral-800/50 p-4 rounded-xl border border-neutral-800">
+                                    {Array.from({ length: numberOfSeasons || 1 }, (_, i) => i + 1).map((seasonNum) => (
+                                        <StarRating 
+                                            key={seasonNum}
+                                            label={`Season ${seasonNum}`}
+                                            value={seasonRatings[seasonNum] || 0}
+                                            onChange={(newVal) => setSeasonRatings(prev => ({ ...prev, [seasonNum]: newVal }))}
+                                            showInput={false}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-2 bg-neutral-800/50 p-4 rounded-xl border border-neutral-800">
+                                    {Object.entries(ratings).map(([key, val]) => (
+                                        <StarRating 
+                                            key={key}
+                                            label={key}
+                                            value={val}
+                                            onChange={(newVal) => setRatings(prev => ({ ...prev, [key]: newVal }))}
+                                            showInput={false}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Overview & Metadata */}

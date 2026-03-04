@@ -57,6 +57,7 @@ export default function AddMovie() {
         ending: 0,
         enjoyment: 0,
     });
+    const [seasonRatings, setSeasonRatings] = useState({});
 
     // Debounced search
     useEffect(() => {
@@ -161,7 +162,10 @@ export default function AddMovie() {
                 notes,
                 number_of_episodes: numberOfEpisodes,
                 number_of_seasons: numberOfSeasons,
-                ratings: {
+                ratings:
+                    type === "tv"
+                        ? { overall: overallRating, seasons: seasonRatings }
+                        : {
                     ...ratings,
                     overall: overallRating,
                 },
@@ -251,10 +255,14 @@ export default function AddMovie() {
                     )}
                     {activeTab === "details" && (
                         <AddMovieDetailsTab
+                            type={type}
+                            numberOfSeasons={numberOfSeasons}
                             overallRating={overallRating}
                             setOverallRating={setOverallRating}
                             ratings={ratings}
                             setRatings={setRatings}
+                            seasonRatings={seasonRatings}
+                            setSeasonRatings={setSeasonRatings}
                             notes={notes}
                             setNotes={setNotes}
                             voteAverage={voteAverage}

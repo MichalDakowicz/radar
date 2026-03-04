@@ -2,19 +2,31 @@ import { Calculator } from "lucide-react";
 import { StarRating } from "../StarRating";
 
 export default function AddMovieDetailsTab({
+    type,
+    numberOfSeasons,
     overallRating,
     setOverallRating,
     ratings,
     setRatings,
+    seasonRatings,
+    setSeasonRatings,
     notes,
     setNotes,
     voteAverage,
 }) {
     const handleRecalculate = () => {
-        const val = Object.values(ratings).filter((v) => v > 0);
-        if (val.length > 0) {
-            const avg = val.reduce((a, b) => a + b, 0) / val.length;
-            setOverallRating(parseFloat(avg.toFixed(1)));
+        if (type === "tv") {
+            const val = Object.values(seasonRatings || {}).filter((v) => v > 0);
+            if (val.length > 0) {
+                const avg = val.reduce((a, b) => a + b, 0) / val.length;
+                setOverallRating(parseFloat(avg.toFixed(1)));
+            }
+        } else {
+            const val = Object.values(ratings).filter((v) => v > 0);
+            if (val.length > 0) {
+                const avg = val.reduce((a, b) => a + b, 0) / val.length;
+                setOverallRating(parseFloat(avg.toFixed(1)));
+            }
         }
     };
 
@@ -44,7 +56,7 @@ export default function AddMovieDetailsTab({
                         value={overallRating}
                         onChange={(val) => {
                             setOverallRating(val);
-                            if (val === 0)
+                            if (val === 0 && type !== "tv")
                                 setRatings((prev) =>
                                     Object.keys(prev).reduce(
                                         (acc, key) => ({
@@ -62,36 +74,64 @@ export default function AddMovieDetailsTab({
                         onClick={handleRecalculate}
                         className="px-4 py-2 text-neutral-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-colors active:scale-95 text-xs font-medium flex items-center gap-2"
                     >
-                        <Calculator size={16} /> Auto-Calc
+                        <Calculator size={16} /> {type === "tv" ? "Avg Seasons" : "Auto-Calc"}
                     </button>
                 </div>
             </div>
 
-            <div>
-                <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
-                    Category Breakdown
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {Object.entries(ratings).map(([key, val]) => (
-                        <div
-                            key={key}
-                            className="bg-neutral-900/30 p-4 rounded-xl border border-neutral-800"
-                        >
-                            <StarRating
-                                label={key}
-                                value={val}
-                                onChange={(newVal) =>
-                                    setRatings((prev) => ({
-                                        ...prev,
-                                        [key]: newVal,
-                                    }))
-                                }
-                                showInput={false}
-                            />
-                        </div>
-                    ))}
+            {type === "tv" ? (
+                <div>
+                    <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
+                        Season Ratings
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {Array.from({ length: numberOfSeasons || 1 }, (_, i) => i + 1).map((seasonNum) => (
+                            <div
+                                key={seasonNum}
+                                className="bg-neutral-900/30 p-4 rounded-xl border border-neutral-800"
+                            >
+                                <StarRating
+                                    label={`Season ${seasonNum}`}
+                                    value={(seasonRatings || {})[seasonNum] || 0}
+                                    onChange={(newVal) =>
+                                        setSeasonRatings((prev) => ({
+                                            ...prev,
+                                            [seasonNum]: newVal,
+                                        }))
+                                    }
+                                    showInput={false}
+                                />
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div>
+                    <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
+                        Category Breakdown
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {Object.entries(ratings).map(([key, val]) => (
+                            <div
+                                key={key}
+                                className="bg-neutral-900/30 p-4 rounded-xl border border-neutral-800"
+                            >
+                                <StarRating
+                                    label={key}
+                                    value={val}
+                                    onChange={(newVal) =>
+                                        setRatings((prev) => ({
+                                            ...prev,
+                                            [key]: newVal,
+                                        }))
+                                    }
+                                    showInput={false}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <div>
                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">

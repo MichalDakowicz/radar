@@ -356,11 +356,16 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                                         let displayRating = null;
                                         if (ratings.overall > 0) {
                                             displayRating = ratings.overall;
+                                        } else if (ratings.seasons && typeof ratings.seasons === "object") {
+                                            const seasonVals = Object.values(ratings.seasons).filter((v) => v > 0);
+                                            if (seasonVals.length > 0) {
+                                                displayRating = seasonVals.reduce((a, b) => a + b, 0) / seasonVals.length;
+                                            }
                                         } else {
                                             const { overall, ...sub } = ratings;
                                             const values = Object.values(
                                                 sub,
-                                            ).filter((v) => v > 0);
+                                            ).filter((v) => typeof v === "number" && v > 0);
                                             if (values.length > 0) {
                                                 displayRating =
                                                     values.reduce(
@@ -431,81 +436,116 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
-                                {Object.entries(ratings)
-                                    .filter(([k]) =>
-                                        [
-                                            "story",
-                                            "acting",
-                                            "ending",
-                                            "enjoyment",
-                                        ].includes(k),
-                                    )
-                                    .map(
-                                        ([key, val]) =>
+                                {movie.type === "tv" && ratings.seasons && Object.keys(ratings.seasons).length > 0
+                                    ? Object.entries(ratings.seasons)
+                                        .sort(([a], [b]) => Number(a) - Number(b))
+                                        .map(([seasonNum, val]) =>
                                             val > 0 && (
                                                 <div
-                                                    key={key}
+                                                    key={seasonNum}
                                                     className="flex justify-between items-center bg-neutral-800/30 p-2 rounded"
                                                 >
                                                     <span className="text-xs uppercase text-neutral-400 font-medium">
-                                                        {key}
+                                                        S{seasonNum}
                                                     </span>
                                                     <div className="flex items-center gap-2">
                                                         <div className="flex gap-0.5">
-                                                            {[
-                                                                1, 2, 3, 4, 5,
-                                                            ].map((i) => {
+                                                            {[1, 2, 3, 4, 5].map((i) => {
                                                                 let fill = 0;
-                                                                if (val >= i)
-                                                                    fill = 100;
-                                                                else if (
-                                                                    val >
-                                                                    i - 1
-                                                                )
-                                                                    fill =
-                                                                        (val -
-                                                                            (i -
-                                                                                1)) *
-                                                                        100;
-
+                                                                if (val >= i) fill = 100;
+                                                                else if (val > i - 1) fill = (val - (i - 1)) * 100;
                                                                 return (
-                                                                    <div
-                                                                        key={i}
-                                                                        className="relative"
-                                                                    >
-                                                                        <Star
-                                                                            size={
-                                                                                8
-                                                                            }
-                                                                            className="text-neutral-700"
-                                                                        />
-                                                                        {fill >
-                                                                            0 && (
-                                                                            <div
-                                                                                className="absolute inset-0 overflow-hidden"
-                                                                                style={{
-                                                                                    width: `${fill}%`,
-                                                                                }}
-                                                                            >
-                                                                                <Star
-                                                                                    size={
-                                                                                        8
-                                                                                    }
-                                                                                    className="fill-amber-400 text-amber-400"
-                                                                                />
+                                                                    <div key={i} className="relative">
+                                                                        <Star size={8} className="text-neutral-700" />
+                                                                        {fill > 0 && (
+                                                                            <div className="absolute inset-0 overflow-hidden" style={{ width: `${fill}%` }}>
+                                                                                <Star size={8} className="fill-amber-400 text-amber-400" />
                                                                             </div>
                                                                         )}
                                                                     </div>
                                                                 );
                                                             })}
                                                         </div>
-                                                        <span className="text-xs font-bold text-white w-6 text-right">
-                                                            {val}
-                                                        </span>
+                                                        <span className="text-xs font-bold text-white w-6 text-right">{val}</span>
                                                     </div>
                                                 </div>
-                                            ),
-                                    )}
+                                            )
+                                        )
+                                    : Object.entries(ratings)
+                                        .filter(([k]) =>
+                                            [
+                                                "story",
+                                                "acting",
+                                                "ending",
+                                                "enjoyment",
+                                            ].includes(k),
+                                        )
+                                        .map(
+                                            ([key, val]) =>
+                                                val > 0 && (
+                                                    <div
+                                                        key={key}
+                                                        className="flex justify-between items-center bg-neutral-800/30 p-2 rounded"
+                                                    >
+                                                        <span className="text-xs uppercase text-neutral-400 font-medium">
+                                                            {key}
+                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex gap-0.5">
+                                                                {[
+                                                                    1, 2, 3, 4, 5,
+                                                                ].map((i) => {
+                                                                    let fill = 0;
+                                                                    if (val >= i)
+                                                                        fill = 100;
+                                                                    else if (
+                                                                        val >
+                                                                        i - 1
+                                                                    )
+                                                                        fill =
+                                                                            (val -
+                                                                                (i -
+                                                                                    1)) *
+                                                                            100;
+
+                                                                    return (
+                                                                        <div
+                                                                            key={i}
+                                                                            className="relative"
+                                                                        >
+                                                                            <Star
+                                                                                size={
+                                                                                    8
+                                                                                }
+                                                                                className="text-neutral-700"
+                                                                            />
+                                                                            {fill >
+                                                                                0 && (
+                                                                                <div
+                                                                                    className="absolute inset-0 overflow-hidden"
+                                                                                    style={{
+                                                                                        width: `${fill}%`,
+                                                                                    }}
+                                                                                >
+                                                                                    <Star
+                                                                                        size={
+                                                                                            8
+                                                                                        }
+                                                                                        className="fill-amber-400 text-amber-400"
+                                                                                    />
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                            <span className="text-xs font-bold text-white w-6 text-right">
+                                                                {val}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ),
+                                        )}
                             </div>
                         </div>
                     )}
