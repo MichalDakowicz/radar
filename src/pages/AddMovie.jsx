@@ -4,6 +4,7 @@ import { Save } from "lucide-react";
 import { useMovies } from "../hooks/useMovies";
 import { Navbar } from "../components/layout/Navbar";
 import { searchMedia, fetchMediaMetadata } from "../services/tmdb";
+import { normalizeServiceName } from "../lib/services";
 import AddMovieHero from "../features/movies/add/AddMovieHero";
 import AddMovieMainTab from "../features/movies/add/AddMovieMainTab";
 import AddMovieDetailsTab from "../features/movies/add/AddMovieDetailsTab";
@@ -102,9 +103,20 @@ export default function AddMovie() {
                 setCast(data.cast || []);
                 setRuntime(data.runtime || 0);
                 setOverview(data.overview || "");
-                setNumberOfSeasons(data.numberOfSeasons || 0);
-                setNumberOfEpisodes(data.numberOfEpisodes || 0);
-                if (data.type === "movie" && data.director?.length > 0) {
+                setAvailability(
+                    data.availability
+                        ? Array.from(
+                              new Set(
+                                  data.availability
+                                      .map(normalizeServiceName)
+                                      .filter(Boolean),
+                              ),
+                          )
+                        : [],
+                );
+                setNumberOfSeasons(data.number_of_seasons || 0);
+                setNumberOfEpisodes(data.number_of_episodes || 0);
+                if (data.director?.length > 0) {
                     // Normalize directors - extract names from objects if needed
                     const directorNames = data.director.map((d) =>
                         typeof d === "object" ? d.name : d,

@@ -85,7 +85,8 @@ export default function SharedShelf() {
             }
 
             movieDirectors.forEach((d) => {
-                if (d && d.trim()) directors.add(d.trim());
+                const name = typeof d === "object" ? d?.name : d;
+                if (name && name.trim()) directors.add(name.trim());
             });
 
             if (movie.releaseDate) {
@@ -159,7 +160,9 @@ export default function SharedShelf() {
                         movieDirectors = [m.director];
                     }
                 }
-                return movieDirectors.includes(filterDirector);
+                return movieDirectors
+                    .map((d) => (typeof d === "object" ? d?.name : d))
+                    .includes(filterDirector);
             });
         }
 

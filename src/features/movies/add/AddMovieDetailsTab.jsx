@@ -16,7 +16,9 @@ export default function AddMovieDetailsTab({
 }) {
     const handleRecalculate = () => {
         if (type === "tv") {
-            const val = Object.values(seasonRatings || {}).filter((v) => v > 0);
+            const val = Object.values(seasonRatings || {})
+                .map((s) => (typeof s === "object" ? s.overall : s))
+                .filter((v) => v > 0);
             if (val.length > 0) {
                 const avg = val.reduce((a, b) => a + b, 0) / val.length;
                 setOverallRating(parseFloat(avg.toFixed(1)));
@@ -84,25 +86,62 @@ export default function AddMovieDetailsTab({
                     <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
                         Season Ratings
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {Array.from({ length: numberOfSeasons || 1 }, (_, i) => i + 1).map((seasonNum) => (
-                            <div
-                                key={seasonNum}
-                                className="bg-neutral-900/30 p-4 rounded-xl border border-neutral-800"
-                            >
-                                <StarRating
-                                    label={`Season ${seasonNum}`}
-                                    value={(seasonRatings || {})[seasonNum] || 0}
-                                    onChange={(newVal) =>
-                                        setSeasonRatings((prev) => ({
-                                            ...prev,
-                                            [seasonNum]: newVal,
-                                        }))
-                                    }
-                                    showInput={false}
-                                />
-                            </div>
-                        ))}
+                    <div className="space-y-4">
+                        {Array.from({ length: numberOfSeasons || 1 }, (_, i) => i + 1).map((seasonNum) => {
+                            const sRating = (seasonRatings || {})[seasonNum] || { overall: 0, story: 0, acting: 0, ending: 0, enjoyment: 0 };
+                            const handleSeasonCategoryChange = (cat, newVal) => {
+                                setSeasonRatings((prev) => ({
+                                    ...prev,
+                                    [seasonNum]: { ...(prev[seasonNum] || { overall: 0, story: 0, acting: 0, ending: 0, enjoyment: 0 }), [cat]: newVal },
+                                }));
+                            };
+                            const handleSeasonAutoCalc = () => {
+                                const cats = [sRating.story, sRating.acting, sRating.ending, sRating.enjoyment].filter((v) => v > 0);
+                                if (cats.length > 0) {
+                                    const avg = parseFloat((cats.reduce((a, b) => a + b, 0) / cats.length).toFixed(1));
+                                    setSeasonRatings((prev) => ({
+                                        ...prev,
+                                        [seasonNum]: { ...(prev[seasonNum] || {}), overall: avg },
+                                    }));
+                                }
+                            };
+                            return (
+                                <div key={seasonNum} className="bg-neutral-900/30 rounded-xl border border-neutral-800 overflow-hidden">
+                                    <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-neutral-900/50">
+                                        <span className="text-sm font-bold text-white uppercase tracking-wide">Season {seasonNum}</span>
+                                        <button
+                                            type="button"
+                                            onClick={handleSeasonAutoCalc}
+                                            className="px-3 py-1 text-neutral-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors active:scale-95 text-xs font-medium flex items-center gap-1.5"
+                                        >
+                                            <Calculator size={13} /> Auto-Calc
+                                        </button>
+                                    </div>
+                                    <div className="p-4 space-y-3">
+                                        <div className="bg-neutral-900/50 p-3 rounded-xl border border-neutral-800">
+                                            <StarRating
+                                                label="Overall"
+                                                value={sRating.overall || 0}
+                                                onChange={(newVal) => handleSeasonCategoryChange("overall", newVal)}
+                                                showInput={true}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {["story", "acting", "ending", "enjoyment"].map((cat) => (
+                                                <div key={cat} className="bg-neutral-900/30 p-3 rounded-xl border border-neutral-800">
+                                                    <StarRating
+                                                        label={cat}
+                                                        value={sRating[cat] || 0}
+                                                        onChange={(newVal) => handleSeasonCategoryChange(cat, newVal)}
+                                                        showInput={false}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             ) : (

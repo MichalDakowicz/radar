@@ -95,7 +95,7 @@ export async function fetchMediaMetadata(tmdbId, type = "movie") {
                 [];
             cast =
                 data.credits?.cast
-                    ?.slice(0, 5)
+                    ?.slice(0, 15)
                     .map((p) => ({ id: p.id, name: p.name })) || [];
         } else {
             // For TV, use created_by or explicit creators.
@@ -108,7 +108,7 @@ export async function fetchMediaMetadata(tmdbId, type = "movie") {
             const credits = data.aggregate_credits || data.credits;
             cast =
                 credits?.cast
-                    ?.slice(0, 5)
+                    ?.slice(0, 15)
                     .map((p) => ({ id: p.id, name: p.name })) || [];
         }
 

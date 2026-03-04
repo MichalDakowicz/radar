@@ -138,7 +138,17 @@ export default function EditMovie() {
                 ending: r.ending || 0,
                 enjoyment: r.enjoyment || 0,
             });
-            setSeasonRatings(r.seasons || {});
+            // Upgrade old flat-number format { 1: 4.5 } to object format
+            const rawSeasons = r.seasons || {};
+            const upgradedSeasons = Object.fromEntries(
+                Object.entries(rawSeasons).map(([k, v]) => [
+                    k,
+                    typeof v === "object"
+                        ? v
+                        : { overall: v, story: 0, acting: 0, ending: 0, enjoyment: 0 },
+                ]),
+            );
+            setSeasonRatings(upgradedSeasons);
             setNumberOfSeasons(movie.number_of_seasons || 0);
             setNumberOfEpisodes(movie.number_of_episodes || 0);
             setEpisodesWatched(movie.episodesWatched || {});
@@ -201,7 +211,9 @@ export default function EditMovie() {
 
     const handleRecalculate = () => {
         if (type === "tv") {
-            const val = Object.values(seasonRatings).filter((v) => v > 0);
+            const val = Object.values(seasonRatings)
+                .map((s) => (typeof s === "object" ? s.overall : s))
+                .filter((v) => v > 0);
             if (val.length > 0) {
                 const avg = val.reduce((a, b) => a + b, 0) / val.length;
                 setOverallRating(parseFloat(avg.toFixed(1)));
@@ -253,14 +265,11 @@ export default function EditMovie() {
                           )
                         : availability,
                 );
-                setNumberOfSeasons(data.numberOfSeasons || 0);
-                setNumberOfEpisodes(data.numberOfEpisodes || 0);
-                if (data.type === "movie" && data.director.length > 0) {
-                    // Normalize directors - extract names from objects if needed
-                    const directorNames = data.director.map((d) =>
-                        typeof d === "object" ? d.name : d,
-                    );
-                    setDirector(directorNames);
+                setNumberOfSeasons(data.number_of_seasons || 0);
+                setNumberOfEpisodes(data.number_of_episodes || 0);
+                if (data.director?.length > 0) {
+                    // Keep directors as objects with IDs for linking
+                    setDirector(data.director);
                 }
             }
         } catch (err) {
@@ -743,25 +752,62 @@ export default function EditMovie() {
                                     <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
                                         Season Ratings
                                     </label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {Array.from({ length: numberOfSeasons || 1 }, (_, i) => i + 1).map((seasonNum) => (
-                                            <div
-                                                key={seasonNum}
-                                                className="bg-neutral-900/30 p-4 rounded-xl border border-neutral-800"
-                                            >
-                                                <StarRating
-                                                    label={`Season ${seasonNum}`}
-                                                    value={seasonRatings[seasonNum] || 0}
-                                                    onChange={(newVal) =>
-                                                        setSeasonRatings((prev) => ({
-                                                            ...prev,
-                                                            [seasonNum]: newVal,
-                                                        }))
-                                                    }
-                                                    showInput={false}
-                                                />
-                                            </div>
-                                        ))}
+                                    <div className="space-y-4">
+                                        {Array.from({ length: numberOfSeasons || 1 }, (_, i) => i + 1).map((seasonNum) => {
+                                            const sRating = seasonRatings[seasonNum] || { overall: 0, story: 0, acting: 0, ending: 0, enjoyment: 0 };
+                                            const handleSeasonCategoryChange = (cat, newVal) => {
+                                                setSeasonRatings((prev) => ({
+                                                    ...prev,
+                                                    [seasonNum]: { ...(prev[seasonNum] || { overall: 0, story: 0, acting: 0, ending: 0, enjoyment: 0 }), [cat]: newVal },
+                                                }));
+                                            };
+                                            const handleSeasonAutoCalc = () => {
+                                                const cats = [sRating.story, sRating.acting, sRating.ending, sRating.enjoyment].filter((v) => v > 0);
+                                                if (cats.length > 0) {
+                                                    const avg = parseFloat((cats.reduce((a, b) => a + b, 0) / cats.length).toFixed(1));
+                                                    setSeasonRatings((prev) => ({
+                                                        ...prev,
+                                                        [seasonNum]: { ...(prev[seasonNum] || {}), overall: avg },
+                                                    }));
+                                                }
+                                            };
+                                            return (
+                                                <div key={seasonNum} className="bg-neutral-900/30 rounded-xl border border-neutral-800 overflow-hidden">
+                                                    <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-neutral-900/50">
+                                                        <span className="text-sm font-bold text-white uppercase tracking-wide">Season {seasonNum}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleSeasonAutoCalc}
+                                                            className="px-3 py-1 text-neutral-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors active:scale-95 text-xs font-medium flex items-center gap-1.5"
+                                                        >
+                                                            <Calculator size={13} /> Auto-Calc
+                                                        </button>
+                                                    </div>
+                                                    <div className="p-4 space-y-3">
+                                                        <div className="bg-neutral-900/50 p-3 rounded-xl border border-neutral-800 flex items-center justify-between">
+                                                            <StarRating
+                                                                label="Overall"
+                                                                value={sRating.overall || 0}
+                                                                onChange={(newVal) => handleSeasonCategoryChange("overall", newVal)}
+                                                                showInput={true}
+                                                            />
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {["story", "acting", "ending", "enjoyment"].map((cat) => (
+                                                                <div key={cat} className="bg-neutral-900/30 p-3 rounded-xl border border-neutral-800">
+                                                                    <StarRating
+                                                                        label={cat}
+                                                                        value={sRating[cat] || 0}
+                                                                        onChange={(newVal) => handleSeasonCategoryChange(cat, newVal)}
+                                                                        showInput={false}
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ) : (

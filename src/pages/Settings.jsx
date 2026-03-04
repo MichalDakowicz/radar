@@ -292,6 +292,10 @@ export default function Settings() {
                     if (freshData) {
                         const updatedMovie = {
                             ...movie,
+                            // TMDB metadata - fully refreshed
+                            title: freshData.title,
+                            coverUrl: freshData.coverUrl || movie.coverUrl,
+                            releaseDate: freshData.releaseDate || movie.releaseDate,
                             genres: freshData.genres,
                             director: freshData.director,
                             cast: freshData.cast,
@@ -299,7 +303,17 @@ export default function Settings() {
                             runtime: freshData.runtime,
                             voteAverage: freshData.voteAverage,
                             voteCount: freshData.voteCount,
-                            availability: freshData.availability,
+                            imdbId: freshData.imdbId || movie.imdbId,
+                            number_of_seasons: freshData.number_of_seasons ?? movie.number_of_seasons,
+                            number_of_episodes: freshData.number_of_episodes ?? movie.number_of_episodes,
+                            tagline: freshData.tagline || movie.tagline,
+                            budget: freshData.budget ?? movie.budget,
+                            revenue: freshData.revenue ?? movie.revenue,
+                            productionCompanies: freshData.productionCompanies || movie.productionCompanies,
+                            availability: freshData.availability?.length
+                                ? freshData.availability
+                                : movie.availability,
+                            // Preserve all user data
                             ratings: movie.ratings,
                             watched: movie.watched,
                             inWatchlist: movie.inWatchlist,

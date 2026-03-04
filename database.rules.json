@@ -40,6 +40,10 @@
                     "privacy": {
                         ".read": true,
                         ".write": "$uid === auth.uid"
+                    },
+                    "stats": {
+                        ".read": true,
+                        ".write": "$uid === auth.uid"
                     }
                 },
                 "friends": {

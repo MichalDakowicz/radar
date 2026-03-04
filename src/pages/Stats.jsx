@@ -66,22 +66,26 @@ export default function Stats() {
             if (!user && !userId) return;
             const targetUserId = userId || user.uid;
 
-            const movieStreakRef = ref(
-                db,
-                `users/${targetUserId}/settings/stats/streakThreshold`,
-            );
-            const movieSnapshot = await get(movieStreakRef);
-            if (movieSnapshot.exists()) {
-                setStreakThreshold(movieSnapshot.val());
-            }
+            try {
+                const movieStreakRef = ref(
+                    db,
+                    `users/${targetUserId}/settings/stats/streakThreshold`,
+                );
+                const movieSnapshot = await get(movieStreakRef);
+                if (movieSnapshot.exists()) {
+                    setStreakThreshold(movieSnapshot.val());
+                }
 
-            const tvStreakRef = ref(
-                db,
-                `users/${targetUserId}/settings/stats/tvStreakThreshold`,
-            );
-            const tvSnapshot = await get(tvStreakRef);
-            if (tvSnapshot.exists()) {
-                setTvStreakThreshold(tvSnapshot.val());
+                const tvStreakRef = ref(
+                    db,
+                    `users/${targetUserId}/settings/stats/tvStreakThreshold`,
+                );
+                const tvSnapshot = await get(tvStreakRef);
+                if (tvSnapshot.exists()) {
+                    setTvStreakThreshold(tvSnapshot.val());
+                }
+            } catch (e) {
+                // Use defaults if settings are not readable (e.g. permission denied)
             }
         };
         fetchStreakSettings();
@@ -801,6 +805,7 @@ export default function Stats() {
                                 weeklyCompletions={stats.weeklyCompletions}
                                 threshold={streakThreshold}
                                 userId={!userId ? user?.uid : null}
+                                movies={movies}
                             />
                         </div>
                         <div>
@@ -819,6 +824,7 @@ export default function Stats() {
                                 weeklyCompletions={stats.weeklyTVCompletions}
                                 threshold={tvStreakThreshold}
                                 userId={!userId ? user?.uid : null}
+                                movies={movies}
                             />
                         </div>
                     </div>
@@ -831,6 +837,7 @@ export default function Stats() {
                                     weeklyCompletions={stats.weeklyCompletions}
                                     threshold={streakThreshold}
                                     userId={!userId ? user?.uid : null}
+                                    movies={movies}
                                 />
                             </div>
                         ) : (
@@ -841,6 +848,7 @@ export default function Stats() {
                                     }
                                     threshold={tvStreakThreshold}
                                     userId={!userId ? user?.uid : null}
+                                    movies={movies}
                                 />
                             </div>
                         )}

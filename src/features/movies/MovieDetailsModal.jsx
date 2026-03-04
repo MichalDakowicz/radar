@@ -357,7 +357,9 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                                         if (ratings.overall > 0) {
                                             displayRating = ratings.overall;
                                         } else if (ratings.seasons && typeof ratings.seasons === "object") {
-                                            const seasonVals = Object.values(ratings.seasons).filter((v) => v > 0);
+                                            const seasonVals = Object.values(ratings.seasons)
+                                                .map((s) => (typeof s === "object" ? s.overall : s))
+                                                .filter((v) => v > 0);
                                             if (seasonVals.length > 0) {
                                                 displayRating = seasonVals.reduce((a, b) => a + b, 0) / seasonVals.length;
                                             }
@@ -439,8 +441,9 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                                 {movie.type === "tv" && ratings.seasons && Object.keys(ratings.seasons).length > 0
                                     ? Object.entries(ratings.seasons)
                                         .sort(([a], [b]) => Number(a) - Number(b))
-                                        .map(([seasonNum, val]) =>
-                                            val > 0 && (
+                                        .map(([seasonNum, val]) => {
+                                            const seasonOverall = typeof val === "object" ? val.overall : val;
+                                            return seasonOverall > 0 && (
                                                 <div
                                                     key={seasonNum}
                                                     className="flex justify-between items-center bg-neutral-800/30 p-2 rounded"
@@ -452,8 +455,8 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                                                         <div className="flex gap-0.5">
                                                             {[1, 2, 3, 4, 5].map((i) => {
                                                                 let fill = 0;
-                                                                if (val >= i) fill = 100;
-                                                                else if (val > i - 1) fill = (val - (i - 1)) * 100;
+                                                                if (seasonOverall >= i) fill = 100;
+                                                                else if (seasonOverall > i - 1) fill = (seasonOverall - (i - 1)) * 100;
                                                                 return (
                                                                     <div key={i} className="relative">
                                                                         <Star size={8} className="text-neutral-700" />
@@ -466,11 +469,11 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                                                                 );
                                                             })}
                                                         </div>
-                                                        <span className="text-xs font-bold text-white w-6 text-right">{val}</span>
+                                                        <span className="text-xs font-bold text-white w-6 text-right">{seasonOverall}</span>
                                                     </div>
                                                 </div>
-                                            )
-                                        )
+                                            );
+                                        })
                                     : Object.entries(ratings)
                                         .filter(([k]) =>
                                             [

@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trophy } from "lucide-react";
-import { useMovies } from "../../hooks/useMovies";
 
-export function TVStreakCalendar({ weeklyCompletions, threshold, userId }) {
+export function TVStreakCalendar({ weeklyCompletions, threshold, userId, movies = [] }) {
     const navigate = useNavigate();
-    const { movies } = useMovies();
 
     const generateCalendar = () => {
         const today = new Date();

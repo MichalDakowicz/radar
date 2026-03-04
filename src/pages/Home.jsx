@@ -247,7 +247,8 @@ export default function Home() {
             }
 
             movieDirectors.forEach((p) => {
-                if (p && p.trim()) directors.add(p.trim());
+                const name = typeof p === "object" ? p?.name : p;
+                if (name && name.trim()) directors.add(name.trim());
             });
 
             if (movie.releaseDate) {
@@ -326,7 +327,9 @@ export default function Home() {
                         movieDirectors = [m.director];
                     }
                 }
-                return movieDirectors.includes(filterDirector);
+                return movieDirectors
+                    .map((d) => (typeof d === "object" ? d?.name : d))
+                    .includes(filterDirector);
             });
         }
 

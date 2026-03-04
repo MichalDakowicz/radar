@@ -19,7 +19,7 @@ export default function EditMovieHero({
                             className="absolute inset-0 bg-cover bg-center blur-xl opacity-50"
                             style={{ backgroundImage: `url(${coverUrl})` }}
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+                        <div className="absolute inset-0 bg-linear-to-t from-black via-black/50 to-transparent" />
                     </>
                 ) : (
                     <div className="absolute inset-0 bg-neutral-900" />
@@ -108,7 +108,7 @@ export default function EditMovieHero({
 
                         <div className="text-base sm:text-lg text-neutral-300 drop-shadow-md flex flex-wrap items-center gap-2">
                             {director.length > 0 && (
-                                <span>{director.join(", ")}</span>
+                                <span>{director.map((d) => typeof d === "object" ? d.name : d).join(", ")}</span>
                             )}
                             {director.length > 0 && releaseDate && (
                                 <span>•</span>
