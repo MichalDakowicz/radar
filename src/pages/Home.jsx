@@ -194,6 +194,14 @@ export default function Home() {
         "mt_filterStatus_v2",
         restoredState?.filterStatus || "All",
     );
+    const [filterType, setFilterType] = usePersistedState(
+        "mt_filterType",
+        restoredState?.filterType || "All",
+    );
+    const [filterRating, setFilterRating] = usePersistedState(
+        "mt_filterRating",
+        restoredState?.filterRating || "All",
+    );
     const [sortBy, setSortBy] = usePersistedState(
         "mt_sortBy",
         restoredState?.sortBy || "custom",
@@ -214,6 +222,8 @@ export default function Home() {
             setFilterYear("All");
             setFilterGenre("All");
             setFilterStatus("All");
+            setFilterType("All");
+            setFilterRating("All");
             setSortBy("custom");
             setGroupBy("none");
             window.scrollTo(0, 0);
@@ -366,6 +376,30 @@ export default function Home() {
             );
         }
 
+        // Filter by Type
+        if (filterType !== "All") {
+            result = result.filter((m) => {
+                const isTV = m.type === "tv" || m.type === "TV Show";
+                return filterType === "TV Show" ? isTV : !isTV;
+            });
+        }
+
+        // Filter by Min Rating
+        if (filterRating !== "All") {
+            const minRating = parseFloat(filterRating);
+            result = result.filter((m) => {
+                let rating = 0;
+                if (m.ratings) {
+                    const vals = Object.values(m.ratings).filter((v) => v > 0);
+                    if (vals.length > 0)
+                        rating = vals.reduce((x, y) => x + y, 0) / vals.length;
+                } else if (m.rating) {
+                    rating = m.rating;
+                }
+                return rating >= minRating;
+            });
+        }
+
         // Sort
         result.sort((a, b) => {
             if (sortBy === "custom") {
@@ -405,6 +439,7 @@ export default function Home() {
                 return (dirA || "").localeCompare(dirB || "");
             }
             if (sortBy === "title") return a.title.localeCompare(b.title);
+            if (sortBy === "runtime") return (a.runtime || 0) - (b.runtime || 0);
             return 0;
         });
 
@@ -416,8 +451,8 @@ export default function Home() {
         filterDirector,
         filterYear,
         filterGenre,
-        filterStatus,
-        sortBy,
+        filterStatus,        filterType,
+        filterRating,        sortBy,
     ]);
 
     // Movies eligible for random spin
@@ -487,7 +522,9 @@ export default function Home() {
         filterAvailability === "All" &&
         filterDirector === "All" &&
         filterYear === "All" &&
-        filterGenre === "All";
+        filterGenre === "All" &&
+        filterType === "All" &&
+        filterRating === "All";
 
     const handleDragStart = (event) => {
         setActiveId(event.active.id);
@@ -553,6 +590,8 @@ export default function Home() {
             filterYear,
             filterGenre,
             filterStatus,
+            filterType,
+            filterRating,
             sortBy,
             scrollPosition: window.scrollY,
         };
@@ -574,6 +613,8 @@ export default function Home() {
         filterYear,
         filterGenre,
         filterStatus,
+        filterType,
+        filterRating,
         sortBy,
     ]);
 
@@ -606,6 +647,8 @@ export default function Home() {
         setFilterYear("All");
         setFilterGenre("All");
         setFilterStatus("All");
+        setFilterType("All");
+        setFilterRating("All");
         setSearchQuery("");
     };
 
@@ -649,6 +692,10 @@ export default function Home() {
                                 setFilterYear={setFilterYear}
                                 filterStatus={filterStatus}
                                 setFilterStatus={setFilterStatus}
+                                filterType={filterType}
+                                setFilterType={setFilterType}
+                                filterRating={filterRating}
+                                setFilterRating={setFilterRating}
                                 sortBy={sortBy}
                                 setSortBy={setSortBy}
                                 uniqueDirectors={uniqueDirectors}

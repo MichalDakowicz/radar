@@ -8,6 +8,9 @@ import {
     Calendar,
     Clapperboard,
     Film,
+    Star,
+    Tv,
+    Timer,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { FilterCombobox } from "./FilterCombobox";
@@ -23,6 +26,10 @@ export function FilterPanel({
     setFilterYear,
     filterStatus,
     setFilterStatus,
+    filterType,
+    setFilterType,
+    filterRating,
+    setFilterRating,
     sortBy,
     setSortBy,
     uniqueDirectors,
@@ -37,6 +44,8 @@ export function FilterPanel({
         filterGenre !== "All",
         filterYear !== "All",
         filterStatus !== "All",
+        filterType !== "All",
+        filterRating !== "All",
     ].filter(Boolean).length;
 
     const availabilityOptions = [
@@ -107,8 +116,10 @@ export function FilterPanel({
                                         value: "releaseDate",
                                         label: "Release Date",
                                     },
-                                    { value: "director", label: "Director" },
                                     { value: "title", label: "Title" },
+                                    { value: "director", label: "Director" },
+                                    { value: "rating", label: "Rating" },
+                                    { value: "runtime", label: "Runtime" },
                                 ]}
                                 value={sortBy}
                                 onChange={setSortBy}
@@ -197,6 +208,41 @@ export function FilterPanel({
                                     placeholder="All Genres"
                                     searchPlaceholder="Search genres..."
                                     icon={Tags}
+                                    className="w-full"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-neutral-500 uppercase">
+                                    Type
+                                </label>
+                                <FilterCombobox
+                                    options={["Movie", "TV Show", "All"]}
+                                    value={filterType}
+                                    onChange={setFilterType}
+                                    placeholder="All Types"
+                                    icon={Tv}
+                                    className="w-full"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-neutral-500 uppercase">
+                                    Min Rating
+                                </label>
+                                <FilterCombobox
+                                    options={[
+                                        { value: "5", label: "★★★★★ (5)" },
+                                        { value: "4", label: "★★★★+ (4+)" },
+                                        { value: "3", label: "★★★+ (3+)" },
+                                        { value: "2", label: "★★+ (2+)" },
+                                        { value: "1", label: "★+ (any rated)" },
+                                        { value: "All", label: "All" },
+                                    ]}
+                                    value={filterRating}
+                                    onChange={setFilterRating}
+                                    placeholder="Any Rating"
+                                    icon={Star}
                                     className="w-full"
                                 />
                             </div>

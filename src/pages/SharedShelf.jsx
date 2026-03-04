@@ -53,6 +53,12 @@ export default function SharedShelf() {
     const [filterStatus, setFilterStatus] = useState(
         restoredState?.filterStatus || "All",
     );
+    const [filterType, setFilterType] = useState(
+        restoredState?.filterType || "All",
+    );
+    const [filterRating, setFilterRating] = useState(
+        restoredState?.filterRating || "All",
+    );
     const [sortBy, setSortBy] = useState(restoredState?.sortBy || "custom");
     const [groupBy, setGroupBy] = useState(restoredState?.groupBy || "none");
 
@@ -180,6 +186,30 @@ export default function SharedShelf() {
             );
         }
 
+        // Filter by Type
+        if (filterType !== "All") {
+            result = result.filter((m) => {
+                const isTV = m.type === "tv" || m.type === "TV Show";
+                return filterType === "TV Show" ? isTV : !isTV;
+            });
+        }
+
+        // Filter by Min Rating
+        if (filterRating !== "All") {
+            const minRating = parseFloat(filterRating);
+            result = result.filter((m) => {
+                let rating = 0;
+                if (m.ratings) {
+                    const vals = Object.values(m.ratings).filter((v) => v > 0);
+                    if (vals.length > 0)
+                        rating = vals.reduce((x, y) => x + y, 0) / vals.length;
+                } else if (m.rating) {
+                    rating = m.rating;
+                }
+                return rating >= minRating;
+            });
+        }
+
         // Sort
         result.sort((a, b) => {
             if (sortBy === "custom") {
@@ -205,6 +235,7 @@ export default function SharedShelf() {
                 return (dirA || "").localeCompare(dirB || "");
             }
             if (sortBy === "title") return a.title.localeCompare(b.title);
+            if (sortBy === "runtime") return (a.runtime || 0) - (b.runtime || 0);
             return 0;
         });
 
@@ -216,8 +247,8 @@ export default function SharedShelf() {
         filterDirector,
         filterYear,
         filterGenre,
-        filterStatus,
-        sortBy,
+        filterStatus,        filterType,
+        filterRating,        sortBy,
     ]);
 
     // Grouping Logic
@@ -274,6 +305,8 @@ export default function SharedShelf() {
         setFilterYear("All");
         setFilterGenre("All");
         setFilterStatus("All");
+        setFilterType("All");
+        setFilterRating("All");
         setSearchQuery("");
     };
 
@@ -287,6 +320,8 @@ export default function SharedShelf() {
             filterYear,
             filterGenre,
             filterStatus,
+            filterType,
+            filterRating,
             sortBy,
             groupBy,
             scrollPosition: window.scrollY,
@@ -308,6 +343,8 @@ export default function SharedShelf() {
         filterYear,
         filterGenre,
         filterStatus,
+        filterType,
+        filterRating,
         sortBy,
         groupBy,
         userId,
@@ -372,6 +409,10 @@ export default function SharedShelf() {
                                 setFilterYear={setFilterYear}
                                 filterStatus={filterStatus}
                                 setFilterStatus={setFilterStatus}
+                                filterType={filterType}
+                                setFilterType={setFilterType}
+                                filterRating={filterRating}
+                                setFilterRating={setFilterRating}
                                 sortBy={sortBy}
                                 setSortBy={setSortBy}
                                 uniqueDirectors={uniqueDirectors}
