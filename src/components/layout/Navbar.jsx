@@ -16,6 +16,29 @@ import { useAuth } from "../../features/auth/AuthContext";
 import { useToast } from "../ui/Toast";
 import { BottomNav } from "./BottomNav";
 
+const HOME_LOCALSTORAGE_KEYS = [
+    "mt_filterAvailability",
+    "mt_filterDirector",
+    "mt_filterYear",
+    "mt_filterGenre",
+    "mt_filterStatus_v2",
+    "mt_sortBy",
+    "mt_groupBy",
+];
+
+function resetPage(path) {
+    if (path === "/") {
+        sessionStorage.removeItem("pageState_home");
+        HOME_LOCALSTORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+        window.dispatchEvent(new CustomEvent("resetPage", { detail: { page: "home" } }));
+    } else if (path === "/browse") {
+        sessionStorage.removeItem("pageState_browse");
+        window.dispatchEvent(new CustomEvent("resetPage", { detail: { page: "browse" } }));
+    } else {
+        window.scrollTo(0, 0);
+    }
+}
+
 export function Navbar({ onPickRandom }) {
     const { user } = useAuth();
     const location = useLocation();
@@ -23,6 +46,13 @@ export function Navbar({ onPickRandom }) {
     const { toast } = useToast();
 
     const isActive = (path) => location.pathname === path;
+
+    const handleNavClick = (e, path) => {
+        if (location.pathname === path) {
+            e.preventDefault();
+            resetPage(path);
+        }
+    };
 
     const handleShareShelf = () => {
         if (!user) return;
@@ -39,7 +69,7 @@ export function Navbar({ onPickRandom }) {
         <>
             <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md px-4 py-3 sm:px-6 sm:py-4">
                 <div className="mx-auto max-w-screen-2xl flex items-center justify-between">
-                    <Link to="/" className="flex items-center gap-3 group">
+                    <Link to="/" onClick={(e) => handleNavClick(e, "/")} className="flex items-center gap-3 group">
                         <Logo className="h-8 w-8 text-blue-500 group-hover:scale-110 transition-transform" />
                         <h1 className="text-2xl font-bold tracking-tight text-white">
                             Radar
@@ -72,6 +102,7 @@ export function Navbar({ onPickRandom }) {
 
                             <Link
                                 to="/"
+                                onClick={(e) => handleNavClick(e, "/")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/")
                                         ? "text-white bg-neutral-800"
@@ -83,6 +114,7 @@ export function Navbar({ onPickRandom }) {
                             </Link>
                             <Link
                                 to="/browse"
+                                onClick={(e) => handleNavClick(e, "/browse")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/browse")
                                         ? "text-white bg-neutral-800"
@@ -94,6 +126,7 @@ export function Navbar({ onPickRandom }) {
                             </Link>
                             <Link
                                 to="/stats"
+                                onClick={(e) => handleNavClick(e, "/stats")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/stats")
                                         ? "text-white bg-neutral-800"
@@ -105,6 +138,7 @@ export function Navbar({ onPickRandom }) {
                             </Link>
                             <Link
                                 to="/friends"
+                                onClick={(e) => handleNavClick(e, "/friends")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/friends")
                                         ? "text-white bg-neutral-800"
@@ -127,6 +161,7 @@ export function Navbar({ onPickRandom }) {
 
                             <Link
                                 to="/settings"
+                                onClick={(e) => handleNavClick(e, "/settings")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/settings")
                                         ? "text-white bg-neutral-800"

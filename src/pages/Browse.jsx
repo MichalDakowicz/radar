@@ -161,6 +161,19 @@ export default function Browse() {
     const { addMovie, removeMovie, movies } = useMovies();
     const { toast } = useToast();
 
+    // Reset search/tab when the nav button is clicked while already on this page
+    useEffect(() => {
+        const handleReset = (e) => {
+            if (e.detail?.page !== "browse") return;
+            setQuery("");
+            setResults([]);
+            setActiveTab("movies");
+            window.scrollTo(0, 0);
+        };
+        window.addEventListener("resetPage", handleReset);
+        return () => window.removeEventListener("resetPage", handleReset);
+    }, []);
+
     // Get user's highly rated movies for recommendations
     const topRatedUserMovies = useMemo(() => {
         return movies
@@ -782,7 +795,7 @@ export default function Browse() {
 
                 {!query.trim() && (
                     <>
-                        <div className="sticky top-[56px] sm:top-[62px] z-40 bg-[#09090b]/90 backdrop-blur-xl border-b border-zinc-800/50 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-8 support-[backdrop-filter]:bg-[#09090b]/80">
+                        <div className="sticky top-14 sm:top-15.5 z-40 bg-[#09090b]/90 backdrop-blur-xl border-b border-zinc-800/50 -mx-4 sm:-mx-6 px-4 sm:px-6 mb-8 support-[backdrop-filter]:bg-[#09090b]/80">
                             <div className="flex justify-center max-w-md mx-auto py-3">
                                 <div className="flex w-full items-center p-1 bg-zinc-900/80 border border-zinc-800 rounded-lg">
                                     {[

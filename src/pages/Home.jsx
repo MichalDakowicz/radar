@@ -204,6 +204,25 @@ export default function Home() {
     // Dnd States
     const [activeId, setActiveId] = useState(null);
 
+    // Reset all filters/search when the nav button is clicked while already on this page
+    useEffect(() => {
+        const handleReset = (e) => {
+            if (e.detail?.page !== "home") return;
+            setSearchQuery("");
+            setFilterAvailability("All");
+            setFilterDirector("All");
+            setFilterYear("All");
+            setFilterGenre("All");
+            setFilterStatus("All");
+            setSortBy("custom");
+            setGroupBy("none");
+            window.scrollTo(0, 0);
+        };
+        window.addEventListener("resetPage", handleReset);
+        return () => window.removeEventListener("resetPage", handleReset);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Save scroll position continuously
     useSaveScrollPosition("home");
 
