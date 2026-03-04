@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 /**
@@ -103,24 +103,36 @@ export function useRestoredState(pageKey, defaultState) {
 export function useSaveScrollPosition(pageKey) {
     const stateKey = `pageState_${pageKey}`;
 
-    useEffect(() => {
-        const handleScroll = () => {
-            try {
-                const currentState = sessionStorage.getItem(stateKey);
-                const state = currentState ? JSON.parse(currentState) : {};
-                state.scrollPosition = window.scrollY;
-                sessionStorage.setItem(stateKey, JSON.stringify(state));
-            } catch (error) {
-                console.warn("Error saving scroll position:", error);
-            }
-        };
+    const savePosition = (source) => {
+        try {
+            const currentState = sessionStorage.getItem(stateKey);
+            const state = currentState ? JSON.parse(currentState) : {};
+            state.scrollPosition = window.scrollY;
+            sessionStorage.setItem(stateKey, JSON.stringify(state));
+            console.log(`%c[ScrollSave:${source}] scrollY: ${window.scrollY}px`, "color: #f59e0b;");
+        } catch (error) {
+            console.warn("Error saving scroll position:", error);
+        }
+    };
 
-        // Throttle scroll events
+    // useLayoutEffect cleanup fires synchronously during React's commit phase —
+    // BEFORE the browser auto-scrolls to any focused element in the incoming page
+    // and before passive effects of the new page run. This guarantees we capture
+    // the true scroll position the user was at, not a post-mount-scroll value.
+    useLayoutEffect(() => {
+        return () => {
+            savePosition("unmount");
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [stateKey]);
+
+    // Separate effect for the live scroll listener (doesn't need to be layout)
+    useEffect(() => {
         let timeoutId;
         const throttledScroll = () => {
             if (timeoutId) return;
             timeoutId = setTimeout(() => {
-                handleScroll();
+                savePosition("event");
                 timeoutId = null;
             }, 200);
         };
@@ -130,8 +142,7 @@ export function useSaveScrollPosition(pageKey) {
         return () => {
             window.removeEventListener("scroll", throttledScroll);
             if (timeoutId) clearTimeout(timeoutId);
-            // Save one final time on unmount
-            handleScroll();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stateKey]);
 }

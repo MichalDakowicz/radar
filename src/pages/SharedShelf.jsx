@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import Logo from "../components/ui/Logo";
 import { usePublicMovies } from "../hooks/usePublicMovies";
@@ -350,15 +350,19 @@ export default function SharedShelf() {
         userId,
     ]);
 
-    // Restore scroll position on mount if we have restored state
+    // Restore scroll position after movies have finished loading and rendered
+    const scrollRestoredRef = useRef(false);
     useEffect(() => {
-        if (restoredState?.scrollPosition) {
-            setTimeout(() => {
-                window.scrollTo(0, restoredState.scrollPosition);
-            }, 100);
+        if (!loading && restoredState?.scrollPosition && !scrollRestoredRef.current) {
+            scrollRestoredRef.current = true;
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    window.scrollTo(0, restoredState.scrollPosition);
+                });
+            });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [loading]);
 
     if (loading) {
         return (

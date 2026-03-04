@@ -38,6 +38,11 @@ export default function MovieDetails() {
     const [adding, setAdding] = useState(false);
     const [removing, setRemoving] = useState(false);
 
+    // Scroll to top on mount
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     useEffect(() => {
         async function loadMovie() {
             setLoading(true);

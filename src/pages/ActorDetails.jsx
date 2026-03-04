@@ -27,6 +27,11 @@ export default function ActorDetails() {
     const [loadingMore, setLoadingMore] = useState(false);
     const { movies: userMovies } = useMovies();
 
+    // Scroll to top on mount
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     useEffect(() => {
         async function loadActor() {
             setLoading(true);

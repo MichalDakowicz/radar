@@ -703,13 +703,19 @@ export default function Browse() {
         }
     }, [query, activeTab]);
 
+    // Restore scroll position after categories have finished loading and rendered
+    const scrollRestoredRef = useRef(false);
     useEffect(() => {
-        if (restoredState?.scrollPosition) {
-            setTimeout(() => {
-                window.scrollTo(0, restoredState.scrollPosition);
-            }, 100);
+        if (!loadingCategories && restoredState?.scrollPosition && !scrollRestoredRef.current) {
+            scrollRestoredRef.current = true;
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    window.scrollTo(0, restoredState.scrollPosition);
+                });
+            });
         }
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loadingCategories]);
 
     const renderTabContent = () => {
         if (loadingCategories) {

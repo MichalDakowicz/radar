@@ -13,6 +13,11 @@ export default function AddMovie() {
     const navigate = useNavigate();
     const { addMovie } = useMovies();
 
+    // Scroll to top on mount
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     const [activeTab, setActiveTab] = useState("main");
     const [isProcessing, setIsProcessing] = useState(false);
 

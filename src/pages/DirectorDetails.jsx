@@ -23,6 +23,11 @@ export default function DirectorDetails() {
     const [showFullBio, setShowFullBio] = useState(false);
     const { movies: userMovies } = useMovies();
 
+    // Scroll to top on mount
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     useEffect(() => {
         async function loadDirector() {
             setLoading(true);

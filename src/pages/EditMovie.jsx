@@ -17,6 +17,12 @@ import EditMovieMainTab from "../features/movies/edit/EditMovieMainTab";
 export default function EditMovie() {
     const { movieId } = useParams();
     const navigate = useNavigate();
+
+    // Scroll to top on mount — SPA navigation carries over the previous page's scroll position
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     const {
         movies,
         updateMovie,

@@ -230,7 +230,7 @@ export default function Home() {
         };
         window.addEventListener("resetPage", handleReset);
         return () => window.removeEventListener("resetPage", handleReset);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Save scroll position continuously
@@ -439,7 +439,8 @@ export default function Home() {
                 return (dirA || "").localeCompare(dirB || "");
             }
             if (sortBy === "title") return a.title.localeCompare(b.title);
-            if (sortBy === "runtime") return (a.runtime || 0) - (b.runtime || 0);
+            if (sortBy === "runtime")
+                return (a.runtime || 0) - (b.runtime || 0);
             return 0;
         });
 
@@ -451,8 +452,10 @@ export default function Home() {
         filterDirector,
         filterYear,
         filterGenre,
-        filterStatus,        filterType,
-        filterRating,        sortBy,
+        filterStatus,
+        filterType,
+        filterRating,
+        sortBy,
     ]);
 
     // Movies eligible for random spin
@@ -580,6 +583,8 @@ export default function Home() {
     }, [highlightedMovieId]);
 
     // Save current state to sessionStorage before navigation
+    // NOTE: scrollPosition is intentionally excluded here — useSaveScrollPosition manages it
+    // exclusively via a merge-write so we don't clobber the value it saved on unmount.
     useEffect(() => {
         const currentState = {
             viewMode,
@@ -593,14 +598,15 @@ export default function Home() {
             filterType,
             filterRating,
             sortBy,
-            scrollPosition: window.scrollY,
         };
 
         try {
-            sessionStorage.setItem(
-                "pageState_home",
-                JSON.stringify(currentState),
-            );
+            // Merge with existing sessionStorage so scrollPosition set by useSaveScrollPosition is preserved
+            const existing = sessionStorage.getItem("pageState_home");
+            const merged = existing
+                ? { ...JSON.parse(existing), ...currentState }
+                : currentState;
+            sessionStorage.setItem("pageState_home", JSON.stringify(merged));
         } catch (error) {
             console.warn("Error saving page state:", error);
         }
@@ -618,16 +624,25 @@ export default function Home() {
         sortBy,
     ]);
 
-    // Restore scroll position on mount if we have restored state
+    // Capture target scroll position once at mount — restoredState re-reads sessionStorage
+    // on every render, so if anything writes to it between mount and loading=false the
+    // value would change underneath us. A ref locks it in at the very first render.
+    const scrollTargetRef = useRef(restoredState?.scrollPosition ?? 0);
+
+    // Restore scroll position after movies have finished loading and rendered
+    const scrollRestoredRef = useRef(false);
     useEffect(() => {
-        if (restoredState?.scrollPosition) {
-            // Use setTimeout to ensure DOM is ready
-            setTimeout(() => {
-                window.scrollTo(0, restoredState.scrollPosition);
-            }, 100);
+        if (!loading && scrollTargetRef.current && !scrollRestoredRef.current) {
+            scrollRestoredRef.current = true;
+            const target = scrollTargetRef.current;
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    window.scrollTo(0, target);
+                });
+            });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [loading]);
 
     const handleRandomPick = () => {
         if (validPickMovies.length === 0) {

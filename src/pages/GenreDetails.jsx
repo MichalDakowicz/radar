@@ -49,6 +49,11 @@ export default function GenreDetails() {
 
     const genreName = GENRE_NAMES[genreId] || "Unknown Genre";
 
+    // Scroll to top on mount
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     useEffect(() => {
         async function loadGenreMovies() {
             setLoading(true);
