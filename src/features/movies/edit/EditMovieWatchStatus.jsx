@@ -1,4 +1,13 @@
-import { Library, Check, Minus, Plus, PlayCircle, Clock } from "lucide-react";
+import {
+    Library,
+    Check,
+    Minus,
+    Plus,
+    PlayCircle,
+    Clock,
+    Pause,
+    XCircle,
+} from "lucide-react";
 
 export default function EditMovieWatchStatus({
     type,
@@ -172,31 +181,97 @@ export default function EditMovieWatchStatus({
         );
     }
 
-    // TV Show
+    // TV Show: button-based status to match movie section
+    const tvStatusOptions = [
+        {
+            value: "Plan to Watch",
+            label: "Plan to Watch",
+            icon: Library,
+            activeClass:
+                "bg-blue-500/20 border-blue-500/50 text-blue-400",
+            inactiveClass:
+                "bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:border-neutral-600",
+        },
+        {
+            value: "Watching",
+            label: "Watching",
+            icon: PlayCircle,
+            activeClass:
+                "bg-yellow-500/20 border-yellow-500/50 text-yellow-400",
+            inactiveClass:
+                "bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:border-neutral-600",
+        },
+        {
+            value: "Completed",
+            label: "Completed",
+            icon: Check,
+            activeClass:
+                "bg-green-500/20 border-green-500/50 text-green-400",
+            inactiveClass:
+                "bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:border-neutral-600",
+        },
+        {
+            value: "On Hold",
+            label: "On Hold",
+            icon: Pause,
+            activeClass:
+                "bg-neutral-600/30 border-neutral-500/50 text-neutral-300",
+            inactiveClass:
+                "bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:border-neutral-600",
+        },
+        {
+            value: "Dropped",
+            label: "Dropped",
+            icon: XCircle,
+            activeClass:
+                "bg-red-500/20 border-red-500/50 text-red-400",
+            inactiveClass:
+                "bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:border-neutral-600",
+        },
+    ];
+
     return (
         <div className="space-y-4">
-            <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-800">
+            <div>
                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
                     TV Show Status
                 </label>
-                <select
-                    value={tvStatus}
-                    onChange={(e) => setTvStatus(e.target.value)}
-                    className="w-full bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
-                >
-                    <option value="Plan to Watch">Plan to Watch</option>
-                    <option value="Watching">Watching</option>
-                    <option value="Completed">Completed</option>
-                    <option value="On Hold">On Hold</option>
-                    <option value="Dropped">Dropped</option>
-                </select>
+                <div className="flex flex-wrap gap-3">
+                    {tvStatusOptions.map((opt) => {
+                        const Icon = opt.icon;
+                        const isSelected = tvStatus === opt.value;
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setTvStatus(opt.value)}
+                                className={`flex items-center justify-center gap-2 px-4 py-4 rounded-lg border transition-all text-sm font-medium ${
+                                    isSelected
+                                        ? opt.activeClass
+                                        : opt.inactiveClass
+                                }`}
+                            >
+                                <Icon size={18} />
+                                <span>{opt.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-neutral-800 transition-all bg-neutral-900/50">
-                <div className="flex items-center justify-between">
+            <div
+                className={`p-4 rounded-xl border transition-all flex items-center ${
+                    timesWatched > 0
+                        ? "bg-green-500/10 border-green-500/30"
+                        : "bg-neutral-900/50 border-neutral-800"
+                }`}
+            >
+                <div className="flex items-center justify-between w-full">
                     <label
-                        className={`text-sm font-medium flex items-center gap-3 select-none ${
-                            timesWatched > 0 ? "text-green-400" : "text-white"
+                        className={`text-md font-medium flex items-center gap-3 select-none ${
+                            timesWatched > 0
+                                ? "text-green-400"
+                                : "text-white"
                         }`}
                     >
                         <Check size={18} />
@@ -259,13 +334,15 @@ export default function EditMovieWatchStatus({
                     <input
                         type="text"
                         value={lastWatchedPosition}
-                        onChange={(e) => setLastWatchedPosition(e.target.value)}
+                        onChange={(e) =>
+                            setLastWatchedPosition(e.target.value)
+                        }
                         placeholder="e.g., S02E05 at 23:15"
                         className="w-full bg-neutral-900 border border-neutral-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500/50 text-sm font-mono"
                     />
                     <p className="text-xs text-neutral-500 mt-2">
-                        Enter where you stopped (e.g., "S02E05 at 23:15" or just
-                        "S02E05")
+                        Enter where you stopped (e.g., "S02E05 at 23:15" or
+                        just "S02E05")
                     </p>
                 </div>
             )}

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../features/auth/AuthContext";
 import { useToast } from "../ui/Toast";
+import { useRefreshMetadata } from "../../contexts/RefreshMetadataContext";
 import { BottomNav } from "./BottomNav";
 
 const HOME_LOCALSTORAGE_KEYS = [
@@ -44,6 +45,8 @@ export function Navbar({ onPickRandom }) {
     const location = useLocation();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { isRefreshing: metadataRefreshing, progress: metadataProgress } =
+        useRefreshMetadata();
 
     const isActive = (path) => location.pathname === path;
 
@@ -67,13 +70,18 @@ export function Navbar({ onPickRandom }) {
 
     return (
         <>
-            <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur-md px-4 py-3 sm:px-6 sm:py-4">
+            <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md px-4 py-3 sm:px-6 sm:py-4">
                 <div className="mx-auto max-w-screen-2xl flex items-center justify-between">
                     <Link to="/" onClick={(e) => handleNavClick(e, "/")} className="flex items-center gap-3 group">
                         <Logo className="h-8 w-8 text-blue-500 group-hover:scale-110 transition-transform" />
-                        <h1 className="text-2xl font-bold tracking-tight text-white">
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
                             Radar
                         </h1>
+                        {metadataRefreshing && metadataProgress.total > 0 && (
+                            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded hidden sm:inline">
+                                Refreshing {metadataProgress.current}/{metadataProgress.total}
+                            </span>
+                        )}
                     </Link>
 
                     {user && (
@@ -81,7 +89,7 @@ export function Navbar({ onPickRandom }) {
                             {onPickRandom && (
                                 <button
                                     onClick={onPickRandom}
-                                    className="flex items-center gap-2 rounded-full border border-neutral-700 px-4 py-2 text-sm font-medium hover:bg-neutral-800 hover:text-blue-400 transition-colors cursor-pointer mr-2"
+                                    className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium hover:bg-muted hover:text-primary transition-colors transition-colors cursor-pointer mr-2"
                                 >
                                     <Shuffle size={16} />
                                     <span className="hidden min-[780px]:inline">
@@ -92,7 +100,7 @@ export function Navbar({ onPickRandom }) {
 
                             <button
                                 onClick={() => navigate("/add")}
-                                className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-bold text-black hover:bg-neutral-200 transition-colors cursor-pointer mr-2"
+                                className="flex items-center gap-2 rounded-full bg-blue-500 px-3 py-1.5 sm:px-4 sm:py-2 text-sm font-bold text-primary-foreground hover:opacity-90 transition-colors cursor-pointer mr-2"
                             >
                                 <Plus size={16} />
                                 <span className="hidden min-[780px]:inline">
@@ -105,8 +113,8 @@ export function Navbar({ onPickRandom }) {
                                 onClick={(e) => handleNavClick(e, "/")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/")
-                                        ? "text-white bg-neutral-800"
-                                        : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                                        ? "text-foreground bg-muted"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                                 }`}
                                 title="Library"
                             >
@@ -117,8 +125,8 @@ export function Navbar({ onPickRandom }) {
                                 onClick={(e) => handleNavClick(e, "/browse")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/browse")
-                                        ? "text-white bg-neutral-800"
-                                        : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                                        ? "text-foreground bg-muted"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                                 }`}
                                 title="Browse"
                             >
@@ -129,8 +137,8 @@ export function Navbar({ onPickRandom }) {
                                 onClick={(e) => handleNavClick(e, "/stats")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/stats")
-                                        ? "text-white bg-neutral-800"
-                                        : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                                        ? "text-foreground bg-muted"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                                 }`}
                                 title="Statistics"
                             >
@@ -141,8 +149,8 @@ export function Navbar({ onPickRandom }) {
                                 onClick={(e) => handleNavClick(e, "/friends")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/friends")
-                                        ? "text-white bg-neutral-800"
-                                        : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                                        ? "text-foreground bg-muted"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                                 }`}
                                 title="Friends"
                             >
@@ -151,21 +159,21 @@ export function Navbar({ onPickRandom }) {
 
                             <button
                                 onClick={handleShareShelf}
-                                className="rounded p-2 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors cursor-pointer"
+                                className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
                                 title="Share Public Link"
                             >
                                 <Share2 size={20} />
                             </button>
 
-                            <div className="h-6 w-px bg-neutral-800 mx-2 hidden min-[780px]:block" />
+                            <div className="h-6 w-px bg-border mx-2 hidden min-[780px]:block" />
 
                             <Link
                                 to="/settings"
                                 onClick={(e) => handleNavClick(e, "/settings")}
                                 className={`hidden min-[780px]:block p-2 rounded-md transition-colors ${
                                     isActive("/settings")
-                                        ? "text-white bg-neutral-800"
-                                        : "text-neutral-400 hover:text-white hover:bg-neutral-800"
+                                        ? "text-foreground bg-muted"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                                 }`}
                                 title="Settings"
                             >

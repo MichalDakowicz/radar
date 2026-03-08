@@ -15,6 +15,7 @@ export default function EditMovieMainTab({
     isProcessing,
     episodesWatched,
     number_of_seasons,
+    seasonEpisodeCounts,
     releaseDate,
     setReleaseDate,
     runtime,
@@ -56,6 +57,7 @@ export default function EditMovieMainTab({
                 isProcessing={isProcessing}
                 episodesWatched={episodesWatched}
                 number_of_seasons={number_of_seasons}
+                seasonEpisodeCounts={seasonEpisodeCounts}
             />
             {/* Watch Status - TOP PRIORITY */}
             <div>

@@ -26,24 +26,33 @@ import {
 import { ref, update, get, set } from "firebase/database";
 import { db } from "../lib/firebase";
 import { migrateUserMovies } from "../lib/migrateDatabase";
-import { fetchMediaMetadata } from "../services/tmdb";
 import { useWatchProviderCountry } from "../hooks/useWatchProviderCountry";
+import { useRecentlyAddedSettings } from "../hooks/useRecentlyAddedSettings";
+import { useTheme } from "../contexts/ThemeContext";
+import { useRefreshMetadata } from "../contexts/RefreshMetadataContext";
 
 export default function Settings() {
     const { user, logout } = useAuth();
     const { profile } = useUserProfile(user?.uid);
     const { movies, addMovie, removeMovie } = useMovies();
     const watchProviderCountry = useWatchProviderCountry();
+    const { theme, setTheme } = useTheme();
+    const {
+        recentlyAddedDays,
+        setRecentlyAddedDays,
+        showRecentlyAddedSection,
+        setShowRecentlyAddedSection,
+    } = useRecentlyAddedSettings();
     const { toast } = useToast();
+    const {
+        isRefreshing: refreshingMetadata,
+        progress: metadataProgress,
+        startRefreshMetadata,
+    } = useRefreshMetadata();
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [migrating, setMigrating] = useState(false);
-    const [refreshingMetadata, setRefreshingMetadata] = useState(false);
-    const [metadataProgress, setMetadataProgress] = useState({
-        current: 0,
-        total: 0,
-    });
 
     const [friendsVisibility, setFriendsVisibility] = useState("friends");
     const [loadingPrivacy, setLoadingPrivacy] = useState(true);
@@ -279,114 +288,8 @@ export default function Settings() {
         }
     };
 
-    const handleRefreshMetadata = async () => {
-        if (!user || movies.length === 0) {
-            toast({
-                title: "No Movies",
-                description: "You don't have any movies to refresh.",
-                variant: "destructive",
-            });
-            return;
-        }
-
-        const confirmed = window.confirm(
-            `This will refresh metadata for all ${movies.length} movies in your library from TMDB. This may take a few minutes. Continue?`,
-        );
-
-        if (!confirmed) return;
-
-        setRefreshingMetadata(true);
-        setMetadataProgress({ current: 0, total: movies.length });
-
-        let successCount = 0;
-        let errorCount = 0;
-
-        try {
-            for (let i = 0; i < movies.length; i++) {
-                const movie = movies[i];
-                setMetadataProgress({ current: i + 1, total: movies.length });
-
-                try {
-                    const freshData = await fetchMediaMetadata(
-                        movie.tmdbId,
-                        movie.type || "movie",
-                        watchProviderCountry,
-                    );
-
-                    if (freshData) {
-                        const updatedMovie = {
-                            ...movie,
-                            // TMDB metadata - fully refreshed
-                            title: freshData.title,
-                            coverUrl: freshData.coverUrl || movie.coverUrl,
-                            releaseDate: freshData.releaseDate || movie.releaseDate,
-                            genres: freshData.genres,
-                            director: freshData.director,
-                            cast: freshData.cast,
-                            overview: freshData.overview,
-                            runtime: freshData.runtime,
-                            voteAverage: freshData.voteAverage,
-                            voteCount: freshData.voteCount,
-                            imdbId: freshData.imdbId || movie.imdbId,
-                            number_of_seasons: freshData.number_of_seasons ?? movie.number_of_seasons,
-                            number_of_episodes: freshData.number_of_episodes ?? movie.number_of_episodes,
-                            tagline: freshData.tagline || movie.tagline,
-                            budget: freshData.budget ?? movie.budget,
-                            revenue: freshData.revenue ?? movie.revenue,
-                            productionCompanies: freshData.productionCompanies || movie.productionCompanies,
-                            availability: freshData.availability?.length
-                                ? freshData.availability
-                                : movie.availability,
-                            // Preserve all user data
-                            ratings: movie.ratings,
-                            watched: movie.watched,
-                            inWatchlist: movie.inWatchlist,
-                            inProgress: movie.inProgress,
-                            timesWatched: movie.timesWatched,
-                            addedAt: movie.addedAt,
-                            watchedAt: movie.watchedAt,
-                            notes: movie.notes,
-                        };
-
-                        await update(
-                            ref(db, `users/${user.uid}/movies/${movie.id}`),
-                            updatedMovie,
-                        );
-
-                        successCount++;
-                    }
-                } catch (error) {
-                    console.error(`Error refreshing ${movie.title}:`, error);
-                    errorCount++;
-                }
-
-                await new Promise((resolve) => setTimeout(resolve, 100));
-            }
-
-            toast({
-                title: "Metadata Refresh Complete",
-                description: `Successfully refreshed ${successCount} movies. ${
-                    errorCount > 0 ? `${errorCount} failed.` : ""
-                }`,
-                variant: errorCount > 0 ? "default" : "success",
-            });
-
-            setTimeout(() => window.location.reload(), 1500);
-        } catch (e) {
-            console.error(e);
-            toast({
-                title: "Refresh Failed",
-                description: e.message,
-                variant: "destructive",
-            });
-        } finally {
-            setRefreshingMetadata(false);
-            setMetadataProgress({ current: 0, total: 0 });
-        }
-    };
-
     return (
-        <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans selection:bg-zinc-800">
+        <div className="min-h-screen bg-background text-foreground font-sans selection:bg-muted">
             <Navbar />
 
             <main className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-10 pb-24">
@@ -396,10 +299,10 @@ export default function Settings() {
                 />
 
                 {/* Profile Header */}
-                <section className="mb-16 border-b border-zinc-800 pb-10">
+                <section className="mb-16 border-b border-border pb-10">
                     <div className="flex items-center gap-2 mb-6">
-                        <User className="w-5 h-5 text-zinc-400" />
-                        <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                        <User className="w-5 h-5 text-muted-foreground" />
+                        <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
                             Account
                         </h2>
                     </div>
@@ -409,21 +312,21 @@ export default function Settings() {
                             <img
                                 src={displayPfp}
                                 alt={displayUsername}
-                                className="w-20 h-20 rounded-full border-2 border-zinc-700 object-cover"
+                                className="w-20 h-20 rounded-full border-2 border-border object-cover"
                             />
                         ) : (
-                            <div className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center text-2xl font-semibold text-zinc-300">
+                            <div className="w-20 h-20 rounded-full bg-muted border-2 border-border flex items-center justify-center text-2xl font-semibold text-muted-foreground">
                                 {displayUsername?.[0] || "?"}
                             </div>
                         )}
                         <div>
-                            <p className="text-3xl font-bold tracking-tight text-white mb-1">
+                            <p className="text-3xl font-bold tracking-tight text-foreground mb-1">
                                 {displayName}
                             </p>
-                            <p className="text-sm text-zinc-400 font-medium">
+                            <p className="text-sm text-muted-foreground font-medium">
                                 @{displayUsername}
                             </p>
-                            <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                            <p className="text-xs text-muted-foreground font-medium mt-0.5">
                                 {user?.email}
                             </p>
                         </div>
@@ -432,20 +335,20 @@ export default function Settings() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <button
                             onClick={() => setIsEditProfileOpen(true)}
-                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group"
+                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-card border border-border hover:border-border hover:bg-muted/80 transition-all text-left group"
                         >
-                            <Edit2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
-                            <span className="text-sm font-semibold text-white">
+                            <Edit2 className="w-5 h-5 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                            <span className="text-sm font-semibold text-foreground">
                                 Edit Profile
                             </span>
                         </button>
 
                         <button
                             onClick={handleShareShelf}
-                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group"
+                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-card border border-border hover:border-border hover:bg-muted/80 transition-all text-left group"
                         >
-                            <Share2 className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors" />
-                            <span className="text-sm font-semibold text-white">
+                            <Share2 className="w-5 h-5 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                            <span className="text-sm font-semibold text-foreground">
                                 Share Public Shelf
                             </span>
                         </button>
@@ -453,14 +356,14 @@ export default function Settings() {
                         <button
                             onClick={handleRepairSearch}
                             disabled={refreshing}
-                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group disabled:opacity-50"
+                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-card border border-border hover:border-border hover:bg-muted/80 transition-all text-left group disabled:opacity-50"
                         >
                             <RotateCw
-                                className={`w-5 h-5 text-zinc-400 group-hover:text-blue-400 transition-colors ${
+                                className={`w-5 h-5 text-muted-foreground group-hover:text-blue-400 transition-colors ${
                                     refreshing ? "animate-spin" : ""
                                 }`}
                             />
-                            <span className="text-sm font-semibold text-white">
+                            <span className="text-sm font-semibold text-foreground">
                                 Repair Account Visibility
                             </span>
                         </button>
@@ -468,14 +371,14 @@ export default function Settings() {
                         <button
                             onClick={handleMigrateDatabase}
                             disabled={migrating}
-                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group disabled:opacity-50"
+                            className="flex items-center gap-3 px-5 py-4 rounded-lg bg-card border border-border hover:border-border hover:bg-muted/80 transition-all text-left group disabled:opacity-50"
                         >
                             <RefreshCw
-                                className={`w-5 h-5 text-zinc-400 group-hover:text-green-400 transition-colors ${
+                                className={`w-5 h-5 text-muted-foreground group-hover:text-green-400 transition-colors ${
                                     migrating ? "animate-spin" : ""
                                 }`}
                             />
-                            <span className="text-sm font-semibold text-white">
+                            <span className="text-sm font-semibold text-foreground">
                                 Migrate Database
                             </span>
                         </button>
@@ -483,10 +386,10 @@ export default function Settings() {
 
                     <button
                         onClick={logout}
-                        className="mt-3 w-full flex items-center justify-center gap-3 px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-red-500/50 hover:bg-red-950/30 transition-all group"
+                        className="mt-3 w-full flex items-center justify-center gap-3 px-5 py-4 rounded-lg bg-card border border-border hover:border-red-500/50 hover:bg-red-950/30 transition-all group"
                     >
-                        <LogOut className="w-5 h-5 text-zinc-400 group-hover:text-red-400 transition-colors" />
-                        <span className="text-sm font-semibold text-white group-hover:text-red-400 transition-colors">
+                        <LogOut className="w-5 h-5 text-muted-foreground group-hover:text-red-400 transition-colors" />
+                        <span className="text-sm font-semibold text-foreground group-hover:text-red-400 transition-colors">
                             Sign Out
                         </span>
                     </button>
@@ -499,17 +402,17 @@ export default function Settings() {
                         {/* Privacy */}
                         <section>
                             <div className="flex items-center gap-2 mb-6">
-                                <Globe className="w-5 h-5 text-zinc-400" />
-                                <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                                <Globe className="w-5 h-5 text-muted-foreground" />
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
                                     Privacy
                                 </h2>
                             </div>
 
                             <div className="mb-6">
-                                <h3 className="text-xl font-bold tracking-tight text-white mb-2">
+                                <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">
                                     Friends List Visibility
                                 </h3>
-                                <p className="text-sm text-zinc-400 font-medium">
+                                <p className="text-sm text-muted-foreground font-medium">
                                     Control who can see your friends on your
                                     public profile
                                 </p>
@@ -521,8 +424,8 @@ export default function Settings() {
                                     disabled={loadingPrivacy}
                                     className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         friendsVisibility === "noone"
-                                            ? "bg-red-500/20 border-red-500/50 text-white"
-                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                                            ? "bg-red-500/20 border-red-500/50 text-foreground"
+                                            : "bg-card border-border text-muted-foreground hover:border-border hover:text-foreground"
                                     }`}
                                 >
                                     <Lock className="w-6 h-6 mb-2" />
@@ -538,8 +441,8 @@ export default function Settings() {
                                     disabled={loadingPrivacy}
                                     className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         friendsVisibility === "friends"
-                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
-                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-foreground"
+                                            : "bg-card border-border text-muted-foreground hover:border-border hover:text-foreground"
                                     }`}
                                 >
                                     <Users className="w-6 h-6 mb-2" />
@@ -555,8 +458,8 @@ export default function Settings() {
                                     disabled={loadingPrivacy}
                                     className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         friendsVisibility === "public"
-                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
-                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-foreground"
+                                            : "bg-card border-border text-muted-foreground hover:border-border hover:text-foreground"
                                     }`}
                                 >
                                     <Globe className="w-6 h-6 mb-2" />
@@ -570,17 +473,56 @@ export default function Settings() {
                         {/* Appearance */}
                         <section>
                             <div className="flex items-center gap-2 mb-6">
-                                <Monitor className="w-5 h-5 text-zinc-400" />
-                                <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                                <Monitor className="w-5 h-5 text-muted-foreground" />
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
                                     Appearance
                                 </h2>
                             </div>
 
                             <div className="mb-6">
-                                <h3 className="text-xl font-bold tracking-tight text-white mb-2">
+                                <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">
+                                    Theme
+                                </h3>
+                                <p className="text-sm text-muted-foreground font-medium mb-3">
+                                    Dark, light, or follow system
+                                </p>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {[
+                                        {
+                                            value: "dark",
+                                            label: "Dark",
+                                        },
+                                        {
+                                            value: "light",
+                                            label: "Light",
+                                        },
+                                        {
+                                            value: "system",
+                                            label: "System",
+                                        },
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => setTheme(opt.value)}
+                                            className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
+                                                theme === opt.value
+                                                    ? "bg-blue-500/20 border-blue-500/50 text-foreground"
+                                                    : "bg-card border-border text-muted-foreground hover:border-border hover:text-foreground"
+                                            }`}
+                                        >
+                                            <span className="text-sm font-bold">
+                                                {opt.label}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">
                                     Grid Size
                                 </h3>
-                                <p className="text-sm text-zinc-400 font-medium">
+                                <p className="text-sm text-muted-foreground font-medium">
                                     Adjust the size of cards in the grid view
                                 </p>
                             </div>
@@ -592,8 +534,8 @@ export default function Settings() {
                                     }
                                     className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         gridSize === "compact"
-                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
-                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-foreground"
+                                            : "bg-card border-border text-muted-foreground hover:border-border hover:text-foreground"
                                     }`}
                                 >
                                     <LayoutGrid className="w-6 h-6 mb-2 scale-75" />
@@ -608,8 +550,8 @@ export default function Settings() {
                                     }
                                     className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         gridSize === "normal"
-                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
-                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-foreground"
+                                            : "bg-card border-border text-muted-foreground hover:border-border hover:text-foreground"
                                     }`}
                                 >
                                     <LayoutGrid className="w-6 h-6 mb-2" />
@@ -624,8 +566,8 @@ export default function Settings() {
                                     }
                                     className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 transition-all ${
                                         gridSize === "large"
-                                            ? "bg-blue-500/20 border-blue-500/50 text-white"
-                                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white"
+                                            ? "bg-blue-500/20 border-blue-500/50 text-foreground"
+                                            : "bg-card border-border text-muted-foreground hover:border-border hover:text-foreground"
                                     }`}
                                 >
                                     <LayoutGrid className="w-6 h-6 mb-2 scale-125" />
@@ -633,6 +575,49 @@ export default function Settings() {
                                         Large
                                     </span>
                                 </button>
+                            </div>
+
+                            <div className="mb-6">
+                                <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">
+                                    Recently Added Section
+                                </h3>
+                                <p className="text-sm text-muted-foreground font-medium mb-3">
+                                    Show a "Recently added" block on Home and how many days to include
+                                </p>
+                                <div className="flex flex-wrap items-center gap-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={showRecentlyAddedSection}
+                                            onChange={(e) =>
+                                                setShowRecentlyAddedSection(
+                                                    e.target.checked,
+                                                )
+                                            }
+                                            className="rounded border-border bg-card text-primary focus:ring-blue-500/50"
+                                        />
+                                        <span className="text-sm text-foreground">
+                                            Show recently added section
+                                        </span>
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-muted-foreground">Period:</span>
+                                        <select
+                                            value={recentlyAddedDays}
+                                            onChange={(e) =>
+                                                setRecentlyAddedDays(
+                                                    Number(e.target.value),
+                                                )
+                                            }
+                                            className="bg-card border border-border text-foreground px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        >
+                                            <option value={7}>7 days</option>
+                                            <option value={14}>14 days</option>
+                                            <option value={30}>30 days</option>
+                                            <option value={90}>90 days</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         </section>
                     </div>
@@ -642,18 +627,18 @@ export default function Settings() {
                         {/* Stats */}
                         <section>
                             <div className="flex items-center gap-2 mb-6">
-                                <BarChart3 className="w-5 h-5 text-zinc-400" />
-                                <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                                <BarChart3 className="w-5 h-5 text-muted-foreground" />
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
                                     Stats
                                 </h2>
                             </div>
 
                             <div className="space-y-8">
                                 <div>
-                                    <h3 className="text-xl font-bold tracking-tight text-white mb-2">
+                                    <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">
                                         Movie Streak Threshold
                                     </h3>
-                                    <p className="text-sm text-zinc-400 font-medium mb-4">
+                                    <p className="text-sm text-muted-foreground font-medium mb-4">
                                         Set how many movies per week to maintain
                                         your streak
                                     </p>
@@ -675,19 +660,19 @@ export default function Settings() {
                                                 }
                                             }}
                                             disabled={loadingStats}
-                                            className="w-24 px-4 py-3 bg-zinc-900 border-2 border-zinc-800 rounded-lg text-white text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                            className="w-24 px-4 py-3 bg-card border-2 border-border rounded-lg text-foreground text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                                         />
-                                        <span className="text-sm text-zinc-400 font-semibold">
+                                        <span className="text-sm text-muted-foreground font-semibold">
                                             movies per week
                                         </span>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h3 className="text-xl font-bold tracking-tight text-white mb-2">
+                                    <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">
                                         TV Show Streak Threshold
                                     </h3>
-                                    <p className="text-sm text-zinc-400 font-medium mb-4">
+                                    <p className="text-sm text-muted-foreground font-medium mb-4">
                                         Set how many episodes per week to
                                         maintain your TV streak
                                     </p>
@@ -709,9 +694,9 @@ export default function Settings() {
                                                 }
                                             }}
                                             disabled={loadingStats}
-                                            className="w-24 px-4 py-3 bg-zinc-900 border-2 border-zinc-800 rounded-lg text-white text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                            className="w-24 px-4 py-3 bg-card border-2 border-border rounded-lg text-foreground text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                                         />
-                                        <span className="text-sm text-zinc-400 font-semibold">
+                                        <span className="text-sm text-muted-foreground font-semibold">
                                             episodes per week
                                         </span>
                                     </div>
@@ -722,17 +707,17 @@ export default function Settings() {
                         {/* Data & Privacy */}
                         <section>
                             <div className="flex items-center gap-2 mb-6">
-                                <Database className="w-5 h-5 text-zinc-400" />
-                                <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+                                <Database className="w-5 h-5 text-muted-foreground" />
+                                <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
                                     Data Management
                                 </h2>
                             </div>
 
                             <div className="mb-6">
-                                <h3 className="text-xl font-bold tracking-tight text-white mb-2">
+                                <h3 className="text-xl font-bold tracking-tight text-foreground mb-2">
                                     Where to Watch Region
                                 </h3>
-                                <p className="text-sm text-zinc-400 font-medium mb-3">
+                                <p className="text-sm text-muted-foreground font-medium mb-3">
                                     Country used when fetching streaming
                                     availability from TMDB (for new adds and
                                     refresh).
@@ -744,7 +729,7 @@ export default function Settings() {
                                             e.target.value,
                                         )
                                     }
-                                    className="w-full max-w-xs bg-zinc-900 border border-zinc-800 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                                    className="w-full max-w-xs bg-card border border-border text-foreground px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
                                 >
                                     <option value="US">United States</option>
                                     <option value="GB">United Kingdom</option>
@@ -765,23 +750,23 @@ export default function Settings() {
 
                             <div className="space-y-2">
                                 <button
-                                    onClick={handleRefreshMetadata}
+                                    onClick={startRefreshMetadata}
                                     disabled={refreshingMetadata}
-                                    className="w-full flex items-center justify-between px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group disabled:opacity-50"
+                                    className="w-full flex items-center justify-between px-5 py-4 rounded-lg bg-card border border-border hover:border-border hover:bg-muted/80 transition-all text-left group disabled:opacity-50"
                                 >
                                     <div className="flex items-center gap-3">
                                         <Download
-                                            className={`w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors ${
+                                            className={`w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors ${
                                                 refreshingMetadata
                                                     ? "animate-bounce"
                                                     : ""
                                             }`}
                                         />
                                         <div>
-                                            <p className="text-sm font-semibold text-white">
+                                            <p className="text-sm font-semibold text-foreground">
                                                 Refresh All Metadata
                                             </p>
-                                            <p className="text-xs text-zinc-500 font-medium">
+                                            <p className="text-xs text-muted-foreground font-medium">
                                                 {refreshingMetadata
                                                     ? `${metadataProgress.current} of ${metadataProgress.total}`
                                                     : "Update from TMDB"}
@@ -792,15 +777,15 @@ export default function Settings() {
 
                                 <button
                                     onClick={() => setIsImportModalOpen(true)}
-                                    className="w-full flex items-center justify-between px-5 py-4 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-800/80 transition-all text-left group"
+                                    className="w-full flex items-center justify-between px-5 py-4 rounded-lg bg-card border border-border hover:border-border hover:bg-muted/80 transition-all text-left group"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Database className="w-5 h-5 text-zinc-400 group-hover:text-zinc-200 transition-colors" />
+                                        <Database className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                                         <div>
-                                            <p className="text-sm font-semibold text-white">
+                                            <p className="text-sm font-semibold text-foreground">
                                                 Import / Export Data
                                             </p>
-                                            <p className="text-xs text-zinc-500 font-medium">
+                                            <p className="text-xs text-muted-foreground font-medium">
                                                 Backup or restore library
                                             </p>
                                         </div>

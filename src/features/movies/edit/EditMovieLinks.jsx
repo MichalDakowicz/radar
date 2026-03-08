@@ -14,16 +14,27 @@ export default function EditMovieLinks({
     isProcessing,
     episodesWatched = {},
     number_of_seasons = null,
+    seasonEpisodeCounts = null,
 }) {
     const playMovie = tmdbId
-        ? { tmdbId, type, episodesWatched, number_of_seasons }
+        ? {
+              tmdbId,
+              type,
+              episodesWatched,
+              number_of_seasons,
+              seasonEpisodeCounts,
+          }
         : null;
     const playUrl = playMovie ? getCinebyPlayUrl(playMovie) : null;
     const isTv = type === "tv";
     const nextEp =
         isTv &&
         playUrl &&
-        getNextEpisode(episodesWatched, number_of_seasons);
+        getNextEpisode(
+            episodesWatched,
+            number_of_seasons,
+            seasonEpisodeCounts,
+        );
     const playLabel = isTv
         ? nextEp
             ? `Play episode S${nextEp.season}E${nextEp.episode}`

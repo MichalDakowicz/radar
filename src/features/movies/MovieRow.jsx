@@ -1,5 +1,5 @@
 import { Star, Heart, Clock, StickyNote, Play, Check, Clapperboard, Calendar, Star as StarIcon, X } from "lucide-react";
-import { formatRelativeTime } from "../../lib/utils";
+import { formatRelativeTime, directorToDisplayString } from "../../lib/utils";
 
 export default function MovieRow({ movie, onClick, isHighlighted, innerRef }) {
 
@@ -22,9 +22,7 @@ export default function MovieRow({ movie, onClick, isHighlighted, innerRef }) {
         }
   };
 
-  const directorName = Array.isArray(movie.director) 
-    ? movie.director.join(", ") 
-    : (movie.director || movie.artist || "");
+  const directorName = directorToDisplayString(movie.director ?? movie.artist);
 
   // Calculate rating (User rating takes precedence over TMDB if logic dictates, but here we prioritize user rating display like MovieCard)
   const userRating = (() => {

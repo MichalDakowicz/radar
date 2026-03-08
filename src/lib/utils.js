@@ -22,3 +22,23 @@ export function formatRelativeTime(timestamp) {
   
   return new Date(timestamp).toLocaleDateString();
 }
+
+/**
+ * Normalize director (string, string[], or { id, name }[]) to a display string.
+ * TMDB and DB may store director as objects; display must be text.
+ */
+export function directorToDisplayString(director) {
+  if (director == null) return "";
+  if (Array.isArray(director)) {
+    const names = director.map((d) =>
+      typeof d === "object" && d !== null && d.name != null
+        ? d.name
+        : typeof d === "string"
+          ? d
+          : "",
+    );
+    return names.filter(Boolean).join(", ");
+  }
+  if (typeof director === "object" && director.name != null) return director.name;
+  return typeof director === "string" ? director : "";
+}

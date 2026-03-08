@@ -414,6 +414,7 @@ export default function MovieDetails() {
                                 getNextEpisode(
                                     playMovie.episodesWatched,
                                     playMovie.number_of_seasons,
+                                    playMovie.seasonEpisodeCounts,
                                 );
                             const playLabel = isTv
                                 ? nextEp

@@ -37,13 +37,13 @@ export function BottomNav() {
     };
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-neutral-800 bg-neutral-950/90 backdrop-blur-lg min-[780px]:hidden pb-safe">
+        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/90 backdrop-blur-lg min-[780px]:hidden pb-safe">
             <div className="flex items-center justify-around p-2">
                 <Link
                     to="/"
                     onClick={(e) => handleNavClick(e, "/")}
                     className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
-                        isActive("/") ? "text-blue-500" : "text-neutral-400 hover:text-blue-500"
+                        isActive("/") ? "text-primary" : "text-muted-foreground hover:text-primary"
                     }`}
                 >
                     <LayoutGrid size={24} />
@@ -54,7 +54,7 @@ export function BottomNav() {
                     to="/browse"
                     onClick={(e) => handleNavClick(e, "/browse")}
                     className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
-                        isActive("/browse") ? "text-blue-500" : "text-neutral-400 hover:text-blue-500"
+                        isActive("/browse") ? "text-primary" : "text-muted-foreground hover:text-primary"
                     }`}
                 >
                     <Search size={24} />
@@ -65,7 +65,7 @@ export function BottomNav() {
                     to="/stats"
                     onClick={(e) => handleNavClick(e, "/stats")}
                     className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
-                        isActive("/stats") ? "text-blue-500" : "text-neutral-400 hover:text-blue-500"
+                        isActive("/stats") ? "text-primary" : "text-muted-foreground hover:text-primary"
                     }`}
                 >
                     <BarChart3 size={24} />
@@ -76,7 +76,7 @@ export function BottomNav() {
                     to="/friends"
                     onClick={(e) => handleNavClick(e, "/friends")}
                     className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
-                        isActive("/friends") ? "text-blue-500" : "text-neutral-400 hover:text-blue-500"
+                        isActive("/friends") ? "text-primary" : "text-muted-foreground hover:text-primary"
                     }`}
                 >
                     <Users size={24} />
@@ -87,7 +87,7 @@ export function BottomNav() {
                     to="/settings"
                     onClick={(e) => handleNavClick(e, "/settings")}
                     className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
-                        isActive("/settings") ? "text-blue-500" : "text-neutral-400 hover:text-blue-500"
+                        isActive("/settings") ? "text-primary" : "text-muted-foreground hover:text-primary"
                     }`}
                 >
                     <Settings size={24} />

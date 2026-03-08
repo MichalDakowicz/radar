@@ -176,6 +176,26 @@ export default function EditMovie() {
         }
     }, [activeTab, selectedSeason, tmdbId, type]);
 
+    // Persist season episode count so "next episode" can roll to S(n+1)E1
+    useEffect(() => {
+        if (
+            !movieId ||
+            !seasonData?.episodes?.length ||
+            selectedSeason == null
+        )
+            return;
+        const count = seasonData.episodes.length;
+        const current = movie?.seasonEpisodeCounts || {};
+        if (current[selectedSeason] === count) return;
+        updateMovie(movieId, {
+            seasonEpisodeCounts: {
+                ...current,
+                [selectedSeason]: count,
+            },
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- updateMovie is stable
+    }, [seasonData, selectedSeason, movieId, movie?.seasonEpisodeCounts]);
+
     const toggleEpisodeWatched = (seasonWithType, episodeNum) => {
         const key = `s${seasonWithType}e${episodeNum}`;
         setEpisodesWatched((prev) => {
@@ -518,6 +538,7 @@ export default function EditMovie() {
                             isProcessing={isProcessing}
                             episodesWatched={episodesWatched}
                             number_of_seasons={numberOfSeasons}
+                            seasonEpisodeCounts={movie?.seasonEpisodeCounts}
                             releaseDate={releaseDate}
                             setReleaseDate={setReleaseDate}
                             runtime={runtime}

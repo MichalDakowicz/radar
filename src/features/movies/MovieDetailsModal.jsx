@@ -9,6 +9,7 @@ import {
     Clock,
 } from "lucide-react";
 import { getServiceStyle } from "../../lib/services";
+import { directorToDisplayString } from "../../lib/utils";
 import {
     getCinebyPlayUrl,
     CINEBY_LOGO_URL,
@@ -42,13 +43,10 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
 
     if (!isOpen || !movie) return null;
 
-    // Normalize director
-    const directors = Array.isArray(movie.director)
-        ? movie.director
-        : (Array.isArray(movie.artist)
-              ? movie.artist
-              : [movie.artist || movie.director]
-          ).filter(Boolean);
+    // Normalize director for display (may be string, string[], or { id, name }[])
+    const directorDisplay = directorToDisplayString(
+        movie.director ?? movie.artist,
+    );
 
     const availability = Array.isArray(movie.availability)
         ? movie.availability
@@ -149,7 +147,7 @@ export default function MovieDetailsModal({ isOpen, onClose, movie }) {
                                 {movie.title}
                             </h2>
                             <div className="text-lg sm:text-xl text-neutral-300 truncate drop-shadow-md">
-                                {directors.join(", ")}
+                                {directorDisplay}
                             </div>
                         </div>
                     </div>

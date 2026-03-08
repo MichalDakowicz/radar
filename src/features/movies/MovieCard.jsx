@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Logo from "../../components/ui/Logo"; // Assuming Logo is generic
 import { getServiceStyle, normalizeServiceName } from "../../lib/services";
+import { directorToDisplayString } from "../../lib/utils";
 
 export default function MovieCard({
     movie,
@@ -49,9 +50,11 @@ export default function MovieCard({
         }
     };
 
-    const directorName = Array.isArray(movie.director)
-        ? movie.director.join(", ")
-        : movie.director || movie.artist || ""; // Fallback
+    const directorName = (() => {
+        const d = movie.director ?? movie.artist;
+        if (d == null) return "";
+        return directorToDisplayString(d);
+    })();
 
     const availabilityList = Array.isArray(movie.availability)
         ? Array.from(

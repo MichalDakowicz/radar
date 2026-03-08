@@ -109,7 +109,6 @@ export function useSaveScrollPosition(pageKey) {
             const state = currentState ? JSON.parse(currentState) : {};
             state.scrollPosition = window.scrollY;
             sessionStorage.setItem(stateKey, JSON.stringify(state));
-            console.log(`%c[ScrollSave:${source}] scrollY: ${window.scrollY}px`, "color: #f59e0b;");
         } catch (error) {
             console.warn("Error saving scroll position:", error);
         }

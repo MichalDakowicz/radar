@@ -22,6 +22,8 @@ import AppUrlListener from "./components/AppUrlListener";
 import FriendRequestListener from "./features/friends/FriendRequestListener";
 import SwipeNavigator from "./components/layout/SwipeNavigator";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { RefreshMetadataProvider } from "./contexts/RefreshMetadataContext";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +31,9 @@ function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <AuthProvider>
-                <ToastProvider>
+                <ThemeProvider>
+                    <ToastProvider>
+                    <RefreshMetadataProvider>
                     <BrowserRouter>
                         <AppUrlListener />
                         <FriendRequestListener />
@@ -155,7 +159,9 @@ function App() {
                             <Route path="*" element={<Navigate to="/" />} />
                         </Routes>
                     </BrowserRouter>
+                    </RefreshMetadataProvider>
                 </ToastProvider>
+                </ThemeProvider>
             </AuthProvider>
         </QueryClientProvider>
     );

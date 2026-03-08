@@ -130,7 +130,7 @@ export default function ScrollingRow({
                 >
                     {items.map((movie) => (
                         <div
-                            key={movie.tmdbId}
+                            key={movie.id ?? movie.tmdbId}
                             className="w-35 md:w-50 flex-none transition-transform duration-300 hover:z-20"
                         >
                             <MovieCard

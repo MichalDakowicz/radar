@@ -13,7 +13,14 @@ import MovieRow from "../features/movies/MovieRow";
 import RandomPickModal from "../features/movies/RandomPickModal";
 import { FilterPanel } from "../components/FilterPanel";
 import { Navbar } from "../components/layout/Navbar";
-import { getDisplayStatus, isInWatchlist, isWatched } from "../lib/movieStatus";
+import {
+    getDisplayStatus,
+    isInWatchlist,
+    isWatched,
+    isInProgress,
+} from "../lib/movieStatus";
+import { directorToDisplayString } from "../lib/utils";
+import { useRecentlyAddedSettings } from "../hooks/useRecentlyAddedSettings";
 import { LayoutGrid, List as ListIcon, Search, Layers } from "lucide-react";
 import {
     DndContext,
@@ -144,6 +151,10 @@ function usePersistedState(key, defaultValue) {
 export default function Home() {
     const navigate = useNavigate();
     const { movies, loading, updateMovie } = useMovies();
+    const {
+        recentlyAddedDays,
+        showRecentlyAddedSection,
+    } = useRecentlyAddedSettings();
     const { toast } = useToast();
 
     // Try to restore state from navigation
@@ -257,28 +268,12 @@ export default function Home() {
         const genres = new Set();
 
         movies.forEach((movie) => {
-            // Normalize to array
-            let movieDirectors = [];
-            if (Array.isArray(movie.director)) {
-                movieDirectors = movie.director;
-            } else if (typeof movie.director === "string") {
-                if (movie.director.includes(",")) {
-                    movieDirectors = movie.director
-                        .split(",")
-                        .map((d) => d.trim());
-                } else if (movie.director.includes(";")) {
-                    movieDirectors = movie.director
-                        .split(";")
-                        .map((d) => d.trim());
-                } else {
-                    movieDirectors = [movie.director];
-                }
-            }
-
-            movieDirectors.forEach((p) => {
-                const name = typeof p === "object" ? p?.name : p;
-                if (name && name.trim()) directors.add(name.trim());
-            });
+            const directorStr = directorToDisplayString(movie.director);
+            if (directorStr)
+                directorStr.split(",").forEach((n) => {
+                    const name = n.trim();
+                    if (name) directors.add(name);
+                });
 
             if (movie.releaseDate) {
                 const y = movie.releaseDate.substring(0, 4);
@@ -297,20 +292,63 @@ export default function Home() {
         };
     }, [movies]);
 
+    // Continue watching: in-progress items, limit 15
+    const continueWatchingMovies = useMemo(
+        () =>
+            movies.filter((m) => isInProgress(m)).slice(0, 15),
+        [movies],
+    );
+
+    // Recently added: configurable days
+    const recentlyAddedMovies = useMemo(() => {
+        const days = Math.max(1, Math.min(365, recentlyAddedDays));
+        const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+        return movies
+            .filter((m) => m.addedAt && m.addedAt >= cutoff)
+            .sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+    }, [movies, recentlyAddedDays]);
+
+    // Coming soon: in library with future release date (next 6 months)
+    const comingSoonMovies = useMemo(() => {
+        const now = new Date();
+        const inSixMonths = new Date(now);
+        inSixMonths.setMonth(inSixMonths.getMonth() + 6);
+        return movies
+            .filter((m) => {
+                if (!m.releaseDate) return false;
+                const inList = isInWatchlist(m) || isInProgress(m);
+                const release = new Date(m.releaseDate);
+                return inList && release > now && release <= inSixMonths;
+            })
+            .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
+    }, [movies]);
+
     // Derived state for filtered movies
     const filteredMovies = useMemo(() => {
         let result = [...movies];
 
-        // Filter by Search
+        // Filter by Search (title, director, genre names, year)
         if (searchQuery) {
-            const q = searchQuery.toLowerCase();
+            const q = searchQuery.toLowerCase().trim();
             result = result.filter((m) => {
-                const titleMatch = m.title.toLowerCase().includes(q);
-                const dirs = Array.isArray(m.director)
-                    ? m.director.join(" ").toLowerCase()
-                    : (m.director || "").toLowerCase();
+                const titleMatch = m.title?.toLowerCase().includes(q);
+                const dirs = directorToDisplayString(m.director).toLowerCase();
                 const dirMatch = dirs.includes(q);
-                return titleMatch || dirMatch;
+                const genreMatch =
+                    m.genres &&
+                    m.genres.some((g) => {
+                        const name =
+                            typeof g === "object" ? g.name : String(g);
+                        return name.toLowerCase().includes(q);
+                    });
+                const yearMatch =
+                    m.releaseDate && m.releaseDate.startsWith(q);
+                return (
+                    titleMatch ||
+                    dirMatch ||
+                    genreMatch ||
+                    yearMatch
+                );
             });
         }
 
@@ -340,25 +378,11 @@ export default function Home() {
         // Filter by Director
         if (filterDirector !== "All") {
             result = result.filter((m) => {
-                let movieDirectors = [];
-                if (Array.isArray(m.director)) {
-                    movieDirectors = m.director;
-                } else if (typeof m.director === "string") {
-                    if (m.director.includes(",")) {
-                        movieDirectors = m.director
-                            .split(",")
-                            .map((d) => d.trim());
-                    } else if (m.director.includes(";")) {
-                        movieDirectors = m.director
-                            .split(";")
-                            .map((d) => d.trim());
-                    } else {
-                        movieDirectors = [m.director];
-                    }
-                }
-                return movieDirectors
-                    .map((d) => (typeof d === "object" ? d?.name : d))
-                    .includes(filterDirector);
+                const names = directorToDisplayString(m.director)
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                return names.includes(filterDirector);
             });
         }
 
@@ -430,13 +454,9 @@ export default function Home() {
                     new Date(b.releaseDate || 0) - new Date(a.releaseDate || 0)
                 );
             if (sortBy === "director") {
-                const dirA = Array.isArray(a.director)
-                    ? a.director[0]
-                    : a.director;
-                const dirB = Array.isArray(b.director)
-                    ? b.director[0]
-                    : b.director;
-                return (dirA || "").localeCompare(dirB || "");
+                const dirA = directorToDisplayString(a.director).split(",")[0].trim();
+                const dirB = directorToDisplayString(b.director).split(",")[0].trim();
+                return dirA.localeCompare(dirB);
             }
             if (sortBy === "title") return a.title.localeCompare(b.title);
             if (sortBy === "runtime")
@@ -476,9 +496,7 @@ export default function Home() {
             let key = "Other";
 
             if (groupBy === "director") {
-                const primary = Array.isArray(movie.director)
-                    ? movie.director[0]
-                    : movie.director;
+                const primary = directorToDisplayString(movie.director).split(",")[0].trim();
                 key = primary || "Unknown Director";
             } else if (groupBy === "year") {
                 key = movie.releaseDate
@@ -669,7 +687,7 @@ export default function Home() {
 
     return (
         <div
-            className="min-h-screen bg-neutral-950 text-neutral-200"
+            className="min-h-screen bg-background text-foreground"
             onClick={() => setHighlightedMovieId(null)}
         >
             <Navbar onPickRandom={handleRandomPick} />
@@ -678,7 +696,7 @@ export default function Home() {
                 className="mx-auto max-w-screen-2xl px-4 sm:px-6 pt-6"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Toolbar */}
+                {/* Toolbar - always on top */}
                 <div className="mb-4 flex flex-row items-center justify-between gap-3 sm:gap-4">
                     <div className="relative flex-1 min-w-0">
                         <Search
@@ -727,7 +745,7 @@ export default function Home() {
                                     <button
                                         className={`flex items-center gap-2 rounded px-2 py-1 text-sm font-medium transition-colors cursor-pointer ${
                                             groupBy !== "none"
-                                                ? "bg-neutral-800 text-white"
+                                                ? "bg-muted text-foreground"
                                                 : "text-neutral-500 hover:text-neutral-300"
                                         }`}
                                     >
@@ -776,7 +794,7 @@ export default function Home() {
                                 onClick={() => setViewMode("grid")}
                                 className={`rounded p-1.5 transition-colors cursor-pointer ${
                                     viewMode === "grid"
-                                        ? "bg-neutral-800 text-white"
+                                        ? "bg-muted text-foreground"
                                         : "text-neutral-500 hover:text-neutral-300"
                                 }`}
                                 title="Grid View"
@@ -787,7 +805,7 @@ export default function Home() {
                                 onClick={() => setViewMode("list")}
                                 className={`rounded p-1.5 transition-colors cursor-pointer ${
                                     viewMode === "list"
-                                        ? "bg-neutral-800 text-white"
+                                        ? "bg-muted text-foreground"
                                         : "text-neutral-500 hover:text-neutral-300"
                                 }`}
                                 title="List View"
@@ -797,6 +815,138 @@ export default function Home() {
                         </div>
                     </div>
                 </div>
+
+                {/* Continue watching - grid section */}
+                {continueWatchingMovies.length > 0 && (
+                    <div className="mb-8">
+                        <h2 className="text-xl font-bold text-foreground mb-4 pl-2 flex items-center gap-2">
+                            <div className="h-5 w-1 bg-blue-500 rounded-full" />
+                            Continue watching
+                            <span className="text-sm font-normal text-neutral-500">
+                                ({continueWatchingMovies.length})
+                            </span>
+                        </h2>
+                        {viewMode === "grid" ? (
+                            <div className={gridClasses}>
+                                {continueWatchingMovies.map((movie) => (
+                                    <MovieCard
+                                        key={movie.id}
+                                        movie={movie}
+                                        onClick={() =>
+                                            navigate("/edit/" + movie.id)
+                                        }
+                                        isHighlighted={
+                                            highlightedMovieId === movie.id
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {continueWatchingMovies.map((movie) => (
+                                    <MovieRow
+                                        key={movie.id}
+                                        movie={movie}
+                                        onClick={() =>
+                                            navigate("/edit/" + movie.id)
+                                        }
+                                        isHighlighted={
+                                            highlightedMovieId === movie.id
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Recently added - grid section (when setting enabled) */}
+                {recentlyAddedMovies.length > 0 && showRecentlyAddedSection && (
+                    <div className="mb-8">
+                        <h2 className="text-xl font-bold text-foreground mb-4 pl-2 flex items-center gap-2">
+                            <div className="h-5 w-1 bg-blue-500 rounded-full" />
+                            Recently added (last {recentlyAddedDays} days)
+                            <span className="text-sm font-normal text-neutral-500">
+                                ({recentlyAddedMovies.length})
+                            </span>
+                        </h2>
+                        {viewMode === "grid" ? (
+                            <div className={gridClasses}>
+                                {recentlyAddedMovies.map((movie) => (
+                                    <MovieCard
+                                        key={movie.id}
+                                        movie={movie}
+                                        onClick={() =>
+                                            navigate("/edit/" + movie.id)
+                                        }
+                                        isHighlighted={
+                                            highlightedMovieId === movie.id
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {recentlyAddedMovies.map((movie) => (
+                                    <MovieRow
+                                        key={movie.id}
+                                        movie={movie}
+                                        onClick={() =>
+                                            navigate("/edit/" + movie.id)
+                                        }
+                                        isHighlighted={
+                                            highlightedMovieId === movie.id
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Coming soon - grid section */}
+                {comingSoonMovies.length > 0 && (
+                    <div className="mb-8">
+                        <h2 className="text-xl font-bold text-foreground mb-4 pl-2 flex items-center gap-2">
+                            <div className="h-5 w-1 bg-blue-500 rounded-full" />
+                            Coming soon
+                            <span className="text-sm font-normal text-neutral-500">
+                                ({comingSoonMovies.length})
+                            </span>
+                        </h2>
+                        {viewMode === "grid" ? (
+                            <div className={gridClasses}>
+                                {comingSoonMovies.map((movie) => (
+                                    <MovieCard
+                                        key={movie.id}
+                                        movie={movie}
+                                        onClick={() =>
+                                            navigate("/edit/" + movie.id)
+                                        }
+                                        isHighlighted={
+                                            highlightedMovieId === movie.id
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                {comingSoonMovies.map((movie) => (
+                                    <MovieRow
+                                        key={movie.id}
+                                        movie={movie}
+                                        onClick={() =>
+                                            navigate("/edit/" + movie.id)
+                                        }
+                                        isHighlighted={
+                                            highlightedMovieId === movie.id
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Content */}
                 <DndContext
@@ -822,7 +972,7 @@ export default function Home() {
                         <div className="flex flex-col gap-8 pb-20">
                             {groupedMovies.map((group) => (
                                 <div key={group.title}>
-                                    <h2 className="text-xl font-bold text-white mb-4 pl-2 flex items-center gap-2">
+                                    <h2 className="text-xl font-bold text-foreground mb-4 pl-2 flex items-center gap-2">
                                         <div className="h-5 w-1 bg-blue-500 rounded-full" />
                                         {group.title}
                                         <span className="text-sm font-normal text-neutral-500">

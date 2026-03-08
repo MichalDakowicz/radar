@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { X, Play, Clapperboard, Shuffle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../../components/ui/Logo";
+import { directorToDisplayString } from "../../lib/utils";
 
 export default function RandomPickModal({ isOpen, onClose, movies, onSelect }) {
     const [currentMovie, setCurrentMovie] = useState(null);
@@ -113,10 +114,10 @@ export default function RandomPickModal({ isOpen, onClose, movies, onSelect }) {
                                     {currentMovie.title}
                                 </h3>
                                 <p className="text-blue-400 font-medium truncate drop-shadow-md">
-                                    {Array.isArray(currentMovie.director)
-                                        ? currentMovie.director.join(", ")
-                                        : currentMovie.director ||
-                                          currentMovie.artist}
+                                    {directorToDisplayString(
+                                        currentMovie.director ??
+                                            currentMovie.artist,
+                                    )}
                                 </p>
                             </div>
                         </>

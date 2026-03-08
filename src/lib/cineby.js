@@ -9,11 +9,17 @@ export const CINEBY_LOGO_URL = "https://www.cineby.gd/logo.png";
 /**
  * Parse episodesWatched keys (e.g. s1e1, s2e3) and return the next unwatched
  * season and episode. If no progress, returns { season: 1, episode: 1 }.
+ * Uses seasonEpisodeCounts so that after the last episode of a season we return S(n+1)E1.
  * @param {Record<string, boolean>} episodesWatched - e.g. { s1e1: true, s1e2: true }
  * @param {number | null} number_of_seasons - max seasons (optional)
+ * @param {Record<number, number>} [seasonEpisodeCounts] - e.g. { 1: 10, 2: 12 } episode count per season
  * @returns {{ season: number, episode: number }}
  */
-export function getNextEpisode(episodesWatched, number_of_seasons = null) {
+export function getNextEpisode(
+    episodesWatched,
+    number_of_seasons = null,
+    seasonEpisodeCounts = null,
+) {
     if (!episodesWatched || typeof episodesWatched !== "object") {
         return { season: 1, episode: 1 };
     }
@@ -32,19 +38,22 @@ export function getNextEpisode(episodesWatched, number_of_seasons = null) {
 
     if (watched.length === 0) return { season: 1, episode: 1 };
 
-    // Sort by season then episode, take the highest
     watched.sort((a, b) => {
         if (a.season !== b.season) return a.season - b.season;
         return a.episode - b.episode;
     });
     const last = watched[watched.length - 1];
 
-    // Next is same season next episode, or next season episode 1
-    const nextEpisode = last.episode + 1;
-    const nextSeason = last.season;
+    const maxEpForSeason =
+        seasonEpisodeCounts && typeof seasonEpisodeCounts[last.season] === "number"
+            ? seasonEpisodeCounts[last.season]
+            : null;
 
-    // If we don't have season episode counts, assume next is next episode (could be same season or we'd need API)
-    return { season: nextSeason, episode: nextEpisode };
+    if (maxEpForSeason !== null && last.episode >= maxEpForSeason) {
+        return { season: last.season + 1, episode: 1 };
+    }
+
+    return { season: last.season, episode: last.episode + 1 };
 }
 
 /**
@@ -60,6 +69,7 @@ export function getCinebyPlayUrl(movie) {
         const { season, episode } = getNextEpisode(
             movie.episodesWatched,
             movie.number_of_seasons,
+            movie.seasonEpisodeCounts,
         );
         return `${base}/tv/${movie.tmdbId}/${season}/${episode}?play=true`;
     }
