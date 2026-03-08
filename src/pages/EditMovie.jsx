@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { X, Check, Save, Calculator, CheckCircle } from "lucide-react";
 import { useMovies } from "../hooks/useMovies";
+import { useWatchProviderCountry } from "../hooks/useWatchProviderCountry";
 import { StarRating } from "../features/movies/StarRating";
 import { normalizeServiceName } from "../lib/services";
 import {
@@ -29,6 +30,7 @@ export default function EditMovie() {
         removeMovie,
         loading: moviesLoading,
     } = useMovies();
+    const watchProviderCountry = useWatchProviderCountry();
     const movie = movies.find((m) => m.id === movieId);
 
     const [activeTab, setActiveTab] = useState("main");
@@ -239,13 +241,21 @@ export default function EditMovie() {
         try {
             let data = null;
             if (tmdbId) {
-                data = await fetchMediaMetadata(tmdbId, type);
+                data = await fetchMediaMetadata(
+                    tmdbId,
+                    type,
+                    watchProviderCountry,
+                );
             } else {
                 const results = await searchMedia(title);
                 if (results && results.length > 0) {
                     const match =
                         results.find((r) => r.type === type) || results[0];
-                    data = await fetchMediaMetadata(match.tmdbId, match.type);
+                    data = await fetchMediaMetadata(
+                        match.tmdbId,
+                        match.type,
+                        watchProviderCountry,
+                    );
                 }
             }
             if (data) {
@@ -506,6 +516,8 @@ export default function EditMovie() {
                             title={title}
                             handleSmartFill={handleSmartFill}
                             isProcessing={isProcessing}
+                            episodesWatched={episodesWatched}
+                            number_of_seasons={numberOfSeasons}
                             releaseDate={releaseDate}
                             setReleaseDate={setReleaseDate}
                             runtime={runtime}

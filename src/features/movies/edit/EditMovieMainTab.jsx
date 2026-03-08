@@ -13,6 +13,8 @@ export default function EditMovieMainTab({
     title,
     handleSmartFill,
     isProcessing,
+    episodesWatched,
+    number_of_seasons,
     releaseDate,
     setReleaseDate,
     runtime,
@@ -52,6 +54,8 @@ export default function EditMovieMainTab({
                 title={title}
                 handleSmartFill={handleSmartFill}
                 isProcessing={isProcessing}
+                episodesWatched={episodesWatched}
+                number_of_seasons={number_of_seasons}
             />
             {/* Watch Status - TOP PRIORITY */}
             <div>

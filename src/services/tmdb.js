@@ -55,7 +55,11 @@ export async function searchMovies(query) {
     return searchMedia(query);
 }
 
-export async function fetchMediaMetadata(tmdbId, type = "movie") {
+export async function fetchMediaMetadata(
+    tmdbId,
+    type = "movie",
+    countryCode = "US",
+) {
     if (!tmdbId) return null;
 
     try {
@@ -74,17 +78,14 @@ export async function fetchMediaMetadata(tmdbId, type = "movie") {
         let cast = [];
         let availability = [];
 
-        // Extract Watch Providers (US Default)
-        if (
-            data["watch/providers"] &&
-            data["watch/providers"].results &&
-            data["watch/providers"].results.US
-        ) {
-            const usProviders = data["watch/providers"].results.US;
-            // Collect streaming services (flatrate)
-            if (usProviders.flatrate) {
-                availability = usProviders.flatrate.map((p) => p.provider_name);
-            }
+        // Extract Watch Providers for the requested country (fallback to US)
+        const results = data["watch/providers"]?.results || {};
+        const countryProviders =
+            results[countryCode] || results.US;
+        if (countryProviders?.flatrate) {
+            availability = countryProviders.flatrate.map(
+                (p) => p.provider_name,
+            );
         }
 
         if (type === "movie") {

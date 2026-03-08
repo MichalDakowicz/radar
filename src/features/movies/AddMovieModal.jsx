@@ -3,8 +3,10 @@ import { X, Search, Loader2, Plus, Minus, PenLine, Link, Check, Clapperboard, He
 import { StarRating } from "./StarRating";
 import { fetchMediaMetadata, searchMedia } from "../../services/tmdb";
 import { getServiceStyle } from "../../lib/services";
+import { useWatchProviderCountry } from "../../hooks/useWatchProviderCountry";
 
 export default function AddMovieModal({ isOpen, onClose, onAdd }) {
+  const watchProviderCountry = useWatchProviderCountry();
   const [inputVal, setInputVal] = useState("");
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -164,7 +166,11 @@ export default function AddMovieModal({ isOpen, onClose, onAdd }) {
   const handleSelectMovie = async (item) => {
     setLoading(true);
     try {
-        const fullData = await fetchMediaMetadata(item.tmdbId, item.type);
+        const fullData = await fetchMediaMetadata(
+          item.tmdbId,
+          item.type,
+          watchProviderCountry,
+        );
         setPreview(fullData);
         setSearchResults([]);
         setInputVal(""); // Clear search input

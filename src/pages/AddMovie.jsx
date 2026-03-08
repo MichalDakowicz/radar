@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Save } from "lucide-react";
 import { useMovies } from "../hooks/useMovies";
+import { useWatchProviderCountry } from "../hooks/useWatchProviderCountry";
 import { Navbar } from "../components/layout/Navbar";
 import { searchMedia, fetchMediaMetadata } from "../services/tmdb";
 import { normalizeServiceName } from "../lib/services";
@@ -12,6 +13,7 @@ import AddMovieDetailsTab from "../features/movies/add/AddMovieDetailsTab";
 export default function AddMovie() {
     const navigate = useNavigate();
     const { addMovie } = useMovies();
+    const watchProviderCountry = useWatchProviderCountry();
 
     // Scroll to top on mount
     useEffect(() => {
@@ -94,7 +96,11 @@ export default function AddMovie() {
     const handleSelectMovie = async (item) => {
         setIsProcessing(true);
         try {
-            const data = await fetchMediaMetadata(item.tmdbId, item.type);
+            const data = await fetchMediaMetadata(
+                item.tmdbId,
+                item.type,
+                watchProviderCountry,
+            );
             if (data) {
                 setTmdbId(data.tmdbId);
                 setImdbId(data.imdbId || "");

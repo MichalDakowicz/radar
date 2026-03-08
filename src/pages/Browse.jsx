@@ -11,6 +11,7 @@ import {
     getMoviesByGenre,
 } from "../services/tmdb";
 import { useMovies } from "../hooks/useMovies";
+import { useWatchProviderCountry } from "../hooks/useWatchProviderCountry";
 import { useToast } from "../components/ui/Toast";
 import { Navbar } from "../components/layout/Navbar";
 import { BottomNav } from "../components/layout/BottomNav";
@@ -159,6 +160,7 @@ export default function Browse() {
 
     const navigate = useNavigate();
     const { addMovie, removeMovie, movies } = useMovies();
+    const watchProviderCountry = useWatchProviderCountry();
     const { toast } = useToast();
 
     // Reset search/tab when the nav button is clicked while already on this page
@@ -594,7 +596,11 @@ export default function Browse() {
                 });
                 return;
             }
-            const fullData = await fetchMediaMetadata(item.tmdbId, item.type);
+            const fullData = await fetchMediaMetadata(
+                item.tmdbId,
+                item.type,
+                watchProviderCountry,
+            );
 
             const normalizedData = {
                 ...fullData,

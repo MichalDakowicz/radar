@@ -27,11 +27,13 @@ import { ref, update, get, set } from "firebase/database";
 import { db } from "../lib/firebase";
 import { migrateUserMovies } from "../lib/migrateDatabase";
 import { fetchMediaMetadata } from "../services/tmdb";
+import { useWatchProviderCountry } from "../hooks/useWatchProviderCountry";
 
 export default function Settings() {
     const { user, logout } = useAuth();
     const { profile } = useUserProfile(user?.uid);
     const { movies, addMovie, removeMovie } = useMovies();
+    const watchProviderCountry = useWatchProviderCountry();
     const { toast } = useToast();
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -184,6 +186,27 @@ export default function Settings() {
         }
     };
 
+    const handleWatchProviderCountryChange = async (newCountry) => {
+        if (!user || newCountry === watchProviderCountry) return;
+        try {
+            await set(
+                ref(db, `users/${user.uid}/settings/watchProviderCountry`),
+                newCountry,
+            );
+            toast({
+                title: "Region Updated",
+                description:
+                    "Streaming availability will use this region for new metadata.",
+            });
+        } catch (e) {
+            console.error(e);
+            toast({
+                title: "Update Failed",
+                variant: "destructive",
+            });
+        }
+    };
+
     const displayPfp = profile?.pfp || user?.photoURL;
     const displayUsername = profile?.username || user?.displayName || "User";
     const displayName = profile?.displayName || user?.displayName || "User";
@@ -287,6 +310,7 @@ export default function Settings() {
                     const freshData = await fetchMediaMetadata(
                         movie.tmdbId,
                         movie.type || "movie",
+                        watchProviderCountry,
                     );
 
                     if (freshData) {
@@ -702,6 +726,41 @@ export default function Settings() {
                                 <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
                                     Data Management
                                 </h2>
+                            </div>
+
+                            <div className="mb-6">
+                                <h3 className="text-xl font-bold tracking-tight text-white mb-2">
+                                    Where to Watch Region
+                                </h3>
+                                <p className="text-sm text-zinc-400 font-medium mb-3">
+                                    Country used when fetching streaming
+                                    availability from TMDB (for new adds and
+                                    refresh).
+                                </p>
+                                <select
+                                    value={watchProviderCountry}
+                                    onChange={(e) =>
+                                        handleWatchProviderCountryChange(
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="w-full max-w-xs bg-zinc-900 border border-zinc-800 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm"
+                                >
+                                    <option value="US">United States</option>
+                                    <option value="GB">United Kingdom</option>
+                                    <option value="CA">Canada</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="FR">France</option>
+                                    <option value="ES">Spain</option>
+                                    <option value="IT">Italy</option>
+                                    <option value="AU">Australia</option>
+                                    <option value="BR">Brazil</option>
+                                    <option value="MX">Mexico</option>
+                                    <option value="NL">Netherlands</option>
+                                    <option value="PL">Poland</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="KR">South Korea</option>
+                                </select>
                             </div>
 
                             <div className="space-y-2">
