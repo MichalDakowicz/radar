@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Loader2 } from "lucide-react";
 import {
-    searchMedia,
+    searchBrowse,
     fetchMediaMetadata,
     getTrending,
     getMovies,
@@ -17,9 +17,14 @@ import { Navbar } from "../components/layout/Navbar";
 import { BottomNav } from "../components/layout/BottomNav";
 import HeroCarousel from "../features/movies/HeroCarousel";
 import ScrollingRow from "../features/movies/ScrollingRow";
-import { Plus, Trash2, Star, Film, Tv } from "lucide-react";
+import { Plus, Trash2, Star, Film, Tv, SlidersHorizontal, Tags } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { useRestoredState, useSaveScrollPosition } from "../hooks/usePageState";
 import { useRef, useCallback } from "react";
+
+function isBrowseMediaItem(item) {
+    return item.resultType === "movie" || item.resultType === "tv";
+}
 
 function SearchResultsGrid({
     items,
@@ -35,16 +40,22 @@ function SearchResultsGrid({
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4 md:px-12 pt-8">
             {items.map((item) => {
-                const added = isAdded(item.tmdbId);
+                const media = isBrowseMediaItem(item);
+                const added = media && isAdded(item.tmdbId);
+                const actionId = media ? item.tmdbId : null;
                 return (
                     <div
-                        key={item.tmdbId}
+                        key={item.resultKey}
                         onClick={() => onSelect(item)}
                         className={`group relative bg-neutral-900 rounded-lg overflow-hidden border border-neutral-800 hover:border-neutral-700 transition-colors cursor-pointer ${added ? "opacity-50 grayscale" : ""
                             }`}
                     >
                         <div className="aspect-2/3 relative">
-                            {item.coverUrl ? (
+                            {item.resultType === "genre" && !item.coverUrl ? (
+                                <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-800 text-violet-400/90">
+                                    <Tags size={40} strokeWidth={1.25} />
+                                </div>
+                            ) : item.coverUrl ? (
                                 <img
                                     src={item.coverUrl}
                                     alt={item.title}
@@ -59,7 +70,7 @@ function SearchResultsGrid({
                                 </div>
                             )}
 
-                            {item.voteAverage > 0 && (
+                            {media && item.voteAverage > 0 && (
                                 <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded flex items-center gap-1 z-10">
                                     <Star
                                         size={12}
@@ -71,62 +82,68 @@ function SearchResultsGrid({
                                 </div>
                             )}
 
-                            <div className="absolute top-2 right-2 md:hidden z-10">
-                                {added ? (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onRemove(item);
-                                        }}
-                                        disabled={removingId === item.tmdbId}
-                                        className="bg-red-500/80 text-white p-1.5 rounded-full"
-                                    >
-                                        <Trash2 size={16} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onAdd(item);
-                                        }}
-                                        disabled={addingId === item.tmdbId}
-                                        className="bg-blue-600/80 text-white p-1.5 rounded-full"
-                                    >
-                                        <Plus size={16} />
-                                    </button>
-                                )}
-                            </div>
+                            {media && (
+                                <div className="absolute top-2 right-2 md:hidden z-10">
+                                    {added ? (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onRemove(item);
+                                            }}
+                                            disabled={removingId === actionId}
+                                            className="bg-red-500/80 text-white p-1.5 rounded-full"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onAdd(item);
+                                            }}
+                                            disabled={addingId === actionId}
+                                            className="bg-blue-600/80 text-white p-1.5 rounded-full"
+                                        >
+                                            <Plus size={16} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
 
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
-                                {added ? (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onRemove(item);
-                                        }}
-                                        className="bg-red-500/80 p-2 rounded-full"
-                                    >
-                                        <Trash2 size={20} />
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onAdd(item);
-                                        }}
-                                        className="bg-blue-600 p-2 rounded-full"
-                                    >
-                                        <Plus size={20} />
-                                    </button>
-                                )}
-                            </div>
+                            {media && (
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center gap-2">
+                                    {added ? (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onRemove(item);
+                                            }}
+                                            className="bg-red-500/80 p-2 rounded-full"
+                                        >
+                                            <Trash2 size={20} />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onAdd(item);
+                                            }}
+                                            className="bg-blue-600 p-2 rounded-full"
+                                        >
+                                            <Plus size={20} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className="p-3">
                             <h3 className="text-sm font-medium text-white line-clamp-1">
                                 {item.title}
                             </h3>
                             <span className="text-xs text-neutral-500">
-                                {item.releaseDate?.substring(0, 4)}
+                                {media
+                                    ? item.releaseDate?.substring(0, 4) || "—"
+                                    : item.subtitle}
                             </span>
                         </div>
                     </div>
@@ -142,6 +159,9 @@ export default function Browse() {
     const [query, setQuery] = useState(restoredState?.query || "");
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [searchResultFilter, setSearchResultFilter] = useState(
+        restoredState?.searchResultFilter || "All",
+    );
 
     // Tab State
     const [activeTab, setActiveTab] = useState(
@@ -169,6 +189,7 @@ export default function Browse() {
             if (e.detail?.page !== "browse") return;
             setQuery("");
             setResults([]);
+            setSearchResultFilter("All");
             setActiveTab("movies");
             window.scrollTo(0, 0);
         };
@@ -563,29 +584,46 @@ export default function Browse() {
     );
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            if (query.trim()) {
-                handleSearch(query);
-            } else {
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            if (!query.trim()) {
                 setResults([]);
+                return;
+            }
+            setLoading(true);
+            try {
+                const data = await searchBrowse(query);
+                if (!cancelled) setResults(data);
+            } catch (error) {
+                console.error(error);
+                if (!cancelled) setResults([]);
+            } finally {
+                if (!cancelled) setLoading(false);
             }
         }, 500);
-        return () => clearTimeout(timer);
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+        };
     }, [query]);
 
-    const handleSearch = async (searchQuery) => {
-        setLoading(true);
-        try {
-            const data = await searchMedia(searchQuery);
-            setResults(data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const filteredSearchResults = useMemo(() => {
+        if (!searchResultFilter || searchResultFilter === "All") return results;
+        const want = {
+            Movies: "movie",
+            TV: "tv",
+            People: "person",
+            Genres: "genre",
+        }[searchResultFilter];
+        if (!want) return results;
+        return results.filter((r) => r.resultType === want);
+    }, [results, searchResultFilter]);
+
+    const browseFilterActiveCount =
+        searchResultFilter && searchResultFilter !== "All" ? 1 : 0;
 
     const handleQuickAdd = async (item) => {
+        if (!isBrowseMediaItem(item)) return;
         setAddingId(item.tmdbId);
         try {
             const existing = movies.find((m) => m.tmdbId === item.tmdbId);
@@ -652,6 +690,7 @@ export default function Browse() {
     };
 
     const handleRemove = async (item) => {
+        if (!isBrowseMediaItem(item)) return;
         setRemovingId(item.tmdbId);
         try {
             const movieToRemove = movies.find((m) => m.tmdbId === item.tmdbId);
@@ -682,6 +721,18 @@ export default function Browse() {
     };
 
     const handleViewDetails = (item) => {
+        if (item.resultType === "person") {
+            if (item.knownForDepartment === "Directing") {
+                navigate(`/director/${item.personId}`);
+            } else {
+                navigate(`/actor/${item.personId}`);
+            }
+            return;
+        }
+        if (item.resultType === "genre") {
+            navigate(`/genre/${item.genreId}`);
+            return;
+        }
         const existingMovie = movies.find((m) => m.tmdbId === item.tmdbId);
         if (existingMovie) {
             navigate(`/edit/${existingMovie.id}`);
@@ -696,6 +747,7 @@ export default function Browse() {
         const currentState = {
             query,
             activeTab,
+            searchResultFilter,
             scrollPosition: window.scrollY,
         };
 
@@ -707,7 +759,7 @@ export default function Browse() {
         } catch (error) {
             console.warn("Error saving page state:", error);
         }
-    }, [query, activeTab]);
+    }, [query, activeTab, searchResultFilter]);
 
     // Restore scroll position after categories have finished loading and rendered
     const scrollRestoredRef = useRef(false);
@@ -782,26 +834,84 @@ export default function Browse() {
 
             <main className="mx-auto max-w-screen-2xl relative z-10">
                 <div className="px-4 sm:px-6 pt-8 pb-4">
-                    <div className="relative max-w-2xl mx-auto">
-                        <Search
-                            className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
-                            size={20}
-                        />
-                        <input
-                            type="text"
-                            className="w-full h-12 rounded-xl bg-zinc-900 border border-zinc-800 pl-11 pr-4 text-[15px] font-medium text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-zinc-500 shadow-sm"
-                            placeholder="Find movies & TV shows..."
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                        />
-                        {loading && (
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                                <Loader2
-                                    className="animate-spin text-neutral-400"
-                                    size={18}
-                                />
-                            </div>
-                        )}
+                    <div className="flex max-w-2xl mx-auto items-center gap-2">
+                        <div className="relative flex-1 min-w-0">
+                            <Search
+                                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+                                size={20}
+                            />
+                            <input
+                                type="text"
+                                className="w-full h-12 rounded-xl bg-zinc-900 border border-zinc-800 pl-11 pr-11 text-[15px] font-medium text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-zinc-500 shadow-sm"
+                                placeholder="Movies, TV, people, genres..."
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                            />
+                            {loading && (
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                    <Loader2
+                                        className="animate-spin text-neutral-400"
+                                        size={18}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex h-12 shrink-0 items-center rounded-xl border border-zinc-800 bg-zinc-900 px-1 shadow-sm">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button
+                                        type="button"
+                                        className={`flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors cursor-pointer ${
+                                            browseFilterActiveCount > 0
+                                                ? "bg-zinc-800 text-blue-400"
+                                                : "text-zinc-500 hover:text-zinc-300"
+                                        }`}
+                                    >
+                                        <SlidersHorizontal size={18} />
+                                        <span className="hidden sm:inline">
+                                            Filters
+                                        </span>
+                                        {browseFilterActiveCount > 0 && (
+                                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[10px] font-bold text-zinc-900">
+                                                {browseFilterActiveCount}
+                                            </span>
+                                        )}
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="w-56 p-3 bg-zinc-900 border-zinc-800"
+                                    align="end"
+                                >
+                                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide mb-2">
+                                        Result type
+                                    </p>
+                                    <div className="grid gap-1">
+                                        {[
+                                            "All",
+                                            "Movies",
+                                            "TV",
+                                            "People",
+                                            "Genres",
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt}
+                                                type="button"
+                                                onClick={() =>
+                                                    setSearchResultFilter(opt)
+                                                }
+                                                className={`w-full text-left rounded-md px-2 py-2 text-sm transition-colors ${
+                                                    searchResultFilter === opt
+                                                        ? "bg-blue-500/15 text-blue-400"
+                                                        : "text-zinc-300 hover:bg-zinc-800"
+                                                }`}
+                                            >
+                                                {opt}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
                     </div>
                 </div>
 
@@ -842,9 +952,9 @@ export default function Browse() {
 
                 {query.trim() && (
                     <div className="animate-in fade-in slide-in-from-bottom-5 duration-300 px-4 sm:px-6">
-                        {results.length > 0 ? (
+                        {results.length > 0 && filteredSearchResults.length > 0 ? (
                             <SearchResultsGrid
-                                items={results}
+                                items={filteredSearchResults}
                                 onAdd={handleQuickAdd}
                                 onRemove={handleRemove}
                                 onSelect={handleViewDetails}
@@ -853,16 +963,37 @@ export default function Browse() {
                                 isAdded={isAdded}
                             />
                         ) : (
-                            !loading && (
+                            !loading &&
+                            (results.length > 0 &&
+                            filteredSearchResults.length === 0 ? (
+                                <div className="text-center py-32 text-zinc-500 border-2 border-dashed border-zinc-800/50 rounded-2xl mx-auto max-w-2xl mt-8">
+                                    <SlidersHorizontal
+                                        size={48}
+                                        className="mx-auto mb-4 opacity-30 text-zinc-600"
+                                    />
+                                    <h3 className="text-lg font-semibold text-zinc-300 mb-1">
+                                        No results for this filter
+                                    </h3>
+                                    <p className="text-sm">
+                                        Try choosing &quot;All&quot; or another
+                                        result type.
+                                    </p>
+                                </div>
+                            ) : (
                                 <div className="text-center py-32 text-zinc-500 border-2 border-dashed border-zinc-800/50 rounded-2xl mx-auto max-w-2xl mt-8">
                                     <Search
                                         size={48}
                                         className="mx-auto mb-4 opacity-30 text-zinc-600"
                                     />
-                                    <h3 className="text-lg font-semibold text-zinc-300 mb-1">No matches found</h3>
-                                    <p className="text-sm">We couldn't find anything for "{query}"</p>
+                                    <h3 className="text-lg font-semibold text-zinc-300 mb-1">
+                                        No matches found
+                                    </h3>
+                                    <p className="text-sm">
+                                        We couldn&apos;t find anything for &quot;
+                                        {query}&quot;
+                                    </p>
                                 </div>
-                            )
+                            ))
                         )}
                     </div>
                 )}

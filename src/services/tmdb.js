@@ -55,6 +55,122 @@ export async function searchMovies(query) {
     return searchMedia(query);
 }
 
+let cachedMovieGenres = null;
+let cachedMovieGenresAt = 0;
+const GENRE_CACHE_MS = 1000 * 60 * 60 * 24;
+
+async function getMovieGenresCached() {
+    const now = Date.now();
+    if (cachedMovieGenres && now - cachedMovieGenresAt < GENRE_CACHE_MS) {
+        return cachedMovieGenres;
+    }
+    const res = await fetch(`${BASE_URL}/genre/movie/list`, { headers });
+    if (!res.ok) throw new Error("Failed to fetch movie genres");
+    const data = await res.json();
+    cachedMovieGenres = data.genres || [];
+    cachedMovieGenresAt = now;
+    return cachedMovieGenres;
+}
+
+/**
+ * Browse-only search: movies, TV, people, and movie genres (name substring match).
+ * Does not replace searchMedia (Add/Edit flows stay movie/TV-only).
+ */
+export async function searchBrowse(query) {
+    if (!query?.trim()) return [];
+
+    const q = query.trim();
+    const qLower = q.toLowerCase();
+
+    try {
+        const [multiRes, movieGenres] = await Promise.all([
+            fetch(
+                `${BASE_URL}/search/multi?query=${encodeURIComponent(q)}`,
+                { headers },
+            ),
+            getMovieGenresCached(),
+        ]);
+
+        if (!multiRes.ok) throw new Error("Failed to search browse");
+        const data = await multiRes.json();
+
+        const out = [];
+        let movieTvCount = 0;
+        let personCount = 0;
+
+        for (const item of data.results || []) {
+            if (item.media_type === "movie" || item.media_type === "tv") {
+                if (movieTvCount >= 18) continue;
+                movieTvCount++;
+                out.push({
+                    resultKey: `${item.media_type}-${item.id}`,
+                    resultType: item.media_type,
+                    tmdbId: item.id,
+                    type: item.media_type,
+                    title: item.title || item.name,
+                    director: [],
+                    releaseDate: item.release_date || item.first_air_date,
+                    coverUrl: item.poster_path
+                        ? `${IMAGE_BASE_URL}${item.poster_path}`
+                        : null,
+                    overview: item.overview,
+                    voteAverage: item.vote_average ?? 0,
+                });
+            } else if (item.media_type === "person") {
+                const dept = item.known_for_department || "";
+                if (dept !== "Directing" && dept !== "Acting") continue;
+                if (personCount >= 8) continue;
+                personCount++;
+                out.push({
+                    resultKey: `person-${item.id}`,
+                    resultType: "person",
+                    personId: item.id,
+                    title: item.name,
+                    knownForDepartment: dept,
+                    subtitle: dept || "Person",
+                    coverUrl: item.profile_path
+                        ? `${IMAGE_BASE_URL}${item.profile_path}`
+                        : null,
+                });
+            }
+        }
+
+        const seenGenreIds = new Set();
+        const genreMatches = (movieGenres || [])
+            .filter((g) => {
+                if (!g?.name) return false;
+                const name = g.name.toLowerCase();
+                return name.includes(qLower);
+            })
+            .sort((a, b) => {
+                const an = a.name.toLowerCase();
+                const bn = b.name.toLowerCase();
+                const aExact = an === qLower ? 0 : 1;
+                const bExact = bn === qLower ? 0 : 1;
+                if (aExact !== bExact) return aExact - bExact;
+                return a.name.localeCompare(b.name);
+            })
+            .slice(0, 8);
+
+        for (const g of genreMatches) {
+            if (seenGenreIds.has(g.id)) continue;
+            seenGenreIds.add(g.id);
+            out.push({
+                resultKey: `genre-${g.id}`,
+                resultType: "genre",
+                genreId: g.id,
+                title: g.name,
+                subtitle: "Genre",
+            });
+        }
+
+        return out;
+    } catch (error) {
+        console.error("TMDB Browse Search Error:", error);
+        throw error;
+    }
+}
+
 export async function fetchMediaMetadata(
     tmdbId,
     type = "movie",
