@@ -41,6 +41,23 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+function movieMatchesSearchQuery(m, q) {
+    const trimmed = q.trim();
+    if (!trimmed) return true;
+    const lower = trimmed.toLowerCase();
+    const titleMatch = m.title?.toLowerCase().includes(lower);
+    const dirs = directorToDisplayString(m.director).toLowerCase();
+    const dirMatch = dirs.includes(lower);
+    const genreMatch =
+        m.genres &&
+        m.genres.some((g) => {
+            const name = typeof g === "object" ? g.name : String(g);
+            return name.toLowerCase().includes(lower);
+        });
+    const yearMatch = m.releaseDate && m.releaseDate.startsWith(trimmed);
+    return titleMatch || dirMatch || genreMatch || yearMatch;
+}
+
 function SortableMovie({ movie, viewMode, innerRef, disabled, ...props }) {
     const {
         attributes,
@@ -323,33 +340,44 @@ export default function Home() {
             .sort((a, b) => new Date(a.releaseDate) - new Date(b.releaseDate));
     }, [movies]);
 
+    const continueWatchingFiltered = useMemo(
+        () =>
+            searchQuery.trim()
+                ? continueWatchingMovies.filter((m) =>
+                      movieMatchesSearchQuery(m, searchQuery),
+                  )
+                : continueWatchingMovies,
+        [continueWatchingMovies, searchQuery],
+    );
+
+    const recentlyAddedFiltered = useMemo(
+        () =>
+            searchQuery.trim()
+                ? recentlyAddedMovies.filter((m) =>
+                      movieMatchesSearchQuery(m, searchQuery),
+                  )
+                : recentlyAddedMovies,
+        [recentlyAddedMovies, searchQuery],
+    );
+
+    const comingSoonFiltered = useMemo(
+        () =>
+            searchQuery.trim()
+                ? comingSoonMovies.filter((m) =>
+                      movieMatchesSearchQuery(m, searchQuery),
+                  )
+                : comingSoonMovies,
+        [comingSoonMovies, searchQuery],
+    );
+
     // Derived state for filtered movies
     const filteredMovies = useMemo(() => {
         let result = [...movies];
 
         // Filter by Search (title, director, genre names, year)
         if (searchQuery) {
-            const q = searchQuery.toLowerCase().trim();
-            result = result.filter((m) => {
-                const titleMatch = m.title?.toLowerCase().includes(q);
-                const dirs = directorToDisplayString(m.director).toLowerCase();
-                const dirMatch = dirs.includes(q);
-                const genreMatch =
-                    m.genres &&
-                    m.genres.some((g) => {
-                        const name =
-                            typeof g === "object" ? g.name : String(g);
-                        return name.toLowerCase().includes(q);
-                    });
-                const yearMatch =
-                    m.releaseDate && m.releaseDate.startsWith(q);
-                return (
-                    titleMatch ||
-                    dirMatch ||
-                    genreMatch ||
-                    yearMatch
-                );
-            });
+            const q = searchQuery;
+            result = result.filter((m) => movieMatchesSearchQuery(m, q));
         }
 
         // Filter by Availability
@@ -478,6 +506,26 @@ export default function Home() {
         sortBy,
     ]);
 
+    const sectionIdsForMainDedupe = useMemo(() => {
+        const ids = new Set();
+        continueWatchingFiltered.forEach((m) => ids.add(m.id));
+        if (showRecentlyAddedSection) {
+            recentlyAddedFiltered.forEach((m) => ids.add(m.id));
+        }
+        comingSoonFiltered.forEach((m) => ids.add(m.id));
+        return ids;
+    }, [
+        continueWatchingFiltered,
+        recentlyAddedFiltered,
+        comingSoonFiltered,
+        showRecentlyAddedSection,
+    ]);
+
+    const mainLibraryMovies = useMemo(() => {
+        if (groupBy !== "none") return filteredMovies;
+        return filteredMovies.filter((m) => !sectionIdsForMainDedupe.has(m.id));
+    }, [filteredMovies, groupBy, sectionIdsForMainDedupe]);
+
     // Movies eligible for random spin
     const validPickMovies = useMemo(() => {
         if (filterStatus !== "All") {
@@ -556,15 +604,15 @@ export default function Home() {
         setActiveId(null);
 
         if (active.id !== over.id) {
-            const oldIndex = filteredMovies.findIndex(
+            const oldIndex = mainLibraryMovies.findIndex(
                 (item) => item.id === active.id,
             );
-            const newIndex = filteredMovies.findIndex(
+            const newIndex = mainLibraryMovies.findIndex(
                 (item) => item.id === over.id,
             );
 
             if (oldIndex !== -1 && newIndex !== -1) {
-                const newItems = arrayMove(filteredMovies, oldIndex, newIndex);
+                const newItems = arrayMove(mainLibraryMovies, oldIndex, newIndex);
                 const prevItem = newItems[newIndex - 1];
                 const nextItem = newItems[newIndex + 1];
 
@@ -817,18 +865,18 @@ export default function Home() {
                 </div>
 
                 {/* Continue watching - grid section */}
-                {continueWatchingMovies.length > 0 && (
+                {continueWatchingFiltered.length > 0 && (
                     <div className="mb-8">
                         <h2 className="text-xl font-bold text-foreground mb-4 pl-2 flex items-center gap-2">
                             <div className="h-5 w-1 bg-blue-500 rounded-full" />
                             Continue watching
                             <span className="text-sm font-normal text-neutral-500">
-                                ({continueWatchingMovies.length})
+                                ({continueWatchingFiltered.length})
                             </span>
                         </h2>
                         {viewMode === "grid" ? (
                             <div className={gridClasses}>
-                                {continueWatchingMovies.map((movie) => (
+                                {continueWatchingFiltered.map((movie) => (
                                     <MovieCard
                                         key={movie.id}
                                         movie={movie}
@@ -843,7 +891,7 @@ export default function Home() {
                             </div>
                         ) : (
                             <div className="flex flex-col gap-2">
-                                {continueWatchingMovies.map((movie) => (
+                                {continueWatchingFiltered.map((movie) => (
                                     <MovieRow
                                         key={movie.id}
                                         movie={movie}
@@ -861,18 +909,18 @@ export default function Home() {
                 )}
 
                 {/* Recently added - grid section (when setting enabled) */}
-                {recentlyAddedMovies.length > 0 && showRecentlyAddedSection && (
+                {recentlyAddedFiltered.length > 0 && showRecentlyAddedSection && (
                     <div className="mb-8">
                         <h2 className="text-xl font-bold text-foreground mb-4 pl-2 flex items-center gap-2">
                             <div className="h-5 w-1 bg-blue-500 rounded-full" />
                             Recently added (last {recentlyAddedDays} days)
                             <span className="text-sm font-normal text-neutral-500">
-                                ({recentlyAddedMovies.length})
+                                ({recentlyAddedFiltered.length})
                             </span>
                         </h2>
                         {viewMode === "grid" ? (
                             <div className={gridClasses}>
-                                {recentlyAddedMovies.map((movie) => (
+                                {recentlyAddedFiltered.map((movie) => (
                                     <MovieCard
                                         key={movie.id}
                                         movie={movie}
@@ -887,7 +935,7 @@ export default function Home() {
                             </div>
                         ) : (
                             <div className="flex flex-col gap-2">
-                                {recentlyAddedMovies.map((movie) => (
+                                {recentlyAddedFiltered.map((movie) => (
                                     <MovieRow
                                         key={movie.id}
                                         movie={movie}
@@ -905,18 +953,18 @@ export default function Home() {
                 )}
 
                 {/* Coming soon - grid section */}
-                {comingSoonMovies.length > 0 && (
+                {comingSoonFiltered.length > 0 && (
                     <div className="mb-8">
                         <h2 className="text-xl font-bold text-foreground mb-4 pl-2 flex items-center gap-2">
                             <div className="h-5 w-1 bg-blue-500 rounded-full" />
                             Coming soon
                             <span className="text-sm font-normal text-neutral-500">
-                                ({comingSoonMovies.length})
+                                ({comingSoonFiltered.length})
                             </span>
                         </h2>
                         {viewMode === "grid" ? (
                             <div className={gridClasses}>
-                                {comingSoonMovies.map((movie) => (
+                                {comingSoonFiltered.map((movie) => (
                                     <MovieCard
                                         key={movie.id}
                                         movie={movie}
@@ -931,7 +979,7 @@ export default function Home() {
                             </div>
                         ) : (
                             <div className="flex flex-col gap-2">
-                                {comingSoonMovies.map((movie) => (
+                                {comingSoonFiltered.map((movie) => (
                                     <MovieRow
                                         key={movie.id}
                                         movie={movie}
@@ -946,6 +994,13 @@ export default function Home() {
                             </div>
                         )}
                     </div>
+                )}
+
+                {comingSoonFiltered.length > 0 && (
+                    <div
+                        className="border-t border-border mb-8"
+                        aria-hidden="true"
+                    />
                 )}
 
                 {/* Content */}
@@ -1047,7 +1102,7 @@ export default function Home() {
                         </div>
                     ) : (
                         <SortableContext
-                            items={filteredMovies.map((m) => m.id)}
+                            items={mainLibraryMovies.map((m) => m.id)}
                             strategy={
                                 viewMode === "grid"
                                     ? rectSortingStrategy
@@ -1057,7 +1112,7 @@ export default function Home() {
                         >
                             {viewMode === "grid" ? (
                                 <div className={`${gridClasses} pb-20`}>
-                                    {filteredMovies.map((movie) => (
+                                    {mainLibraryMovies.map((movie) => (
                                         <SortableMovie
                                             key={movie.id}
                                             movie={movie}
@@ -1082,7 +1137,7 @@ export default function Home() {
                                 </div>
                             ) : (
                                 <div className="flex flex-col gap-2 pb-20">
-                                    {filteredMovies.map((movie) => (
+                                    {mainLibraryMovies.map((movie) => (
                                         <SortableMovie
                                             key={movie.id}
                                             movie={movie}

@@ -23,6 +23,7 @@ import { useAuth } from "../features/auth/AuthContext";
 import { ref, get } from "firebase/database";
 import { db } from "../lib/firebase";
 import { getDisplayStatus, isWatched } from "../lib/movieStatus";
+import { directorToDisplayString } from "../lib/utils";
 import { HistoryPill } from "../components/stats/HistoryPill";
 import { QuickStat } from "../components/stats/QuickStat";
 import { StreakCalendar } from "../components/stats/StreakCalendar";
@@ -183,20 +184,20 @@ export default function Stats() {
                 totalRatings++;
             }
 
-            // Directors
-            const dirs = Array.isArray(movie.director)
-                ? movie.director
-                : Array.isArray(movie.artist)
-                ? movie.artist
-                : [movie.artist || movie.director];
-            dirs.forEach((d) => {
-                if (d) {
-                    const cleanName = String(d).trim();
-                    if (cleanName)
+            // Directors (strings or { name } from TMDB / batch updates)
+            const directorNames = directorToDisplayString(movie.director);
+            const artistNames = directorToDisplayString(movie.artist);
+            const namesStr = directorNames || artistNames;
+            if (namesStr) {
+                namesStr
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .forEach((cleanName) => {
                         directorCounts[cleanName] =
                             (directorCounts[cleanName] || 0) + 1;
-                }
-            });
+                    });
+            }
 
             // Genres
             if (movie.genres && Array.isArray(movie.genres)) {
@@ -352,7 +353,7 @@ export default function Stats() {
                 if (dailyCompletions[checkKey] > 0) {
                     // Only count if this week meets the milestone OR it's the current week
                     if (
-                        moviesThisWeek >= 3 ||
+                        moviesThisWeek >= streakThreshold ||
                         (isCurrentWeek && moviesThisWeek > 0)
                     ) {
                         currentStreak++;
@@ -361,7 +362,7 @@ export default function Stats() {
                     checkDate.setDate(checkDate.getDate() - 1);
                 } else {
                     if (
-                        moviesThisWeek >= 3 ||
+                        moviesThisWeek >= streakThreshold ||
                         (isCurrentWeek && moviesThisWeek > 0)
                     ) {
                         checkDate.setDate(checkDate.getDate() - 1);
@@ -554,15 +555,36 @@ export default function Stats() {
             }
         }
 
-        // Calculate longest TV streak
-        let tempTVStreak = 0;
+        // Calculate longest TV streak (weekly threshold, same structure as movie longest)
         if (Object.keys(dailyEpisodes).length > 0) {
             const sortedDates = Object.keys(dailyEpisodes).sort();
             const oldestDate = new Date(sortedDates[0]);
             const newestDate = new Date(sortedDates[sortedDates.length - 1]);
 
+            const getWeekStartTV = (date) => {
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = day === 0 ? 6 : day - 1;
+                d.setDate(d.getDate() - diff);
+                d.setHours(0, 0, 0, 0);
+                return d;
+            };
+
+            const getEpisodesInWeekForLongest = (weekStart) => {
+                let count = 0;
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(weekStart);
+                    d.setDate(d.getDate() + i);
+                    const checkKey = `${d.getFullYear()}-${String(
+                        d.getMonth() + 1,
+                    ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                    count += dailyEpisodes[checkKey] || 0;
+                }
+                return count;
+            };
+
             let checkDate = new Date(oldestDate);
-            tempTVStreak = 0;
+            let tempTVStreak = 0;
 
             while (checkDate <= newestDate) {
                 const checkKey = `${checkDate.getFullYear()}-${String(
@@ -572,11 +594,21 @@ export default function Stats() {
                     "0",
                 )}`;
 
+                const weekStart = getWeekStartTV(checkDate);
+                const episodesThisWeek =
+                    getEpisodesInWeekForLongest(weekStart);
+
                 if (dailyEpisodes[checkKey] > 0) {
-                    tempTVStreak++;
-                    longestTVStreak = Math.max(longestTVStreak, tempTVStreak);
+                    if (episodesThisWeek >= tvStreakThreshold) {
+                        tempTVStreak++;
+                        longestTVStreak = Math.max(longestTVStreak, tempTVStreak);
+                    }
                 } else {
-                    tempTVStreak = 0;
+                    if (episodesThisWeek >= tvStreakThreshold) {
+                        // Continue streak for this week even on days with no episodes
+                    } else {
+                        tempTVStreak = 0;
+                    }
                 }
 
                 checkDate.setDate(checkDate.getDate() + 1);
