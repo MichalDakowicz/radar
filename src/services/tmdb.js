@@ -598,7 +598,11 @@ export async function fetchSimilarMedia(tmdbId, type = "movie") {
         const endpoint =
             type === "tv" ? `tv/${tmdbId}/similar` : `movie/${tmdbId}/similar`;
         const res = await fetch(`${BASE_URL}/${endpoint}`, { headers });
-        if (!res.ok) throw new Error("Failed to fetch similar media");
+        // If TMDB returns 404 for similar endpoint, treat as no similar results
+        if (!res.ok) {
+            if (res.status === 404) return [];
+            throw new Error("Failed to fetch similar media");
+        }
         const data = await res.json();
 
         return data.results.slice(0, 12).map((item) => ({

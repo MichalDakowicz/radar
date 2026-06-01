@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { X, Check, Save, Calculator, CheckCircle } from "lucide-react";
 import { useMovies } from "../hooks/useMovies";
 import { useWatchProviderCountry } from "../hooks/useWatchProviderCountry";
-import { StarRating } from "../features/movies/StarRating";
 import { normalizeServiceName } from "../lib/services";
 import {
     searchMedia,
@@ -11,9 +10,49 @@ import {
     fetchSeasonDetails,
 } from "../services/tmdb";
 import { Navbar } from "../components/layout/Navbar";
+import { setToWatchlist, setToInProgress } from "../lib/movieStatus";
 import ConfirmationModal from "../components/ui/ConfirmationModal";
 import EditMovieHero from "../features/movies/edit/EditMovieHero";
 import EditMovieMainTab from "../features/movies/edit/EditMovieMainTab";
+
+function RatingSlider({ label, value, onChange, compact = false, step = 0.1 }) {
+    const clampedValue = Math.max(0, Math.min(5, value || 0));
+    const percent = (clampedValue / 5) * 100;
+
+    return (
+        <div className={compact ? "space-y-2 w-full" : "space-y-3 w-full"}>
+            {label ? (
+                <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                        {label}
+                    </span>
+                </div>
+            ) : null}
+            <div className="relative h-6 w-full select-none">
+                <div className="absolute left-0 right-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-zinc-900" />
+                <div
+                    className="absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-zinc-100 transition-all duration-150"
+                    style={{ width: `${percent}%` }}
+                />
+                <div
+                    className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-zinc-950 bg-zinc-50 shadow-lg shadow-black/40 transition-all duration-150"
+                    style={{ left: `calc(${percent}% - 0.5rem)` }}
+                />
+                <input
+                    type="range"
+                    min="0"
+                    max="5"
+                    step={step}
+                    value={clampedValue}
+                    onInput={(e) => onChange(parseFloat(e.target.value))}
+                    onChange={(e) => onChange(parseFloat(e.target.value))}
+                    className="absolute inset-0 z-10 h-6 w-full cursor-pointer opacity-0"
+                    aria-label={label || "Rating"}
+                />
+            </div>
+        </div>
+    );
+}
 
 export default function EditMovie() {
     const { movieId } = useParams();
@@ -153,7 +192,13 @@ export default function EditMovie() {
                     k,
                     typeof v === "object"
                         ? v
-                        : { overall: v, story: 0, acting: 0, ending: 0, enjoyment: 0 },
+                        : {
+                              overall: v,
+                              story: 0,
+                              acting: 0,
+                              ending: 0,
+                              enjoyment: 0,
+                          },
                 ]),
             );
             setSeasonRatings(upgradedSeasons);
@@ -178,11 +223,7 @@ export default function EditMovie() {
 
     // Persist season episode count so "next episode" can roll to S(n+1)E1
     useEffect(() => {
-        if (
-            !movieId ||
-            !seasonData?.episodes?.length ||
-            selectedSeason == null
-        )
+        if (!movieId || !seasonData?.episodes?.length || selectedSeason == null)
             return;
         const count = seasonData.episodes.length;
         const current = movie?.seasonEpisodeCounts || {};
@@ -193,7 +234,7 @@ export default function EditMovie() {
                 [selectedSeason]: count,
             },
         });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- updateMovie is stable
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- updateMovie is stable
     }, [seasonData, selectedSeason, movieId, movie?.seasonEpisodeCounts]);
 
     const toggleEpisodeWatched = (seasonWithType, episodeNum) => {
@@ -335,9 +376,48 @@ export default function EditMovie() {
         });
     };
 
+    // Persist watchlist/progress toggles immediately
+    const handleToggleWatchlist = async (newVal) => {
+        // Only update local UI state here. Persist on explicit Save.
+        setInWatchlist(newVal);
+    };
+
+    const handleToggleProgress = async (newVal) => {
+        setInProgress(newVal);
+        if (!movie) return;
+        try {
+            const updates = { inProgress: newVal, updatedAt: Date.now() };
+            if (newVal) {
+                updates.inWatchlist = false;
+                updates.status = "Watching";
+            } else {
+                // Turning off progress: set status based on watched or existing watchlist
+                if (movie.watched) updates.status = "Completed";
+                else if (movie.inWatchlist) updates.status = "Watchlist";
+                else updates.status = null;
+            }
+            await updateMovie(movie.id, updates);
+        } catch (err) {
+            console.error("Failed to persist progress toggle", err);
+        }
+    };
+
     const handleSave = async () => {
         setIsProcessing(true);
         try {
+            // If user unchecked Watchlist for an unwatched, not-in-progress movie,
+            // treat this as a removal from the library, but only after Save.
+            if (
+                type === "movie" &&
+                !inWatchlist &&
+                !inProgress &&
+                (timesWatched === 0 || !timesWatched)
+            ) {
+                // Remove and navigate away
+                await removeMovie(movie.id);
+                navigate("/");
+                return;
+            }
             // Determine status flags based on watch state
             let statusFlags = {};
             let completedAt = movie.completedAt; // Preserve existing completedAt
@@ -426,9 +506,10 @@ export default function EditMovie() {
                 runtime,
                 overview,
                 notes,
-                ratings: type === "tv"
-                    ? { overall: overallRating, seasons: seasonRatings }
-                    : { ...ratings, overall: overallRating },
+                ratings:
+                    type === "tv"
+                        ? { overall: overallRating, seasons: seasonRatings }
+                        : { ...ratings, overall: overallRating },
                 number_of_seasons: numberOfSeasons,
                 number_of_episodes: numberOfEpisodes,
                 episodesWatched,
@@ -465,6 +546,24 @@ export default function EditMovie() {
     };
 
     const handleDelete = () => setIsDeleteModalOpen(true);
+
+    const ratingCategories = [
+        { key: "story", label: "Story" },
+        { key: "acting", label: "Acting" },
+        { key: "ending", label: "Ending" },
+        { key: "enjoyment", label: "Enjoyment" },
+    ];
+
+    const ratingPercent = (value) =>
+        Math.max(0, Math.min(100, (value / 5) * 100));
+
+    const ratingDisplay = (value) => (value > 0 ? value.toFixed(1) : "0.0");
+    const publicRatingDisplay =
+        voteAverage > 0 ? voteAverage.toFixed(1) : "N/A";
+    const publicRatingPercent =
+        voteAverage > 0
+            ? Math.max(0, Math.min(100, (voteAverage / 10) * 100))
+            : 0;
 
     if (moviesLoading)
         return (
@@ -559,6 +658,8 @@ export default function EditMovie() {
                             toggleAvailability={toggleAvailability}
                             inWatchlist={inWatchlist}
                             setInWatchlist={setInWatchlist}
+                            onToggleWatchlist={handleToggleWatchlist}
+                            onToggleProgress={handleToggleProgress}
                             setTimesWatched={setTimesWatched}
                             storedTimesWatched={storedTimesWatched}
                             setStoredTimesWatched={setStoredTimesWatched}
@@ -738,158 +839,385 @@ export default function EditMovie() {
                         </div>
                     )}
                     {activeTab === "rating" && (
-                        <div className="space-y-8 max-w-3xl mx-auto">
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
-                                    Public Rating Score
-                                </label>
-                                <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-800 flex items-center gap-4">
-                                    <div className="text-2xl font-bold font-mono text-white">
-                                        {voteAverage > 0
-                                            ? voteAverage.toFixed(1)
-                                            : "N/A"}
+                        <div className="max-w-6xl mx-auto space-y-6">
+                            <div className="grid grid-cols-12 gap-6">
+                                <section className="col-span-12 lg:col-span-3">
+                                    <div className="flex flex-col items-center justify-between min-h-35 rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm h-full">
+                                        <h3 className="w-full text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                                            Public Score
+                                        </h3>
+                                        <div
+                                            className="relative flex h-24 w-24 items-center justify-center rounded-full mt-2"
+                                            style={{
+                                                background: `conic-gradient(rgb(244 244 245) ${publicRatingPercent}%, rgb(39 39 42) 0)`,
+                                            }}
+                                        >
+                                            <div className="absolute inset-2 rounded-full bg-zinc-900/95" />
+                                            <span className="relative text-2xl font-bold tracking-tight text-zinc-50">
+                                                {publicRatingDisplay}
+                                            </span>
+                                        </div>
+                                        <p className="mt-3 text-center text-xs text-zinc-500 w-full">
+                                            TMDb rating and vote average
+                                        </p>
                                     </div>
-                                    <div className="text-sm text-neutral-500">
-                                        Based on TMDb/IMDb votes (Read-only)
+                                </section>
+
+                                <section className="col-span-12 lg:col-span-9 space-y-6">
+                                    <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-6 min-h-35 shadow-2xl shadow-black/20 backdrop-blur-sm">
+                                        <div className="flex flex-col gap-4">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                                                    User Rating
+                                                </h3>
+                                                <div className="gap-5 flex items-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={
+                                                            handleRecalculate
+                                                        }
+                                                        className="inline-flex shrink-0 items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/80 px-4 py-2 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white active:scale-95"
+                                                    >
+                                                        <Calculator size={15} />
+                                                        {type === "tv"
+                                                            ? "Avg Seasons"
+                                                            : "Auto-Calc"}
+                                                    </button>
+                                                    <span className="text-md font-semibold text-zinc-200">
+                                                        {ratingDisplay(
+                                                            overallRating,
+                                                        )}{" "}
+                                                        / 5
+                                                    </span>
+                                                    
+                                                </div>
+                                            </div>
+                                            <div className="min-w-0 w-full max-w-none">
+                                                <RatingSlider
+                                                    label=""
+                                                    value={overallRating}
+                                                    onChange={(val) => {
+                                                        setOverallRating(val);
+                                                        if (
+                                                            val === 0 &&
+                                                            type !== "tv"
+                                                        ) {
+                                                            setRatings((prev) =>
+                                                                Object.keys(
+                                                                    prev,
+                                                                ).reduce(
+                                                                    (
+                                                                        acc,
+                                                                        key,
+                                                                    ) => ({
+                                                                        ...acc,
+                                                                        [key]: 0,
+                                                                    }),
+                                                                    {},
+                                                                ),
+                                                            );
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
-                                    Overall Rating
-                                </label>
-                                <div className="bg-neutral-900/50 p-6 rounded-2xl border border-neutral-800 flex items-center justify-between">
-                                    <StarRating
-                                        label=""
-                                        value={overallRating}
-                                        onChange={(val) => {
-                                            setOverallRating(val);
-                                            if (val === 0 && type !== "tv")
-                                                setRatings((prev) =>
-                                                    Object.keys(prev).reduce(
-                                                        (acc, key) => ({
-                                                            ...acc,
-                                                            [key]: 0,
-                                                        }),
-                                                        {},
-                                                    ),
-                                                );
-                                        }}
-                                        showInput={true}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleRecalculate}
-                                        className="px-4 py-2 text-neutral-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-xl transition-colors active:scale-95 text-xs font-medium flex items-center gap-2"
-                                    >
-                                        <Calculator size={16} /> {type === "tv" ? "Avg Seasons" : "Auto-Calc"}
-                                    </button>
-                                </div>
-                            </div>
-                            {type === "tv" ? (
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
-                                        Season Ratings
-                                    </label>
-                                    <div className="space-y-4">
-                                        {Array.from({ length: numberOfSeasons || 1 }, (_, i) => i + 1).map((seasonNum) => {
-                                            const sRating = seasonRatings[seasonNum] || { overall: 0, story: 0, acting: 0, ending: 0, enjoyment: 0 };
-                                            const handleSeasonCategoryChange = (cat, newVal) => {
-                                                setSeasonRatings((prev) => ({
-                                                    ...prev,
-                                                    [seasonNum]: { ...(prev[seasonNum] || { overall: 0, story: 0, acting: 0, ending: 0, enjoyment: 0 }), [cat]: newVal },
-                                                }));
-                                            };
-                                            const handleSeasonAutoCalc = () => {
-                                                const cats = [sRating.story, sRating.acting, sRating.ending, sRating.enjoyment].filter((v) => v > 0);
-                                                if (cats.length > 0) {
-                                                    const avg = parseFloat((cats.reduce((a, b) => a + b, 0) / cats.length).toFixed(1));
-                                                    setSeasonRatings((prev) => ({
-                                                        ...prev,
-                                                        [seasonNum]: { ...(prev[seasonNum] || {}), overall: avg },
-                                                    }));
-                                                }
-                                            };
-                                            return (
-                                                <div key={seasonNum} className="bg-neutral-900/30 rounded-xl border border-neutral-800 overflow-hidden">
-                                                    <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 bg-neutral-900/50">
-                                                        <span className="text-sm font-bold text-white uppercase tracking-wide">Season {seasonNum}</span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleSeasonAutoCalc}
-                                                            className="px-3 py-1 text-neutral-400 hover:text-white bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors active:scale-95 text-xs font-medium flex items-center gap-1.5"
+
+                                    <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm">
+                                        <h3 className="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                                            Category Breakdown
+                                        </h3>
+                                        {type === "tv" ? (
+                                            <div className="space-y-4">
+                                                {Array.from(
+                                                    {
+                                                        length:
+                                                            numberOfSeasons ||
+                                                            1,
+                                                    },
+                                                    (_, i) => i + 1,
+                                                ).map((seasonNum) => {
+                                                    const sRating =
+                                                        seasonRatings[
+                                                            seasonNum
+                                                        ] || {
+                                                            overall: 0,
+                                                            story: 0,
+                                                            acting: 0,
+                                                            ending: 0,
+                                                            enjoyment: 0,
+                                                        };
+                                                    const handleSeasonCategoryChange =
+                                                        (cat, newVal) => {
+                                                            setSeasonRatings(
+                                                                (prev) => ({
+                                                                    ...prev,
+                                                                    [seasonNum]:
+                                                                        {
+                                                                            ...(prev[
+                                                                                seasonNum
+                                                                            ] || {
+                                                                                overall: 0,
+                                                                                story: 0,
+                                                                                acting: 0,
+                                                                                ending: 0,
+                                                                                enjoyment: 0,
+                                                                            }),
+                                                                            [cat]: newVal,
+                                                                        },
+                                                                }),
+                                                            );
+                                                        };
+                                                    const handleSeasonAutoCalc =
+                                                        () => {
+                                                            const cats = [
+                                                                sRating.story,
+                                                                sRating.acting,
+                                                                sRating.ending,
+                                                                sRating.enjoyment,
+                                                            ].filter(
+                                                                (v) => v > 0,
+                                                            );
+                                                            if (
+                                                                cats.length > 0
+                                                            ) {
+                                                                const avg =
+                                                                    parseFloat(
+                                                                        (
+                                                                            cats.reduce(
+                                                                                (
+                                                                                    a,
+                                                                                    b,
+                                                                                ) =>
+                                                                                    a +
+                                                                                    b,
+                                                                                0,
+                                                                            ) /
+                                                                            cats.length
+                                                                        ).toFixed(
+                                                                            1,
+                                                                        ),
+                                                                    );
+                                                                setSeasonRatings(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        [seasonNum]:
+                                                                            {
+                                                                                ...(prev[
+                                                                                    seasonNum
+                                                                                ] ||
+                                                                                    {}),
+                                                                                overall:
+                                                                                    avg,
+                                                                            },
+                                                                    }),
+                                                                );
+                                                            }
+                                                        };
+
+                                                    return (
+                                                        <div
+                                                            key={seasonNum}
+                                                            className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50"
                                                         >
-                                                            <Calculator size={13} /> Auto-Calc
-                                                        </button>
-                                                    </div>
-                                                    <div className="p-4 space-y-3">
-                                                        <div className="bg-neutral-900/50 p-3 rounded-xl border border-neutral-800 flex items-center justify-between">
-                                                            <StarRating
-                                                                label="Overall"
-                                                                value={sRating.overall || 0}
-                                                                onChange={(newVal) => handleSeasonCategoryChange("overall", newVal)}
-                                                                showInput={true}
-                                                            />
+                                                            <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-900/80 px-4 py-3">
+                                                                <span className="text-sm font-semibold uppercase tracking-[0.18em] text-zinc-200">
+                                                                    Season{" "}
+                                                                    {seasonNum}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={
+                                                                        handleSeasonAutoCalc
+                                                                    }
+                                                                    className="inline-flex items-center gap-1.5 rounded-full border border-zinc-800 bg-zinc-950/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white active:scale-95"
+                                                                >
+                                                                    <Calculator
+                                                                        size={
+                                                                            13
+                                                                        }
+                                                                    />
+                                                                    Auto-Calc
+                                                                </button>
+                                                            </div>
+                                                            <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
+                                                                <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4">
+                                                                    <div className="mb-3 flex items-center justify-between">
+                                                                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                                                                            Overall
+                                                                        </span>
+                                                                        <span className="text-sm font-semibold text-zinc-200">
+                                                                            {ratingDisplay(
+                                                                                sRating.overall ||
+                                                                                    0,
+                                                                            )}{" "}
+                                                                            / 5
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="mt-4">
+                                                                        <RatingSlider
+                                                                            label=""
+                                                                            value={
+                                                                                sRating.overall ||
+                                                                                0
+                                                                            }
+                                                                            onChange={(
+                                                                                newVal,
+                                                                            ) =>
+                                                                                handleSeasonCategoryChange(
+                                                                                    "overall",
+                                                                                    newVal,
+                                                                                )
+                                                                            }
+                                                                            compact={
+                                                                                true
+                                                                            }
+                                                                            step={
+                                                                                0.5
+                                                                            }
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                                    {ratingCategories.map(
+                                                                        ({
+                                                                            key,
+                                                                            label,
+                                                                        }) => {
+                                                                            const value =
+                                                                                sRating[
+                                                                                    key
+                                                                                ] ||
+                                                                                0;
+                                                                            return (
+                                                                                <div
+                                                                                    key={
+                                                                                        key
+                                                                                    }
+                                                                                    className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-4"
+                                                                                >
+                                                                                    <div className="mb-3 flex items-center justify-between gap-3">
+                                                                                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                                                                                            {
+                                                                                                label
+                                                                                            }
+                                                                                        </span>
+                                                                                        <span className="text-sm font-semibold text-zinc-200">
+                                                                                            {ratingDisplay(
+                                                                                                value,
+                                                                                            )}{" "}
+                                                                                            /
+                                                                                            5
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div className="mt-4">
+                                                                                        <RatingSlider
+                                                                                            label=""
+                                                                                            value={
+                                                                                                value
+                                                                                            }
+                                                                                            onChange={(
+                                                                                                newVal,
+                                                                                            ) =>
+                                                                                                handleSeasonCategoryChange(
+                                                                                                    key,
+                                                                                                    newVal,
+                                                                                                )
+                                                                                            }
+                                                                                            compact={
+                                                                                                true
+                                                                                            }
+                                                                                            step={
+                                                                                                0.5
+                                                                                            }
+                                                                                        />
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        },
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {["story", "acting", "ending", "enjoyment"].map((cat) => (
-                                                                <div key={cat} className="bg-neutral-900/30 p-3 rounded-xl border border-neutral-800">
-                                                                    <StarRating
-                                                                        label={cat}
-                                                                        value={sRating[cat] || 0}
-                                                                        onChange={(newVal) => handleSeasonCategoryChange(cat, newVal)}
-                                                                        showInput={false}
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                {ratingCategories.map(
+                                                    ({ key, label }) => {
+                                                        const value =
+                                                            ratings[key] || 0;
+                                                        return (
+                                                            <div
+                                                                key={key}
+                                                                className="rounded-2xl p-2 transition-colors"
+                                                            >
+                                                                <div className="mb-3 flex items-center justify-between gap-3">
+                                                                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                                                                        {label}
+                                                                    </span>
+                                                                    <span className="text-sm font-semibold text-zinc-200">
+                                                                        {ratingDisplay(
+                                                                            value,
+                                                                        )}{" "}
+                                                                        / 5
+                                                                    </span>
+                                                                </div>
+                                                                <div className="mt-4">
+                                                                    <RatingSlider
+                                                                        label=""
+                                                                        value={
+                                                                            value
+                                                                        }
+                                                                        onChange={(
+                                                                            newVal,
+                                                                        ) =>
+                                                                            setRatings(
+                                                                                (
+                                                                                    prev,
+                                                                                ) => ({
+                                                                                    ...prev,
+                                                                                    [key]: newVal,
+                                                                                }),
+                                                                            )
+                                                                        }
+                                                                        compact={
+                                                                            true
+                                                                        }
+                                                                        step={
+                                                                            0.5
+                                                                        }
                                                                     />
                                                                 </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div>
-                                    <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-3">
-                                        Category Breakdown
-                                    </label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {Object.entries(ratings).map(
-                                            ([key, val]) => (
-                                                <div
-                                                    key={key}
-                                                    className="bg-neutral-900/30 p-4 rounded-xl border border-neutral-800"
-                                                >
-                                                    <StarRating
-                                                        label={key}
-                                                        value={val}
-                                                        onChange={(newVal) =>
-                                                            setRatings((prev) => ({
-                                                                ...prev,
-                                                                [key]: newVal,
-                                                            }))
-                                                        }
-                                                        showInput={false}
-                                                    />
-                                                </div>
-                                            ),
+                                                            </div>
+                                                        );
+                                                    },
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-                                </div>
-                            )}
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
-                                    Personal Notes
-                                </label>
-                                <textarea
-                                    className="w-full bg-neutral-900 border border-neutral-800 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 min-h-50 text-base leading-relaxed placeholder:text-neutral-800"
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    placeholder="Write your review or thoughts here..."
-                                />
+
+                                    
+                                </section>
+                                
                             </div>
+                            <div className="rounded-2xl border border-zinc-800/80 bg-zinc-950/70 p-6 shadow-2xl shadow-black/20 backdrop-blur-sm w-full">
+                                        <h3 className="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                                            Personal Notes
+                                        </h3>
+                                        <textarea
+                                            className="min-h-32 w-full rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-3 text-sm leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 focus:ring-0"
+                                            value={notes}
+                                            onChange={(e) =>
+                                                setNotes(e.target.value)
+                                            }
+                                            placeholder="Write your review or thoughts here..."
+                                        />
+                                    </div>
                         </div>
+                        
                     )}
                     {activeTab === "episodes" && type === "tv" && (
                         <div className="space-y-6 max-w-3xl mx-auto">

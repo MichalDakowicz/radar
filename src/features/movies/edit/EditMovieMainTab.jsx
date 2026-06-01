@@ -36,11 +36,13 @@ export default function EditMovieMainTab({
     toggleAvailability,
     inWatchlist,
     setInWatchlist,
+    onToggleWatchlist,
     setTimesWatched,
     storedTimesWatched,
     setStoredTimesWatched,
     inProgress,
     setInProgress,
+    onToggleProgress,
     lastWatchedPosition,
     setLastWatchedPosition,
     handleDelete,
@@ -68,13 +70,19 @@ export default function EditMovieMainTab({
                 <EditMovieWatchStatus
                     type={type}
                     inWatchlist={inWatchlist}
-                    setInWatchlist={setInWatchlist}
+                    setInWatchlist={(v) => {
+                        setInWatchlist(v);
+                        if (onToggleWatchlist) onToggleWatchlist(v);
+                    }}
                     timesWatched={timesWatched}
                     setTimesWatched={setTimesWatched}
                     storedTimesWatched={storedTimesWatched}
                     setStoredTimesWatched={setStoredTimesWatched}
                     inProgress={inProgress}
-                    setInProgress={setInProgress}
+                    setInProgress={(v) => {
+                        setInProgress(v);
+                        if (onToggleProgress) onToggleProgress(v);
+                    }}
                     lastWatchedPosition={lastWatchedPosition}
                     setLastWatchedPosition={setLastWatchedPosition}
                     tvStatus={tvStatus}

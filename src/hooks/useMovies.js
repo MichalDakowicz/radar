@@ -89,12 +89,17 @@ export function useMovies() {
         if (!user) return;
         const activityRef = ref(db, `users/${user.uid}/activity`);
         const newActivityRef = push(activityRef);
+        // Remove any undefined values from details to avoid Firebase set errors
+        const safeDetails = Object.fromEntries(
+            Object.entries(details || {}).filter(([, v]) => v !== undefined),
+        );
+
         await set(newActivityRef, {
             movieId,
             movieTitle,
             type: activityType, // 'added', 'updated', 'status_changed', 'rating_changed', 'removed'
             timestamp: Date.now(),
-            ...details,
+            ...safeDetails,
         });
     };
 

@@ -756,7 +756,7 @@ export default function Stats() {
                         value={stats.avgRating}
                         label="Avg Rating"
                         icon={<Star className="w-4 h-4" />}
-                        suffix="★"
+                        suffix="/5"
                     />
                     <QuickStat
                         value={`${stats.completionRate}%`}
