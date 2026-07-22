@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Radar Rewrite — Build Tracker</title>
+<style>
+  :root{
+    --bg:#09090b; --panel:#111114; --panel2:#17171b; --border:#26262b;
+    --fg:#e7e7ea; --muted:#8a8a93; --muted2:#6b6b73;
+    --blue:#3b82f6; --blue2:#60a5fa;
+    --green:#22c55e; --amber:#f59e0b; --red:#ef4444; --violet:#8b5cf6;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--fg);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--blue2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 16px 80px}
+
+  header.top{position:sticky;top:0;z-index:20;background:rgba(9,9,11,.9);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);margin:-24px -16px 20px;padding:16px}
+  .brand{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--violet));
+    display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+  h1{font-size:19px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+
+  .overall{margin-top:14px;display:flex;align-items:center;gap:14px}
+  .bar{flex:1;height:10px;border-radius:999px;background:var(--panel2);overflow:hidden;border:1px solid var(--border)}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--green));transition:width .35s ease}
+  .pct{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;min-width:132px;text-align:right;color:var(--muted)}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0}
+  .btn{background:var(--panel2);border:1px solid var(--border);color:var(--fg);border-radius:9px;
+    padding:7px 12px;font-size:12.5px;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:#3a3a42;background:#1d1d22}
+  .btn.ghost{background:transparent}
+  .spacer{flex:1}
+  .filters{display:flex;gap:6px}
+  .filters .btn.active{border-color:var(--blue);color:var(--blue2)}
+
+  .callout{background:linear-gradient(180deg,rgba(59,130,246,.08),rgba(59,130,246,.02));
+    border:1px solid rgba(59,130,246,.35);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px;font-size:13.5px;color:#cfe0ff}
+  .callout b{color:#fff}
+  .callout code{background:#0c1a33;border:1px solid #1e3a66;border-radius:5px;padding:1px 5px;font-size:12px}
+
+  .phase{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+  .phase.keys{border-color:rgba(245,158,11,.5);background:linear-gradient(180deg,rgba(245,158,11,.06),transparent)}
+  .phead{display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;user-select:none}
+  .phead:hover{background:var(--panel2)}
+  .chev{color:var(--muted2);transition:transform .2s;flex:none;font-size:12px}
+  .phase.open .chev{transform:rotate(90deg)}
+  .ptitle{font-weight:650;font-size:15px;flex:1;min-width:0}
+  .ptitle .num{color:var(--muted2);font-weight:600;margin-right:6px;font-variant-numeric:tabular-nums}
+  .pmeta{display:flex;align-items:center;gap:10px;flex:none}
+  .minibar{width:70px;height:6px;border-radius:999px;background:var(--panel2);overflow:hidden;border:1px solid var(--border)}
+  .minibar > i{display:block;height:100%;background:var(--green);width:0}
+  .count{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+
+  .pill{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+    padding:3px 9px;border-radius:999px;border:1px solid;cursor:pointer;white-space:nowrap}
+  .st-todo{color:var(--muted);border-color:var(--border);background:var(--panel2)}
+  .st-doing{color:var(--amber);border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.1)}
+  .st-done{color:var(--green);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.1)}
+  .st-blocked{color:var(--red);border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.1)}
+
+  .pbody{display:none;padding:4px 16px 16px;border-top:1px solid var(--border)}
+  .phase.open .pbody{display:block}
+  .goal{color:var(--muted);font-size:13px;margin:12px 0}
+  .goal b{color:var(--fg)}
+  .deliver{font-size:12.5px;color:#bde6c9;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.25);
+    border-radius:9px;padding:8px 11px;margin:12px 0}
+
+  .docrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0}
+  .docrow .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted2);margin-right:2px}
+  .doc{font-size:11.5px;background:#0d1526;border:1px solid #1e2c47;color:#9fc0ff;border-radius:7px;padding:3px 8px}
+  .doc:hover{background:#12203a;text-decoration:none}
+
+  ul.subs{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+  ul.subs li{display:flex;align-items:flex-start;gap:10px;padding:7px 8px;border-radius:8px}
+  ul.subs li:hover{background:var(--panel2)}
+  .ck{flex:none;width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border);margin-top:1px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;transition:.12s}
+  .ck.done{background:var(--green);border-color:var(--green);color:#04120a}
+  .ck.doing{border-color:var(--amber);color:var(--amber)}
+  .stext{flex:1;font-size:13.5px}
+  li.done .stext{color:var(--muted);text-decoration:line-through}
+  .stext code{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-size:12px}
+
+  footer{color:var(--muted2);font-size:12px;text-align:center;margin-top:30px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">R</div>
+      <div>
+        <h1>Radar Rewrite — Build Tracker</h1>
+        <div class="sub">Firebase → Supabase · React + Vite + Capacitor → Expo + NativeWind · live progress of the rewrite</div>
+      </div>
+    </div>
+    <div class="overall">
+      <div class="bar"><i id="overallBar"></i></div>
+      <div class="pct" id="overallPct">0 / 0 · 0%</div>
+    </div>
+  </header>
+
+  <div class="callout">
+    <b>How this file works.</b> The AI keeps the single source of truth in the <code>PHASES</code>
+    data at the bottom of this file and updates each task/subtask status as it works — reload to see progress.
+    Before starting any phase, the AI reads the linked <b>docs</b> for that phase (in <code>/rewrite</code>).
+    You can also click a status pill (cycles To&nbsp;do → Doing → Done → Blocked) or tick a subtask
+    yourself; your clicks are saved in your browser and layered on top — use <b>Reset my changes</b> to clear them.
+    <br><br>
+    <b>Start with Step&nbsp;0</b> — the AI can't build until you create the accounts and provide the keys listed there.
+    🔒 Put real secrets in <code>.env</code> / Supabase dashboard / EAS secrets, <b>not</b> in this file.
+  </div>
+
+  <div class="toolbar">
+    <div class="filters">
+      <button class="btn active" data-filter="all">All</button>
+      <button class="btn" data-filter="active">Active</button>
+      <button class="btn" data-filter="done">Done</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="expandAll">Expand all</button>
+    <button class="btn ghost" id="collapseAll">Collapse all</button>
+    <button class="btn ghost" id="resetLocal">Reset my changes</button>
+  </div>
+
+  <div id="phases"></div>
+
+  <footer>
+    Radar rewrite tracker · docs in <code>/rewrite</code> · state authored by the AI in the <code>PHASES</code> object below.
+    <div class="legend">
+      <span><i class="dot" style="background:var(--muted)"></i>To do</span>
+      <span><i class="dot" style="background:var(--amber)"></i>In progress</span>
+      <span><i class="dot" style="background:var(--green)"></i>Done</span>
+      <span><i class="dot" style="background:var(--red)"></i>Blocked</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+/* ============================================================================
+   SINGLE SOURCE OF TRUTH — the AI edits `status` fields here as work progresses.
+   status values: 'todo' | 'doing' | 'done' | 'blocked'
+   docs: array of doc numbers ('00'..'12' or 'README') shown as clickable chips.
+   ========================================================================== */
+const DOC_FILES = {
+  'README':'README.md','00':'00-project-overview.md','01':'01-current-architecture.md',
+  '02':'02-data-model.md','03':'03-feature-inventory.md','04':'04-known-issues-and-fixes.md',
+  '05':'05-state-and-navigation.md','06':'06-new-features-spec.md','07':'07-rn-expo-stack.md',
+  '08':'08-migration-plan.md','09':'09-tmdb-and-firebase.md','10':'10-code-conventions.md',
+  '11':'11-supabase-migration.md','12':'12-ui-unification-and-add-flow.md'
+};
+
+const PHASES = [
+  {
+    id:'keys', keys:true, status:'todo',
+    title:'Step 0 — Keys & Accounts  (USER ACTION REQUIRED)',
+    goal:'The AI needs these credentials/accounts before it can scaffold or migrate. Create each service, then place the values in <b>.env</b> / the Supabase dashboard / EAS secrets. Do not paste secrets into this file.',
+    docs:['11','07','09'],
+    deliver:'All keys available; the AI can start Phase 0.',
+    subtasks:[
+      {id:'k-supabase', status:'todo', text:'Create a <b>Supabase project</b> → provide <code>EXPO_PUBLIC_SUPABASE_URL</code> + <code>EXPO_PUBLIC_SUPABASE_ANON_KEY</code> (publishable key). (doc 11, 07)'},
+      {id:'k-supabase-service', status:'todo', text:'Supabase <code>service_role</code> key → for the data-migration script only, kept local/secret, never in the app bundle. (doc 11 §data-migration)'},
+      {id:'k-google-oauth', status:'todo', text:'Google Cloud <b>OAuth client IDs</b> for Sign-in: Web client ID (+ iOS & Android client IDs, Android SHA-1). Add them in Supabase Auth → Google provider. (doc 11 §auth)'},
+      {id:'k-email', status:'todo', text:'Enable <b>Email/password</b> provider in Supabase Auth; set redirect/deep-link URL <code>radar://</code>. (doc 11 §auth)'},
+      {id:'k-tmdb', status:'todo', text:'<b>TMDB</b> API read token → <code>EXPO_PUBLIC_TMDB_ACCESS_TOKEN</code> (reuse the existing <code>VITE_TMDB_ACCESS_TOKEN</code> from current <code>.env</code>). (doc 09)'},
+      {id:'k-firebase', status:'todo', text:'Access to the <b>existing Firebase project</b> (RTDB URL + a service account / DB export) — read-only, needed to export data for migration. (doc 11 §data-migration)'},
+      {id:'k-expo', status:'todo', text:'<b>Expo/EAS account</b> (for builds). Later: Apple Developer account (iOS) + Google Play account (Android). (doc 08 Phase 10)'},
+      {id:'k-decisions', status:'todo', text:'Answer the remaining <b>❓ Confirm</b> questions (swipe-tabs, carousels scope, "Other" service chip, TV rewatch UI, Hall-of-Fame layout, post-add behaviour, export shape). See README + docs 05/06/12.'},
+    ]
+  },
+  {
+    id:'p0', status:'done', title:'Phase 0 — Scaffold',
+    goal:'Stand up an empty but themed Expo app wired to Supabase.',
+    docs:['08','07','10','11'],
+    deliver:'App boots to a Login screen; theme works.',
+    subtasks:[
+      {id:'p0-1', status:'done', text:'New <b>Expo + TypeScript</b> app; install Expo Router, NativeWind, react-query, MMKV, Reanimated, gesture-handler, safe-area, expo-image, FlashList, lucide-react-native, <code>@supabase/supabase-js</code>. (doc 07)'},
+      {id:'p0-2', status:'done', text:'Theme tokens mirroring current <code>ThemeContext</code> (bg/foreground/primary/muted/border), dark default. (doc 00, 10)'},
+      {id:'p0-3', status:'done', text:'Create Supabase project; apply <b>schema + RLS + auth trigger</b> from doc 11; enable Google + email/password (magic-link dropped — not offered, not needed). (doc 11)'},
+      {id:'p0-4', status:'done', text:'<code>lib/supabase.ts</code> (client + RN session persistence); <code>EXPO_PUBLIC_*</code> env wiring for TMDB + Supabase. (doc 07, 11)'},
+      {id:'p0-5', status:'done', text:'Root <code>_layout.tsx</code> provider stack (Query → Auth → Theme → Toast → RefreshMetadata), gated on auth-resolved. (doc 01, 08)'},
+    ]
+  },
+  {
+    id:'p1', status:'done', title:'Phase 1 — Auth + data spine',
+    goal:'Sign in via all methods; movies load through Supabase into the cache.',
+    docs:['11','02','09','05','04'],
+    deliver:'Sign in (Google / email); movies load into cache.',
+    subtasks:[
+      {id:'p1-1', status:'done', text:'Supabase Auth: Google (browser OAuth + PKCE — native GoogleSignin SDK deferred, needs k-google-oauth client IDs) + email/password sign-in/sign-up; profile auto-created by DB trigger. (doc 11 §auth)'},
+      {id:'p1-2', status:'done', text:'<code>lib/tmdb.ts</code> ported from <code>src/services/tmdb.js</code> (typed) + <code>hooks/useTmdb.ts</code> react-query wrappers. (doc 09)'},
+      {id:'p1-3', status:'done', text:'<code>lib/movieStatus.ts</code> ported <b>with unit tests</b> (16 tests passing) (status mutual-exclusion + rewatch rules). (doc 02, 06)'},
+      {id:'p1-4', status:'done', text:'<code>normalizeMovie()</code> (Postgres row ⇄ app <code>Movie</code>, <code>cast_members</code>→<code>cast</code>) + shared <code>stripUndefined()</code>. (doc 02, 11)'},
+      {id:'p1-5', status:'done', text:'<code>useMovies</code> → <code>supabase.from(\'movies\')</code> select + Realtime channel feeding react-query; add/update/remove with activity logging. Verified live: signup trigger, RLS owner-vs-stranger, insert/select all confirmed against the real Supabase project. (doc 05, 11)'},
+    ]
+  },
+  {
+    id:'p2', status:'done', title:'Phase 2 — Shared UI kit (build once, use everywhere)',
+    goal:'The unified component library. Build BEFORE any screen so nothing re-implements cards.',
+    docs:['12','06','04','10'],
+    deliver:'Component gallery; all core cards render from real data via one component.',
+    subtasks:[
+      {id:'p2-1', status:'done', text:'The single <code>MovieCard</code> with <code>variant=poster|row|hero|compact</code> — no per-page card markup. (doc 12 §part-1)'},
+      {id:'p2-2', status:'done', text:'<code>MediaGrid</code> (3 size presets, FlashList) + <code>MediaCarousel</code> (port <code>ScrollingRow</code>, FlashList horizontal) — the only poster containers. (doc 12)'},
+      {id:'p2-3', status:'done', text:'Single-source subcomponents: <code>ServiceBadges</code>, <code>RatingStars</code>, <code>StatusBadge</code> (incl. new <code>Rewatch</code> kind), <code>StatusPicker</code> (shared Quick-Add/Edit, doc 06 §3 rewatch checkbox + times-watched), <code>SectionHeader</code>. (doc 12)'},
+      {id:'p2-4', status:'done', text:'<code>LoadingState</code>/<code>EmptyState</code>/<code>ErrorState</code>. (doc 04-K)'},
+      {id:'p2-5', status:'done', text:'<code>ServiceFilterChips</code> (incl. "Other" chip) + unified <code>POPULAR_SERVICES</code>/<code>SERVICE_CONFIG</code> in <code>lib/services.ts</code> (7 services, replaces legacy duplicated config + hardcoded icon map — doc 04 issue H). (doc 06 §2)'},
+      {id:'p2-6', status:'done', text:'Bottom-sheet primitive <code>components/ui/Sheet.tsx</code> via <code>@gorhom/bottom-sheet</code> (+ <code>BottomSheetModalProvider</code> wired into root layout). No native SVG logo assets — services render as colored short-label badges (single source, no icon-asset pipeline needed). Verified: typecheck clean, 16 unit tests pass, and a temporary smoke route exercising every component (grid/carousel/all 4 card variants/picker/sheet/loading/empty/error) built cleanly through Metro on web (338KB bundle, no errors) — not a real browser click-through, no browser tool available this session.'},
+    ]
+  },
+  {
+    id:'p3', status:'done', title:'Phase 3 — Library (Home)',
+    goal:'Full library screen; validates the native scroll-retention fix.',
+    docs:['03','05','06','12'],
+    deliver:'Full Library with native scroll retention on navigate-back.',
+    subtasks:[
+      {id:'p3-1', status:'done', text:'Introduced the <code>(tabs)</code> group (doc 05 route tree) — bottom <code>Tabs</code> shell with Library/Browse/Stats/Friends/Settings (last 4 are Phase 4/7/8/9 placeholders; Settings has a working sign-out since it replaced the old bare Index screen). <code>(tabs)/index.tsx</code> + <code>LibraryToolbar</code>, <code>LibraryFilterSheet</code>, <code>LibrarySection</code>, <code>LibraryMainList</code> (grid/list, virtualized FlashList), <code>LibraryGroupedList</code>, <code>useLibraryFilters</code>, <code>useLibraryReorder</code>. Added a placeholder <code>edit/[movieId]</code> route (real screen is Phase 5) so tap-through has a real destination. (doc 03)'},
+      {id:'p3-2', status:'done', text:'Filters/sort/group/view in <code>store/libraryPrefs.ts</code> (zustand +  MMKV-backed <code>persist</code> via <code>lib/mmkvStorage.ts</code>), no sessionStorage. Search text stays local component state (ephemeral tier). (doc 05)'},
+      {id:'p3-3', status:'done', text:'Sections: <b>Continue watching (carousel — new #1)</b>, Recently added, Coming soon — all three as <code>MediaCarousel</code> under a shared <code>SectionHeader</code> via <code>LibrarySection</code>. (doc 06 §1)'},
+      {id:'p3-4', status:'done', text:'Reorder via <code>react-native-draggable-flatlist</code> (long-press drag), swapped in by <code>LibraryMainList</code> only when <code>isReorderEnabled</code> (custom sort, no group/search/status/service filters) — persists <code>customOrder</code> silently (no activity-log spam, added an <code>updateMovie(...,{silent:true})</code> option for this). Random-pick sheet ported from <code>RandomPickModal.jsx</code> (same spin algorithm) via the <code>Sheet</code> primitive. (doc 03)'},
+      {id:'p3-5', status:'done', text:'Service filter chips (new #2, incl. "Other") + rewatch badge/filter (new #3, <code>isRewatch()</code> added to <code>movieStatus.ts</code>) both wired into <code>LibraryFilterSheet</code> and <code>useLibraryFilters</code>. (doc 06 §2,§3)'},
+      {id:'p3-6', status:'done', text:'Fixed <code>lib/mmkvStorage.ts</code> using react-native-mmkv v4\'s real API (<code>remove()</code>, not <code>delete()</code>). Disabled <code>app.json</code> <code>experiments.typedRoutes</code> — its generated route union proved unstable across regenerations for dynamic segments and the transparent <code>(tabs)</code> group (observed live during this phase); used <code>as Href</code>/object-form <code>pathname</code> at the 2 call sites already written rather than fighting it further. <b>Deferred:</b> swipe-between-main-tabs (doc 05 confirmed want) - shipped standard bottom tabs now since 4 of 5 tabs are still placeholders; revisit with material-top-tabs once Phase 4/7/8/9 give every tab real content. Verified: typecheck clean, 22 unit tests pass (16 movieStatus + 6 new <code>movieMatchesSearchQuery</code>), and the full route tree (tabs shell, Library screen, edit stub) built cleanly through Metro on web (344KB bundle, no errors). Not a real browser click-through/login — no browser tool available this session.'},
+    ]
+  },
+  {
+    id:'p4', status:'done', title:'Phase 4 — Browse (with stability fix)',
+    goal:'Discovery feed that no longer reshuffles every visit.',
+    docs:['04','05','03','12'],
+    deliver:'Browse content stable across visits; scroll restored on return.',
+    subtasks:[
+      {id:'p4-1', status:'done', text:'<code>(tabs)/browse.tsx</code> + <code>BrowseHero</code>, <code>BrowseTabs</code>, <code>BrowseSearchBar</code>, <code>DiscoveryRow</code>, <code>SearchResultsGrid</code> (mixes <code>MovieCard</code> media results with dedicated person/genre tiles - not pure <code>MediaGrid</code>, which is movies-only). <code>toDiscoveryMovie()</code> adapts raw TMDB items into a display-only <code>Movie</code> stub so the single <code>MovieCard</code> still renders them (with <code>showStatus=false</code> so untracked items don\'t show a fake Watchlist badge). Added placeholder routes <code>movie/[tmdbId]/[type]</code>, <code>director/[id]</code>, <code>actor/[id]</code>, <code>genre/[id]</code> (Phase 5/6) so tap-through has real destinations. (doc 03, 12)'},
+      {id:'p4-2', status:'done', text:'<code>useDiscoveryFeed</code>: react-query <code>useInfiniteQuery</code>, seed = <code>day-number*1000+rerollNonce</code> fed through a <code>mulberry32</code> PRNG (<code>seededRandom.ts</code>) instead of legacy\'s per-mount <code>Math.random()</code> - same day+tab+reroll always returns the same cached pages (doc 04-B fix). Pull-to-refresh bumps <code>rerollNonce</code>; infinite scroll via <code>onScroll</code> near-bottom + <code>fetchNextPage</code>, capped at 6 batches. staleTime 1h / gcTime 24h. (doc 04-B, 05)'},
+      {id:'p4-3', status:'done', text:'Universal search (500ms debounce, <code>useBrowseSearch</code>) + result-type filter sheet (<code>BrowseResultFilterSheet</code>). Quick add/remove through the new shared <code>useQuickAdd</code> (<code>src/features/movies/add/</code>, Watchlist default) - Browse and the future Phase 5 QuickAddSheet share this one code path. Verified: typecheck clean, 22 unit tests pass, <code>expo export --platform web</code> builds the full route tree (5MB bundle, no errors). Not a real browser click-through - no browser tool available this session. (doc 03, 12)'},
+    ]
+  },
+  {
+    id:'p5', status:'done', title:'Phase 5 — Detail / Quick-Add / Edit',
+    goal:'Simplified add + full edit; back-compatible writes.',
+    docs:['12','03','06','02'],
+    deliver:'Quick-Add (name→pick→status) and full Edit round-trip write correct payloads.',
+    subtasks:[
+      {id:'p5-1', status:'done', text:'Stack screens <code>movie/[tmdbId]/[type]</code>, <code>edit/[movieId]</code>. (doc 03)'},
+      {id:'p5-2', status:'done', text:'<b>Quick-Add sheet</b> (replaces old 2-tab Add): <code>QuickAddSheet</code>, <code>AddSearchResults</code>, <code>StatusPicker</code>, <code>useQuickAdd</code> (+ <code>addWithStatus</code>/<code>addManual</code>). Reachable via a new Library "+" FAB; Browse\'s existing quick-add buttons keep using the same hook\'s <code>add()</code>. (doc 12 §part-2)'},
+      {id:'p5-3', status:'done', text:'Edit split: <code>EditBasicTab</code>/<code>EditEpisodesTab</code>/<code>EditDetailsTab</code>/<code>EditRatingsTab</code>, <code>RatingSlider</code> (tap-to-set, no native range input in RN), <code>SeasonRatings</code>, <code>EpisodeList</code>, <code>useEditMovieForm</code>, <code>buildMoviePayload</code> (pure, 8 jest tests). TV\'s legacy On-Hold/Dropped tvStatus states dropped - doc 02\'s boolean-flag model only has watchlist/in-progress/watched, so Basic tab reuses the same <code>StatusPicker</code> for movie and TV. Cineby external-play integration and the legacy per-tab metadata/similar-movies sections were not ported (not called out in doc 03\'s Phase-5 component split). (doc 03)'},
+      {id:'p5-4', status:'done', text:'Rewatch UX (new #3) via shared <code>StatusPicker</code> (built Phase 2) + card badge (built Phase 3); smart-fill (TMDB refetch by tmdbId or title search), availability toggles (full <code>SERVICE_CONFIG</code> list, not just the 7 filter chips), delete (new shared <code>ConfirmDialog</code>). Verified: typecheck clean, 32 unit tests pass (8 new for <code>buildMoviePayload</code>/<code>recalcOverall</code>/<code>recalcSeasonsAverage</code>), <code>expo export --platform web</code> builds the full route tree incl. the new Detail/Edit screens (5.1MB bundle, no errors). Not a real browser click-through - no browser tool available this session. (doc 06 §3)'},
+    ]
+  },
+  {
+    id:'p6', status:'done', title:'Phase 6 — Person / Genre',
+    goal:'Cast/genre navigation end-to-end.',
+    docs:['03','12','09'],
+    deliver:'Navigation from cast/genre chips works end-to-end.',
+    subtasks:[
+      {id:'p6-1', status:'done', text:'<code>director/[id]</code> (bio + full filmography via <code>fetchDirectorMovies</code>, not paginated) and <code>actor/[id]</code>/<code>genre/[id]</code> (paginated via new <code>useActorMoviesInfinite</code>/<code>useGenreMoviesInfinite</code>, infinite-scroll <code>MediaGrid</code> instead of legacy\'s "load more" button) built on the existing placeholder routes. Shared <code>PersonHero</code> (blurred-profile bio header) for Director/Actor; <code>toDiscoveryMovie()</code> widened to accept TMDB <code>CreditItem</code>; <code>MediaGrid</code> gained <code>ListHeaderComponent</code>/<code>ListFooterComponent</code>/<code>onEndReached</code> (same convention as <code>LibraryMainList</code>) so bio+grid share one scroll. Genre name resolved from the cached genre list (no hardcoded id→name table). Verified: typecheck clean (1 pre-existing unrelated <code>global.css</code> error only), 32 unit tests pass, <code>expo export --platform web</code> builds the full route tree (5.1MB bundle, no errors). Not a real browser click-through - no browser tool available this session. <b>Fix (user-reported):</b> all 3 screens returned bare <code>MediaGrid</code>/<code>LoadingState</code>/<code>ErrorState</code> with no background wrapper, so they sat on the native-stack\'s default white screen background instead of the app\'s dark theme - in dark mode this also made <code>text-foreground</code> copy (the genre header, mostly text with no poster underneath) render near-invisible, i.e. the genre page looked blank/"missing" while Director/Actor at least showed visible posters. Wrapped every branch of all 3 screens in <code>&lt;View className="flex-1 bg-background"&gt;</code>, matching the convention already used in Browse/Library. Re-verified: typecheck + 32 tests clean. (doc 03, 12)'},
+    ]
+  },
+  {
+    id:'p7', status:'todo', title:'Phase 7 — Stats (+ Hall of Fame)',
+    goal:'Stats parity plus the perfect-score showcase.',
+    docs:['03','06','12'],
+    deliver:'Stats parity + Hall of Fame.',
+    subtasks:[
+      {id:'p7-1', status:'todo', text:'<code>(tabs)/stats.tsx</code> + port <code>components/stats/*</code> (charts → react-native-svg). (doc 03, 07)'},
+      {id:'p7-2', status:'todo', text:'Streak calendars (movie + TV), overview, breakdowns, genres, eras, directors, history. (doc 03)'},
+      {id:'p7-3', status:'todo', text:'<b>Hall of Fame</b> section — <code>ratings.overall === 5</code>, as <code>MediaCarousel</code>. (doc 06 §4)'},
+      {id:'p7-4', status:'todo', text:'Completion managers (<code>manage-completions</code>, <code>manage-tv-completions</code>). (doc 03)'},
+    ]
+  },
+  {
+    id:'p8', status:'todo', title:'Phase 8 — Social',
+    goal:'Friends + public shelf (also on Web).',
+    docs:['03','11','05'],
+    deliver:'Friend flow + public links; verified on Expo Web.',
+    subtasks:[
+      {id:'p8-1', status:'todo', text:'<code>(tabs)/friends.tsx</code>, <code>FriendRequestListener</code> (Realtime), user search, requests, friend list. (doc 03, 11)'},
+      {id:'p8-2', status:'todo', text:'Public shelf <code>u/[userId]/*</code> (library/stats/friends) + public chrome; RLS-gated reads. (doc 11 §rls)'},
+    ]
+  },
+  {
+    id:'p9', status:'todo', title:'Phase 9 — Settings & data',
+    goal:'Settings parity + data tools.',
+    docs:['03','07','11'],
+    deliver:'Settings parity.',
+    subtasks:[
+      {id:'p9-1', status:'todo', text:'Theme, watch-provider country, recently-added config, privacy/visibility, streak thresholds → <code>user_settings</code>. (doc 03, 11)'},
+      {id:'p9-2', status:'todo', text:'Refresh metadata (port <code>RefreshMetadataContext</code>; background-safe with progress). (doc 03)'},
+      {id:'p9-3', status:'todo', text:'Edit profile with <code>expo-image-manipulator</code> crop; Import/Export JSON (stable format). (doc 03, 02)'},
+    ]
+  },
+  {
+    id:'mig', status:'doing', title:'Data Migration — RTDB → Postgres',
+    goal:'Move real data faithfully; runs in parallel, cutover at the end.',
+    docs:['11','02'],
+    deliver:'Real account migrated; field-by-field diff clean.',
+    subtasks:[
+      {id:'mig-1', status:'done', text:'Export RTDB JSON from the existing Firebase project — <code>rewrite/radar-watchlist-default-rtdb-export.json</code> (4 RTDB users; 1 real account, 483 movies). (doc 11 §data-migration)'},
+      {id:'mig-2', status:'done', text:'<code>scripts/migrate-data.ts</code> (<code>npm run migrate:data</code>): since RTDB has no emails and the real auth user already exists (created via Google sign-in in Phase 1), maps the RTDB account with the most movies onto an <b>existing</b> Supabase auth user picked via <code>--target-email</code>/<code>--target-uid</code> — no auth users are created. (doc 11)'},
+      {id:'mig-3', status:'done', text:'Script transforms movies/activity/settings through <code>migrateStatus</code>/<code>normalizeServiceName</code>/<code>stripUndefined</code> (reused from <code>src/lib</code>); ms→ISO timestamptz; type defaults to "movie" / "TV Show"→"tv"; skips corrupt nodes (no title & no tmdbId). (doc 11, 02)'},
+      {id:'mig-4', status:'done', text:'Migrated the real account (uid <code>RlR5U…</code>, 483 movies) into <code>mrmichu220@gmail.com</code>\'s Supabase user. Verified: 482/482 movies (1 corrupt RTDB node skipped) + 347/347 activity rows landed, profile (username/display_name/pfp) and user_settings upserted, sample rows spot-checked. Friends (1) skipped — no Supabase mapping yet for the friend\'s RTDB uid. (doc 08, 11)'},
+      {id:'mig-5', status:'todo', text:'Cutover: freeze Firebase writes → final export → re-run <code>migrate:data --force</code> → point app at prod Supabase; keep Firebase read-only backup. (doc 11)'},
+    ]
+  },
+  {
+    id:'p10', status:'todo', title:'Phase 10 — Platform polish & release',
+    goal:'Ship on Android + iOS + Web.',
+    docs:['08','07','05'],
+    deliver:'Shippable builds on all three targets.',
+    subtasks:[
+      {id:'p10-1', status:'todo', text:'Deep links (<code>radar://</code> + public-shelf URLs), splash/icon (from <code>assets/</code>), safe areas, keyboard. (doc 09, 07)'},
+      {id:'p10-2', status:'todo', text:'Expo <b>Web</b> pass (public shelf must work). (doc 00, 08)'},
+      {id:'p10-3', status:'todo', text:'Performance: FlashList tuning, image cache, memoized selectors. (doc 04, 05)'},
+      {id:'p10-4', status:'todo', text:'EAS builds Android + iOS; web deploy. Add Apple Sign-In before iOS submission. (doc 08, 11)'},
+      {id:'p10-5', status:'todo', text:'Testing checkpoints: migration fidelity, scroll restoration, Browse stability, status matrix. (doc 08 §testing)'},
+    ]
+  },
+];
+
+/* ---- state overlay (user's manual clicks) -------------------------------- */
+const LS_KEY = 'radar_rewrite_progress_v1';
+let overlay = {};
+try { overlay = JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(e){ overlay = {}; }
+const saveOverlay = () => { try{ localStorage.setItem(LS_KEY, JSON.stringify(overlay)); }catch(e){} };
+
+const STATUS_ORDER = ['todo','doing','done','blocked'];
+const STATUS_LABEL = {todo:'To do', doing:'Doing', done:'Done', blocked:'Blocked'};
+
+const effTaskStatus = p => overlay['task:'+p.id] || p.status;
+const effSubStatus  = (p,s) => overlay['sub:'+p.id+':'+s.id] || s.status;
+
+/* ---- rendering ----------------------------------------------------------- */
+const phasesEl = document.getElementById('phases');
+let filter = 'all';
+
+function subDone(st){ return st === 'done'; }
+
+function computeCounts(){
+  let total=0, done=0;
+  PHASES.forEach(p => p.subtasks.forEach(s => { total++; if(subDone(effSubStatus(p,s))) done++; }));
+  return {total, done};
+}
+
+function render(){
+  phasesEl.innerHTML = '';
+  PHASES.forEach(p => {
+    const done = p.subtasks.filter(s => subDone(effSubStatus(p,s))).length;
+    const tot = p.subtasks.length;
+    const tStatus = effTaskStatus(p);
+    // auto-reflect: if all subs done, show done tint on count only (don't override explicit status)
+    const isDoneish = tStatus==='done' || (tot>0 && done===tot);
+    if(filter==='active' && (isDoneish)) return;
+    if(filter==='done' && !isDoneish) return;
+
+    const ph = document.createElement('div');
+    ph.className = 'phase' + (p.keys?' keys':'') + (openState[p.id]?' open':'');
+    ph.innerHTML = `
+      <div class="phead" data-toggle="${p.id}">
+        <span class="chev">▶</span>
+        <div class="ptitle">${p.title}</div>
+        <div class="pmeta">
+          <div class="minibar"><i style="width:${tot?Math.round(done/tot*100):0}%"></i></div>
+          <span class="count">${done}/${tot}</span>
+          <span class="pill st-${tStatus}" data-taskpill="${p.id}">${STATUS_LABEL[tStatus]}</span>
+        </div>
+      </div>
+      <div class="pbody">
+        <div class="goal">${p.goal}</div>
+        <div class="docrow"><span class="lbl">Read</span>${
+          p.docs.map(d=>`<a class="doc" href="./${DOC_FILES[d]}" target="_blank" rel="noopener">${d==='README'?'README':'doc '+d}</a>`).join('')
+        }</div>
+        <ul class="subs">${
+          p.subtasks.map(s=>{
+            const ss = effSubStatus(p,s);
+            const mark = ss==='done'?'✓':(ss==='doing'?'●':(ss==='blocked'?'✕':''));
+            return `<li class="${ss==='done'?'done':''}">
+              <div class="ck ${ss}" data-subck="${p.id}:${s.id}" title="click: toggle done · shift-click: cycle">${mark}</div>
+              <div class="stext">${s.text}</div>
+            </li>`;
+          }).join('')
+        }</ul>
+        <div class="deliver"><b>Deliverable:</b> ${p.deliver}</div>
+      </div>`;
+    phasesEl.appendChild(ph);
+  });
+  const {total, done} = computeCounts();
+  const pct = total?Math.round(done/total*100):0;
+  document.getElementById('overallBar').style.width = pct+'%';
+  document.getElementById('overallPct').textContent = `${done} / ${total} subtasks · ${pct}%`;
+}
+
+const openState = {}; PHASES.forEach((p,i)=> openState[p.id] = (p.keys===true || i<=1));
+
+/* ---- interactions -------------------------------------------------------- */
+phasesEl.addEventListener('click', e => {
+  const tog = e.target.closest('[data-toggle]');
+  const pill = e.target.closest('[data-taskpill]');
+  const ck = e.target.closest('[data-subck]');
+
+  if(ck){
+    const [pid,sid] = ck.getAttribute('data-subck').split(':');
+    const p = PHASES.find(x=>x.id===pid); const s = p.subtasks.find(x=>x.id===sid);
+    const cur = effSubStatus(p,s);
+    let next;
+    if(e.shiftKey){ next = STATUS_ORDER[(STATUS_ORDER.indexOf(cur)+1)%STATUS_ORDER.length]; }
+    else { next = cur==='done' ? 'todo' : 'done'; }
+    overlay['sub:'+pid+':'+sid] = next; saveOverlay(); render(); return;
+  }
+  if(pill){
+    const pid = pill.getAttribute('data-taskpill');
+    const p = PHASES.find(x=>x.id===pid);
+    const cur = effTaskStatus(p);
+    overlay['task:'+pid] = STATUS_ORDER[(STATUS_ORDER.indexOf(cur)+1)%STATUS_ORDER.length];
+    saveOverlay(); render(); return;
+  }
+  if(tog){ const id = tog.getAttribute('data-toggle'); openState[id] = !openState[id]; render(); }
+});
+
+document.querySelectorAll('.filters .btn').forEach(b => b.addEventListener('click', ()=>{
+  document.querySelectorAll('.filters .btn').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); filter = b.getAttribute('data-filter'); render();
+}));
+document.getElementById('expandAll').onclick = ()=>{ PHASES.forEach(p=>openState[p.id]=true); render(); };
+document.getElementById('collapseAll').onclick = ()=>{ PHASES.forEach(p=>openState[p.id]=false); render(); };
+document.getElementById('resetLocal').onclick = ()=>{ overlay = {}; saveOverlay(); render(); };
+
+render();
+</script>
+</body>
+</html>

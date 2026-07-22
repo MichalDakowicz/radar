@@ -547,7 +547,6 @@ export default function MovieDetails() {
                     {/* Overview */}
                     <div className="space-y-4">
                         <h3 className="text-2xl font-bold text-white flex items-center gap-2">
-                            <StickyNote className="text-yellow-500" />
                             Overview
                         </h3>
                         <p className="text-neutral-400 leading-relaxed text-lg">

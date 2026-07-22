@@ -674,14 +674,7 @@ export default function EditMovie() {
                     )}
                     {activeTab === "details" && (
                         <div className="space-y-8 max-w-3xl mx-auto">
-                            <div>
-                                <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
-                                    Internal ID
-                                </label>
-                                <div className="w-full bg-neutral-900/50 border border-neutral-800 text-neutral-500 px-4 py-3 rounded-xl text-sm font-mono select-all">
-                                    {tmdbId || "N/A"}
-                                </div>
-                            </div>
+                            
                             <div>
                                 <label className="block text-xs font-medium text-neutral-500 uppercase tracking-wider mb-2">
                                     Genres

@@ -1,0 +1,630 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --acc: oklch(0.623 0.214 259.815);
+  --acc-dim: oklch(0.623 0.214 259.815 / 0.15);
+  --acc-border: oklch(0.623 0.214 259.815 / 0.35);
+  --bg0:#08090C;--bg1:#0F1014;--bg2:#16171D;--bg3:#1E1F27;
+  --t1:#F2F2F5;--t2:#8A8B96;--t3:#44454F;
+  --border:#1E1F27;--border2:#2A2B35;
+}
+.app{background:var(--bg0);color:var(--t1);font-family:'Space Grotesk',sans-serif;border-radius:14px;overflow:hidden;min-height:700px;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 24px 0;flex-shrink:0}
+.logo{font-size:14px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--t1)}
+.logo em{color:var(--acc);font-style:normal}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--bg3);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--t2);cursor:pointer}
+.tabs{display:flex;gap:2px;padding:16px 24px 0;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{display:flex;align-items:center;gap:7px;padding:10px 16px;font-size:12px;font-weight:500;letter-spacing:0.05em;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color 0.15s;border-radius:6px 6px 0 0;background:transparent;border-left:none;border-right:none;border-top:none;font-family:inherit}
+.tab i{font-size:15px}
+.tab:hover{color:var(--t2)}
+.tab.on{color:var(--acc);border-bottom-color:var(--acc)}
+.content{flex:1;overflow:auto;padding:24px}
+.panel{display:none}
+.panel.on{display:block}
+
+/* LIBRARY */
+.featured{position:relative;border-radius:12px;overflow:hidden;height:200px;margin-bottom:28px;cursor:pointer;background:var(--bg2)}
+.feat-art{position:absolute;inset:0;background:linear-gradient(135deg,#0d1b3e 0%,#1a2f6e 50%,#0a4a8c 100%);transition:transform 0.5s ease;background-size:cover;background-position:center}
+.featured:hover .feat-art{transform:scale(1.03)}
+.feat-veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,9,12,0.97) 0%,rgba(8,9,12,0.45) 55%,transparent 100%)}
+.feat-pill{position:absolute;top:14px;right:14px;background:var(--acc);color:#fff;font-size:10px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;padding:4px 10px;border-radius:99px}
+.feat-body{position:absolute;bottom:0;left:0;right:0;padding:18px 20px;z-index:2}
+.feat-tags{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.feat-genre{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--acc)}
+.feat-dot{width:2px;height:2px;border-radius:50%;background:var(--t3)}
+.feat-sub{font-size:11px;color:var(--t3)}
+.feat-title{font-size:20px;font-weight:700;letter-spacing:-0.02em;margin-bottom:3px}
+.feat-desc{font-size:11px;color:var(--t2);line-height:1.5;max-width:380px}
+.feat-btns{position:absolute;bottom:18px;right:20px;display:flex;gap:7px;z-index:3}
+.btn-acc{display:flex;align-items:center;gap:5px;background:var(--acc);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:opacity 0.15s}
+.btn-acc:hover{opacity:0.88}
+.btn-ghost{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);color:var(--t2);border:0.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 12px;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s}
+.btn-ghost:hover{background:rgba(255,255,255,0.12);color:var(--t1)}
+.feat-bar{position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--bg3)}
+.feat-fill{height:100%;background:var(--acc);width:58%}
+
+.sh{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.sh-label{font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3)}
+.sh-count{font-size:11px;color:var(--t3)}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:28px}
+.card{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:2/3;background:var(--bg2);cursor:pointer}
+.card-art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;transition:transform 0.4s cubic-bezier(.25,.46,.45,.94);background-size:cover;background-position:center}
+.card:hover .card-art{transform:scale(1.06)}
+.card-veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,9,12,0.97) 0%,rgba(8,9,12,0.4) 50%,transparent 100%);opacity:0;transition:opacity 0.28s;z-index:2}
+.card:hover .card-veil{opacity:1}
+.card-info{position:absolute;bottom:0;left:0;right:0;padding:12px 10px 10px;z-index:3;transform:translateY(6px);transition:transform 0.28s;opacity:0}
+.card:hover .card-info{opacity:1;transform:translateY(0)}
+.card-title{font-size:12px;font-weight:600;color:#fff;line-height:1.3;margin-bottom:3px}
+.card-meta{display:flex;align-items:center;gap:5px}
+.card-year{font-size:10px;color:var(--t2)}
+.card-sep{width:2px;height:2px;border-radius:50%;background:var(--t3)}
+.card-rating{font-size:10px;color:var(--acc);font-weight:600}
+.card-acts{position:absolute;top:8px;right:8px;display:flex;gap:5px;z-index:4;opacity:0;transform:translateY(-4px);transition:all 0.22s}
+.card:hover .card-acts{opacity:1;transform:translateY(0)}
+.ib{width:26px;height:26px;border-radius:50%;background:rgba(8,9,12,0.72);border:0.5px solid rgba(255,255,255,0.13);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s}
+.ib i{font-size:12px;color:var(--t2)}
+.ib:hover{background:var(--acc-dim);border-color:var(--acc-border)}
+.ib:hover i{color:var(--acc)}
+.card-badge{position:absolute;top:8px;left:8px;z-index:4;font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:3px 7px;border-radius:4px}
+.b-new{background:var(--acc);color:#fff}
+.b-wip{background:var(--acc-dim);color:var(--acc);border:0.5px solid var(--acc-border)}
+.b-done{background:rgba(255,255,255,0.05);color:var(--t3);border:0.5px solid var(--border2)}
+.card-bar{position:absolute;bottom:0;left:0;right:0;height:2.5px;background:var(--bg3);z-index:5}
+.card-fill{height:100%;background:var(--acc)}
+
+/* SKELETON */
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skeleton{background:linear-gradient(90deg,var(--bg2) 25%,var(--bg3) 50%,var(--bg2) 75%);background-size:200% 100%;animation:shimmer 1.5s ease-in-out infinite;border-radius:10px}
+
+/* SEARCH TAB */
+.search-hero{display:flex;align-items:center;gap:10px;background:var(--bg2);border:0.5px solid var(--border2);border-radius:10px;padding:12px 16px;margin-bottom:24px}
+.search-hero i{font-size:18px;color:var(--t3)}
+.search-hero input{background:transparent;border:none;outline:none;font-family:inherit;font-size:14px;color:var(--t1);flex:1}
+.search-hero input::placeholder{color:var(--t3)}
+.filter-row{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.filter-chip{font-family:inherit;font-size:11px;font-weight:500;padding:5px 12px;border-radius:99px;border:0.5px solid var(--border2);background:transparent;color:var(--t3);cursor:pointer;transition:all 0.15s;letter-spacing:0.04em}
+.filter-chip.on{background:var(--acc-dim);border-color:var(--acc-border);color:var(--acc)}
+.filter-chip:hover:not(.on){color:var(--t2);border-color:var(--t3)}
+
+/* EXPLORE RESULTS GRID */
+.explore-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.explore-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:border-color 0.15s;position:relative}
+.explore-card:hover{border-color:var(--acc-border)}
+.explore-poster{width:100%;aspect-ratio:2/3;background:var(--bg3);background-size:cover;background-position:center;position:relative}
+.explore-poster-fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px;color:var(--t3)}
+.explore-body{padding:10px}
+.explore-title{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.explore-sub{font-size:10px;color:var(--t2);margin-bottom:8px}
+.explore-add{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--acc);background:var(--acc-dim);border:0.5px solid var(--acc-border);padding:4px 8px;border-radius:99px;width:fit-content;cursor:pointer;transition:all 0.15s;font-family:inherit}
+.explore-add:hover{background:var(--acc);color:#fff}
+.explore-add.added{background:rgba(255,255,255,0.05);color:var(--t3);border-color:var(--border2);cursor:default}
+
+/* STATS TAB */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:28px}
+.stat{background:var(--bg1);border:0.5px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat-label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);margin-bottom:5px}
+.stat-val{font-size:22px;font-weight:700;letter-spacing:-0.02em;color:var(--t1)}
+.stat-val span{font-size:12px;font-weight:400;color:var(--t3);margin-left:2px}
+.stat-sub{font-size:11px;color:var(--acc);margin-top:2px}
+.chart-card{background:var(--bg1);border:0.5px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
+.chart-title{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--t3);margin-bottom:16px}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:100px}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.bar{width:100%;border-radius:4px 4px 0 0;background:var(--bg3);transition:background 0.2s;cursor:pointer}
+.bar:hover{background:var(--acc-dim)}
+.bar.hi{background:var(--acc)}
+.bar-lbl{font-size:10px;color:var(--t3)}
+.genre-list{display:flex;flex-direction:column;gap:10px}
+.genre-row{display:flex;align-items:center;gap:10px}
+.genre-name{font-size:12px;color:var(--t2);width:80px;flex-shrink:0}
+.genre-track{flex:1;height:6px;background:var(--bg3);border-radius:99px;overflow:hidden}
+.genre-fill{height:100%;background:var(--acc);border-radius:99px}
+.genre-pct{font-size:11px;color:var(--t3);width:32px;text-align:right;flex-shrink:0}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* SETTINGS TAB */
+.sett-section{margin-bottom:24px}
+.sett-heading{font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);margin-bottom:12px;padding-bottom:8px;border-bottom:0.5px solid var(--border)}
+.sett-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:0.5px solid var(--border)}
+.sett-row:last-child{border-bottom:none}
+.sett-name{font-size:13px;font-weight:500;color:var(--t1)}
+.sett-desc{font-size:11px;color:var(--t3);margin-top:2px}
+.toggle{width:38px;height:22px;border-radius:99px;background:var(--bg3);border:0.5px solid var(--border2);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0}
+.toggle.on{background:var(--acc);border-color:transparent}
+.toggle-dot{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 0.2s}
+.toggle.on .toggle-dot{transform:translateX(16px)}
+.sett-select{background:var(--bg2);border:0.5px solid var(--border2);border-radius:7px;padding:6px 10px;font-family:inherit;font-size:12px;color:var(--t1);outline:none;cursor:pointer}
+.profile-card{display:flex;align-items:center;gap:14px;background:var(--bg2);border:0.5px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px}
+.profile-avatar{width:44px;height:44px;border-radius:50%;background:var(--acc-dim);border:1.5px solid var(--acc-border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--acc)}
+.profile-name{font-size:14px;font-weight:600;color:var(--t1)}
+.profile-sub{font-size:11px;color:var(--t3)}
+
+/* EMPTY / LOADING STATES */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;color:var(--t3)}
+.empty-state i{font-size:32px;margin-bottom:12px;color:var(--t3)}
+.empty-state p{font-size:12px;line-height:1.6;max-width:260px}
+.loading-dots{display:flex;gap:5px;justify-content:center;margin-top:8px}
+.loading-dots span{width:5px;height:5px;border-radius:50%;background:var(--acc);animation:dot-bounce 1.2s ease-in-out infinite}
+.loading-dots span:nth-child(2){animation-delay:0.2s}
+.loading-dots span:nth-child(3){animation-delay:0.4s}
+@keyframes dot-bounce{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--bg3);border:0.5px solid var(--border2);border-radius:8px;padding:9px 16px;font-size:12px;color:var(--t1);opacity:0;transition:all 0.25s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+<div class="app">
+  <div class="topbar">
+    <div class="logo">Watch<em>list</em></div>
+    <div class="avatar">JK</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="library"><i class="ti ti-layout-grid" aria-hidden="true"></i> Library</button>
+    <button class="tab" data-tab="search"><i class="ti ti-search" aria-hidden="true"></i> Explore</button>
+    <button class="tab" data-tab="stats"><i class="ti ti-chart-bar" aria-hidden="true"></i> Stats</button>
+    <button class="tab" data-tab="settings"><i class="ti ti-settings" aria-hidden="true"></i> Settings</button>
+  </div>
+
+  <div class="content">
+
+    <!-- LIBRARY PANEL — no stat cards -->
+    <div class="panel on" id="panel-library">
+
+      <div class="featured" id="feat-banner">
+        <div class="feat-art" id="feat-art"></div>
+        <div class="feat-veil"></div>
+        <div class="feat-pill">Continue watching</div>
+        <div class="feat-body">
+          <div class="feat-tags">
+            <span class="feat-genre">Sci-fi</span>
+            <div class="feat-dot"></div>
+            <span class="feat-sub">2023 · Series · S2 E4</span>
+          </div>
+          <div class="feat-title">Silo</div>
+          <div class="feat-desc">In a ruined future, thousands live underground in a silo that may be all that stands between them and a hostile world.</div>
+        </div>
+        <div class="feat-btns">
+          <button class="btn-acc"><i class="ti ti-player-play" aria-hidden="true" style="font-size:11px"></i> Resume</button>
+          <button class="btn-ghost"><i class="ti ti-info-circle" aria-hidden="true" style="font-size:11px"></i> Details</button>
+        </div>
+        <div class="feat-bar"><div class="feat-fill"></div></div>
+      </div>
+
+      <div class="sh"><span class="sh-label">Up next</span><span class="sh-count" id="upnext-count">8 titles</span></div>
+      <div class="grid" id="grid-upnext"></div>
+
+      <div class="sh"><span class="sh-label">Recently finished</span><span class="sh-count">3 titles</span></div>
+      <div class="grid" id="grid-finished"></div>
+    </div>
+
+    <!-- EXPLORE / SEARCH PANEL -->
+    <div class="panel" id="panel-search">
+      <div class="search-hero">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input id="search-input" placeholder="Search movies & series…" autocomplete="off" />
+      </div>
+      <div class="filter-row" id="filters">
+        <button class="filter-chip on" data-filter="0">All</button>
+        <button class="filter-chip" data-filter="movie">Movies</button>
+        <button class="filter-chip" data-filter="tv">Series</button>
+      </div>
+      <div class="sh" id="explore-heading"><span class="sh-label">Trending now</span></div>
+      <div class="explore-grid" id="explore-grid">
+        <div class="empty-state" style="grid-column:1/-1"><div class="loading-dots"><span></span><span></span><span></span></div></div>
+      </div>
+    </div>
+
+    <!-- STATS PANEL -->
+    <div class="panel" id="panel-stats">
+      <div class="stats-row">
+        <div class="stat"><div class="stat-label">Total titles</div><div class="stat-val" id="stat-total">–</div><div class="stat-sub">in your list</div></div>
+        <div class="stat"><div class="stat-label">Hours watched</div><div class="stat-val">214</div><div class="stat-sub">≈ 9 full days</div></div>
+        <div class="stat"><div class="stat-label">Avg rating</div><div class="stat-val">8.4</div><div class="stat-sub">your picks</div></div>
+        <div class="stat"><div class="stat-label">This month</div><div class="stat-val">7</div><div class="stat-sub">titles watched</div></div>
+      </div>
+      <div class="two-col">
+        <div class="chart-card">
+          <div class="chart-title">Titles per month</div>
+          <div class="bar-chart" id="bar-chart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">By genre</div>
+          <div class="genre-list" id="genre-list"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Watch activity — last 12 weeks</div>
+        <div id="heatmap" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PANEL -->
+    <div class="panel" id="panel-settings">
+      <div class="profile-card">
+        <div class="profile-avatar">JK</div>
+        <div><div class="profile-name">Jan Kowalski</div><div class="profile-sub" id="profile-sub">Member since January 2023 · 0 titles</div></div>
+      </div>
+      <div class="sett-section">
+        <div class="sett-heading">Appearance</div>
+        <div class="sett-row">
+          <div><div class="sett-name">Theme</div><div class="sett-desc">Interface color scheme</div></div>
+          <select class="sett-select"><option>Dark</option><option>System</option></select>
+        </div>
+        <div class="sett-row">
+          <div><div class="sett-name">Compact view</div><div class="sett-desc">Smaller cards, more titles per row</div></div>
+          <div class="toggle" data-toggle><div class="toggle-dot"></div></div>
+        </div>
+        <div class="sett-row">
+          <div><div class="sett-name">Show ratings</div><div class="sett-desc">Display TMDB ratings on cards</div></div>
+          <div class="toggle on" data-toggle><div class="toggle-dot"></div></div>
+        </div>
+      </div>
+      <div class="sett-section">
+        <div class="sett-heading">Notifications</div>
+        <div class="sett-row">
+          <div><div class="sett-name">New episodes</div><div class="sett-desc">Alert when a series you track gets a new episode</div></div>
+          <div class="toggle on" data-toggle><div class="toggle-dot"></div></div>
+        </div>
+        <div class="sett-row">
+          <div><div class="sett-name">Weekly digest</div><div class="sett-desc">Summary of your watch activity every Sunday</div></div>
+          <div class="toggle" data-toggle><div class="toggle-dot"></div></div>
+        </div>
+      </div>
+      <div class="sett-section">
+        <div class="sett-heading">Data</div>
+        <div class="sett-row">
+          <div><div class="sett-name">Export watchlist</div><div class="sett-desc">Download your library as CSV or JSON</div></div>
+          <button class="btn-ghost" style="font-size:11px;padding:6px 12px"><i class="ti ti-download" style="font-size:12px"></i> Export</button>
+        </div>
+        <div class="sett-row">
+          <div><div class="sett-name">Clear history</div><div class="sett-desc">Remove all watch history data</div></div>
+          <button class="btn-ghost" style="font-size:11px;padding:6px 12px;color:#e05;border-color:rgba(238,0,85,0.25)">Clear</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── TMDB CONFIG ───────────────────────────────────────────────────────────
+const TMDB_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI1MjVhMTExZTc2M2EyMjk5NjVlYTNmNDIxMWUxYTBhZiIsIm5iZiI6MTc3MDQ2ODA0Ny41ODUsInN1YiI6IjY5ODczMmNmZjMzYzY1ODZjM2MxYzMzNSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.pQIi3eloq2i1-R0QQ4rt5UGSJ1o8Hi6DT92hFVbCWaA';
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const IMG_BASE  = 'https://image.tmdb.org/t/p/w500';
+const HEADERS   = { Authorization: `Bearer ${TMDB_TOKEN}`, 'Content-Type': 'application/json' };
+
+async function tmdb(path, params = {}) {
+  const url = new URL(TMDB_BASE + path);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+  const r = await fetch(url, { headers: HEADERS });
+  return r.json();
+}
+
+// ─── WATCHLIST STATE ───────────────────────────────────────────────────────
+// Pre-seeded with known TMDB IDs
+const watchlist = {
+  // id -> { id, type, title, poster, year, rating, status: 'new'|'watching'|'done', progress: 0-100 }
+};
+
+const SEED = [
+  { id: 693134, type: 'movie', status: 'new',      progress: 0   }, // Dune Part Two
+  { id: 872585, type: 'movie', status: 'watching', progress: 44  }, // Oppenheimer
+  { id: 73586,  type: 'tv',    status: 'done',     progress: 100 }, // Succession
+  { id: 126308, type: 'tv',    status: 'new',      progress: 0   }, // Shogun 2024
+  { id: 95396,  type: 'tv',    status: 'done',     progress: 100 }, // Severance
+  { id: 136315, type: 'tv',    status: 'done',     progress: 100 }, // Beef
+];
+
+async function seedWatchlist() {
+  await Promise.all(SEED.map(async s => {
+    try {
+      const d = await tmdb(`/${s.type}/${s.id}`);
+      watchlist[s.id] = {
+        id: s.id,
+        type: s.type,
+        title: d.title || d.name,
+        poster: d.poster_path ? IMG_BASE + d.poster_path : null,
+        backdrop: d.backdrop_path ? 'https://image.tmdb.org/t/p/w1280' + d.backdrop_path : null,
+        year: (d.release_date || d.first_air_date || '').slice(0, 4),
+        rating: d.vote_average ? d.vote_average.toFixed(1) : '–',
+        status: s.status,
+        progress: s.progress,
+      };
+    } catch(e) {}
+  }));
+}
+
+// ─── LIBRARY RENDER ────────────────────────────────────────────────────────
+function buildCard(item, badgeClass, badgeText) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.card = '';
+
+  const art = document.createElement('div');
+  art.className = 'card-art';
+  if (item.poster) art.style.backgroundImage = `url(${item.poster})`;
+  else art.style.background = 'linear-gradient(160deg,#1e1f27,#2a2b35)';
+
+  const badge = document.createElement('div');
+  badge.className = `card-badge ${badgeClass}`;
+  badge.textContent = badgeText;
+
+  const acts = document.createElement('div');
+  acts.className = 'card-acts';
+  const icon = item.status === 'done' ? 'ti-star' : 'ti-bookmark';
+  acts.innerHTML = `<div class="ib"><i class="ti ${icon}" aria-hidden="true"></i></div><div class="ib"><i class="ti ti-dots-vertical" aria-hidden="true"></i></div>`;
+
+  const veil = document.createElement('div');
+  veil.className = 'card-veil';
+
+  const info = document.createElement('div');
+  info.className = 'card-info';
+  info.innerHTML = `<div class="card-title">${item.title}</div><div class="card-meta"><span class="card-year">${item.year}</span><div class="card-sep"></div><span class="card-rating">★ ${item.rating}</span></div>`;
+
+  const bar = document.createElement('div');
+  bar.className = 'card-bar';
+  bar.innerHTML = `<div class="card-fill" style="width:${item.progress}%"></div>`;
+
+  card.append(art, badge, acts, veil, info, bar);
+  attachCardHover(card);
+  return card;
+}
+
+function renderLibrary() {
+  const items = Object.values(watchlist);
+  const upnext   = items.filter(i => i.status !== 'done');
+  const finished = items.filter(i => i.status === 'done');
+
+  // Update banner backdrop
+  const firstItem = upnext[0] || items[0];
+  if (firstItem?.backdrop) {
+    document.getElementById('feat-art').style.backgroundImage = `url(${firstItem.backdrop})`;
+  }
+
+  const gridUp = document.getElementById('grid-upnext');
+  gridUp.innerHTML = '';
+  upnext.forEach(item => {
+    const badgeClass = item.status === 'new' ? 'b-new' : 'b-wip';
+    const badgeText  = item.status === 'new' ? 'New' : 'Watching';
+    gridUp.appendChild(buildCard(item, badgeClass, badgeText));
+  });
+  document.getElementById('upnext-count').textContent = `${upnext.length} titles`;
+
+  const gridFin = document.getElementById('grid-finished');
+  gridFin.innerHTML = '';
+  finished.forEach(item => gridFin.appendChild(buildCard(item, 'b-done', 'Done')));
+
+  // Stats total
+  const total = items.length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('profile-sub').textContent = `Member since January 2023 · ${total} titles`;
+}
+
+// ─── EXPLORE / SEARCH ─────────────────────────────────────────────────────
+let currentFilter = '0'; // '0' = all, 'movie', 'tv'
+let searchTimer   = null;
+
+function buildExploreCard(item, type) {
+  const isAdded = !!watchlist[item.id];
+  const title   = item.title || item.name;
+  const year    = (item.release_date || item.first_air_date || '').slice(0,4);
+  const poster  = item.poster_path ? IMG_BASE + item.poster_path : null;
+  const rating  = item.vote_average ? item.vote_average.toFixed(1) : '–';
+
+  const card = document.createElement('div');
+  card.className = 'explore-card';
+  card.dataset.id   = item.id;
+  card.dataset.type = type;
+
+  const posterDiv = document.createElement('div');
+  posterDiv.className = 'explore-poster';
+  if (poster) posterDiv.style.backgroundImage = `url(${poster})`;
+  else posterDiv.innerHTML = `<div class="explore-poster-fallback">🎬</div>`;
+
+  const body = document.createElement('div');
+  body.className = 'explore-body';
+  body.innerHTML = `
+    <div class="explore-title">${title}</div>
+    <div class="explore-sub">${year} · ★ ${rating}</div>
+    <button class="explore-add ${isAdded?'added':''}" data-id="${item.id}" data-type="${type}" data-title="${title.replace(/"/g,'&quot;')}" data-year="${year}" data-rating="${rating}" data-poster="${poster||''}">
+      <i class="ti ${isAdded?'ti-check':'ti-plus'}" style="font-size:10px" aria-hidden="true"></i>
+      ${isAdded ? 'Added' : 'Add to list'}
+    </button>`;
+
+  card.append(posterDiv, body);
+
+  body.querySelector('.explore-add').addEventListener('click', e => {
+    e.stopPropagation();
+    if (isAdded) return;
+    const btn = e.currentTarget;
+    const id  = parseInt(btn.dataset.id);
+    watchlist[id] = {
+      id, type: btn.dataset.type,
+      title: btn.dataset.title,
+      poster: btn.dataset.poster || null,
+      year: btn.dataset.year,
+      rating: btn.dataset.rating,
+      status: 'new', progress: 0
+    };
+    btn.innerHTML = `<i class="ti ti-check" style="font-size:10px" aria-hidden="true"></i> Added`;
+    btn.classList.add('added');
+    renderLibrary();
+    showToast(`"${btn.dataset.title}" added to library`);
+  });
+
+  return card;
+}
+
+async function loadTrending() {
+  const grid = document.getElementById('explore-grid');
+  grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="loading-dots"><span></span><span></span><span></span></div></div>`;
+  document.getElementById('explore-heading').querySelector('.sh-label').textContent = 'Trending now';
+
+  try {
+    let results = [];
+    if (currentFilter === '0') {
+      const [mv, tv] = await Promise.all([
+        tmdb('/trending/movie/week'),
+        tmdb('/trending/tv/week')
+      ]);
+      // interleave
+      const ml = mv.results.slice(0,6).map(i=>({...i,_type:'movie'}));
+      const tl = tv.results.slice(0,6).map(i=>({...i,_type:'tv'}));
+      for (let i=0;i<6;i++) { if(ml[i]) results.push(ml[i]); if(tl[i]) results.push(tl[i]); }
+      results = results.slice(0,12);
+    } else if (currentFilter === 'movie') {
+      const d = await tmdb('/trending/movie/week');
+      results = d.results.slice(0,12).map(i=>({...i,_type:'movie'}));
+    } else {
+      const d = await tmdb('/trending/tv/week');
+      results = d.results.slice(0,12).map(i=>({...i,_type:'tv'}));
+    }
+
+    grid.innerHTML = '';
+    results.forEach(item => grid.appendChild(buildExploreCard(item, item._type)));
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="ti ti-wifi-off"></i><p>Couldn't load trending titles.</p></div>`;
+  }
+}
+
+async function searchTMDB(query) {
+  const grid = document.getElementById('explore-grid');
+  grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="loading-dots"><span></span><span></span><span></span></div></div>`;
+  document.getElementById('explore-heading').querySelector('.sh-label').textContent = `Results for "${query}"`;
+
+  try {
+    let results = [];
+    if (currentFilter === '0') {
+      const d = await tmdb('/search/multi', { query, include_adult: false, page: 1 });
+      results = d.results.filter(i => i.media_type === 'movie' || i.media_type === 'tv').slice(0,12);
+      results.forEach(i => { i._type = i.media_type; });
+    } else {
+      const d = await tmdb(`/search/${currentFilter}`, { query, include_adult: false, page: 1 });
+      results = d.results.slice(0,12).map(i=>({...i,_type:currentFilter}));
+    }
+
+    if (!results.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="ti ti-movie-off"></i><p>No results for "${query}".</p></div>`;
+      return;
+    }
+
+    grid.innerHTML = '';
+    results.forEach(item => grid.appendChild(buildExploreCard(item, item._type)));
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="ti ti-wifi-off"></i><p>Search failed. Check your connection.</p></div>`;
+  }
+}
+
+// ─── STATS CHARTS ──────────────────────────────────────────────────────────
+function buildCharts() {
+  const months=['J','F','M','A','M','J','J','A','S','O','N','D'];
+  const vals=[2,4,3,6,5,7,4,8,6,5,7,9];
+  const bc=document.getElementById('bar-chart');
+  if (bc.children.length) return;
+  const maxV=Math.max(...vals);
+  vals.forEach((v,i)=>{
+    const w=document.createElement('div');w.className='bar-wrap';
+    const b=document.createElement('div');
+    b.className='bar'+(i===vals.length-1?' hi':'');
+    b.style.height=Math.round(v/maxV*80+10)+'px';
+    const lbl=document.createElement('div');lbl.className='bar-lbl';lbl.textContent=months[i];
+    w.append(b,lbl);bc.appendChild(w);
+  });
+
+  const genres=[['Drama',88],['Sci-fi',65],['Thriller',52],['Comedy',38],['Docs',24]];
+  const gl=document.getElementById('genre-list');
+  if (!gl.children.length) genres.forEach(([name,pct])=>{
+    const row=document.createElement('div');row.className='genre-row';
+    row.innerHTML=`<div class="genre-name">${name}</div><div class="genre-track"><div class="genre-fill" style="width:${pct}%"></div></div><div class="genre-pct">${pct}%</div>`;
+    gl.appendChild(row);
+  });
+
+  const hm=document.getElementById('heatmap');
+  if (!hm.children.length) for(let i=0;i<84;i++){
+    const c=document.createElement('div');
+    const v=Math.random();
+    const op=v>0.7?1:v>0.4?0.5:v>0.2?0.25:0.08;
+    c.style.cssText=`width:10px;height:10px;border-radius:2px;background:oklch(0.623 0.214 259.815 / ${op});flex-shrink:0`;
+    hm.appendChild(c);
+  }
+}
+
+// ─── UI HELPERS ────────────────────────────────────────────────────────────
+function attachCardHover(card) {
+  card.addEventListener('mouseenter', () => {
+    card.querySelector('.card-veil').style.opacity = '1';
+    card.querySelector('.card-info').style.opacity = '1';
+    card.querySelector('.card-info').style.transform = 'translateY(0)';
+    card.querySelector('.card-acts').style.opacity = '1';
+    card.querySelector('.card-acts').style.transform = 'translateY(0)';
+    card.querySelector('.card-art').style.transform = 'scale(1.06)';
+  });
+  card.addEventListener('mouseleave', () => {
+    card.querySelector('.card-veil').style.opacity = '0';
+    card.querySelector('.card-info').style.opacity = '0';
+    card.querySelector('.card-info').style.transform = 'translateY(6px)';
+    card.querySelector('.card-acts').style.opacity = '0';
+    card.querySelector('.card-acts').style.transform = 'translateY(-4px)';
+    card.querySelector('.card-art').style.transform = 'scale(1)';
+  });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ─── TABS ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    document.getElementById('panel-' + t.dataset.tab).classList.add('on');
+    if (t.dataset.tab === 'stats') buildCharts();
+  });
+});
+
+// ─── FILTERS ───────────────────────────────────────────────────────────────
+document.querySelectorAll('[data-filter]').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('[data-filter]').forEach(c => c.classList.remove('on'));
+    chip.classList.add('on');
+    currentFilter = chip.dataset.filter;
+    const q = document.getElementById('search-input').value.trim();
+    if (q.length >= 2) searchTMDB(q);
+    else loadTrending();
+  });
+});
+
+// ─── SEARCH INPUT ──────────────────────────────────────────────────────────
+document.getElementById('search-input').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  const q = e.target.value.trim();
+  if (q.length === 0) { loadTrending(); return; }
+  if (q.length < 2) return;
+  searchTimer = setTimeout(() => searchTMDB(q), 420);
+});
+
+// ─── TOGGLES ───────────────────────────────────────────────────────────────
+document.querySelectorAll('[data-toggle]').forEach(tog => {
+  tog.addEventListener('click', () => tog.classList.toggle('on'));
+});
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+(async () => {
+  await seedWatchlist();
+  renderLibrary();
+  loadTrending();
+})();
+</script>
