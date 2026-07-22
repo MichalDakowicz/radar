@@ -202,9 +202,105 @@ create trigger on_auth_user_created
   for each row execute function private.handle_new_user();
 
 -- ============================================================================
+-- SOCIAL RPCs (Phase 8) — friend handshake + public-shelf visibility probe.
+-- ============================================================================
+--
+-- friendships / friend_requests writes are owner-scoped by RLS
+-- (friendships_write: user_id = auth.uid()), so a client can only ever touch
+-- its own side. Accepting a request has to write BOTH mirrored friendship rows
+-- (mine + the sender's) atomically, and removing a friend has to delete both
+-- sides — neither is expressible under owner-only RLS. These security-definer
+-- functions do the cross-side write after re-checking the caller is the right
+-- party, mirroring the atomic multi-path update the Firebase rules did.
+
+-- Accept: only the recipient of a *pending* request may accept it. Flips the
+-- request to 'accepted' and inserts the two mirrored friendship rows.
+create or replace function public.accept_friend_request(p_sender uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+
+  update public.friend_requests
+     set status = 'accepted'
+   where sender_id = p_sender
+     and recipient_id = auth.uid()
+     and status = 'pending';
+
+  if not found then
+    raise exception 'no pending request from %', p_sender;
+  end if;
+
+  insert into public.friendships (user_id, friend_id)
+    values (auth.uid(), p_sender)
+    on conflict do nothing;
+  insert into public.friendships (user_id, friend_id)
+    values (p_sender, auth.uid())
+    on conflict do nothing;
+end $$;
+revoke all on function public.accept_friend_request(uuid) from public;
+grant execute on function public.accept_friend_request(uuid) to authenticated;
+
+-- Decline: recipient deletes the request row (delete, not a status flip, so a
+-- later re-request from the same sender isn't blocked by the composite PK).
+create or replace function public.decline_friend_request(p_sender uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+  delete from public.friend_requests
+   where sender_id = p_sender and recipient_id = auth.uid();
+end $$;
+revoke all on function public.decline_friend_request(uuid) from public;
+grant execute on function public.decline_friend_request(uuid) to authenticated;
+
+-- Remove friend: delete both directions (either row referencing the pair).
+create or replace function public.remove_friend(p_friend uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+  delete from public.friendships
+   where (user_id = auth.uid() and friend_id = p_friend)
+      or (user_id = p_friend and friend_id = auth.uid());
+end $$;
+revoke all on function public.remove_friend(uuid) from public;
+grant execute on function public.remove_friend(uuid) to authenticated;
+
+-- Public-shelf visibility probe: exposes private.can_view over PostgREST so the
+-- client can distinguish "shelf is private" from "shelf is empty" (the raw RLS
+-- filter just returns 0 rows either way). anon may call it for public web shelves.
+create or replace function public.can_view_user(p_target uuid)
+returns boolean
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select private.can_view(p_target);
+$$;
+grant execute on function public.can_view_user(uuid) to authenticated, anon;
+
+-- ============================================================================
 -- REALTIME — needed starting Phase 1 (useMovies), harmless to enable now.
 -- ============================================================================
 
 alter publication supabase_realtime add table public.movies;
 alter publication supabase_realtime add table public.friend_requests;
+alter publication supabase_realtime add table public.friendships;
 alter publication supabase_realtime add table public.activity;

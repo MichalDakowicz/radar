@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 
 import type { BottomSheetModal } from '@/components/ui/Sheet';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { FriendRequestListener } from '@/features/friends/FriendRequestListener';
 import { QuickAddSheet } from '@/features/movies/add/QuickAddSheet';
 import { useQuickAddSheetStore } from '@/store/quickAddSheet';
 
@@ -46,6 +47,7 @@ export default function TabsLayout() {
         />
       </Tabs>
       <QuickAddSheet ref={quickAddRef} />
+      <FriendRequestListener />
     </>
   );
 }

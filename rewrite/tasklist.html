@@ -282,13 +282,13 @@ const PHASES = [
     ]
   },
   {
-    id:'p8', status:'todo', title:'Phase 8 — Social',
+    id:'p8', status:'done', title:'Phase 8 — Social',
     goal:'Friends + public shelf (also on Web).',
     docs:['03','11','05'],
     deliver:'Friend flow + public links; verified on Expo Web.',
     subtasks:[
-      {id:'p8-1', status:'todo', text:'<code>(tabs)/friends.tsx</code>, <code>FriendRequestListener</code> (Realtime), user search, requests, friend list. (doc 03, 11)'},
-      {id:'p8-2', status:'todo', text:'Public shelf <code>u/[userId]/*</code> (library/stats/friends) + public chrome; RLS-gated reads. (doc 11 §rls)'},
+      {id:'p8-1', status:'done', text:'<code>(tabs)/friends.tsx</code> (My&nbsp;Friends / Find&nbsp;Friends segmented control + incoming-requests block) built on new <code>useFriends</code>/<code>useProfile</code>/<code>useUserSearch</code> hooks + <code>FriendCard</code>/<code>FriendRequestItem</code>/<code>UserSearchPanel</code>/<code>Avatar</code>. <code>FriendRequestListener</code> mounted in <code>(tabs)/_layout</code> toasts new requests via Realtime. <b>Backend:</b> the friend handshake can\'t run under owner-only RLS (accepting writes <i>both</i> mirrored <code>friendships</code> rows; remove deletes both sides), so added security-definer RPCs to <code>supabase/schema.sql</code> — <code>accept_friend_request</code>/<code>decline_friend_request</code>/<code>remove_friend</code> (+ <code>can_view_user</code> exposing <code>private.can_view</code>) and added <code>friendships</code> to the realtime publication. <b>⚠️ User action:</b> re-run the appended schema.sql block in the Supabase SQL editor before the flow works live. Realtime on <code>friend_requests</code>+<code>friendships</code> keeps lists live; legacy <code>userSearchIndex</code> side-table dropped (query <code>profiles</code> directly, doc 11). (doc 03, 11)'},
+      {id:'p8-2', status:'done', text:'Public shelf <code>u/[userId]/*</code> — nested <code>Tabs</code> (library/stats/friends) with shared <code>PublicHeader</code> chrome, reachable by anon users (root AuthGate gates on auth <i>resolving</i>, not on being signed in) so public web shelves work. Public library renders through the unified <code>MediaGrid</code>/<code>MovieCard</code> (readOnly) with search; public stats reuse the <b>extracted shared <code>StatsView</code></b> (refactored out of <code>(tabs)/stats.tsx</code> so own + public render one component, doc 03) minus nav callbacks; public friends = read-only <code>FriendCard</code>s. Visibility unified into <code>private.can_view</code> (one gate for movies/activity/friends, doc 11) — <code>can_view_user</code> RPC distinguishes "private" from "empty" (raw RLS just returns 0 rows). Verified: <code>tsc --noEmit</code> clean (1 pre-existing <code>global.css</code> error only), 42 unit tests pass, <code>expo export --platform web</code> builds the full route tree incl. the <code>u/[userId]</code> group (5.2MB bundle, no errors). Not a real browser click-through/login — no browser tool this session. (doc 11 §rls)'},
     ]
   },
   {
