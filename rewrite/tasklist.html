@@ -270,15 +270,15 @@ const PHASES = [
     ]
   },
   {
-    id:'p7', status:'todo', title:'Phase 7 — Stats (+ Hall of Fame)',
+    id:'p7', status:'done', title:'Phase 7 — Stats (+ Masterpieces)',
     goal:'Stats parity plus the perfect-score showcase.',
     docs:['03','06','12'],
-    deliver:'Stats parity + Hall of Fame.',
+    deliver:'Stats parity + Masterpieces (renamed Hall of Fame).',
     subtasks:[
-      {id:'p7-1', status:'todo', text:'<code>(tabs)/stats.tsx</code> + port <code>components/stats/*</code> (charts → react-native-svg). (doc 03, 07)'},
-      {id:'p7-2', status:'todo', text:'Streak calendars (movie + TV), overview, breakdowns, genres, eras, directors, history. (doc 03)'},
-      {id:'p7-3', status:'todo', text:'<b>Hall of Fame</b> section — <code>ratings.overall === 5</code>, as <code>MediaCarousel</code>. (doc 06 §4)'},
-      {id:'p7-4', status:'todo', text:'Completion managers (<code>manage-completions</code>, <code>manage-tv-completions</code>). (doc 03)'},
+      {id:'p7-1', status:'done', text:'<code>(tabs)/stats.tsx</code> + ported <code>components/stats/*</code> (QuickStat, HistoryPill, ThinProgressBar, ContentMix, DecadeBars, DirectorItem, GenreTag). <b>No react-native-svg needed</b> — legacy\'s "charts" were CSS-height bars + a day-button grid, so they port to plain <code>View</code>s (simplification vs the planned SVG). DirectorItem/GenreTag navigate via the ids now carried on <code>Movie.director</code>/<code>Movie.genres</code>, dropping legacy\'s <code>batchSearchDirectors</code> name→id lookup and the hardcoded <code>GENRE_IDS</code> table. (doc 03, 07)'},
+      {id:'p7-2', status:'done', text:'Streak calendars (movie + TV merged into one <code>StreakCalendar</code> with an accent variant — legacy had two near-identical files), overview grid, status breakdown, content mix, release eras, top directors, favorite genres, recent-activity rail via new <code>useActivity</code>. <b>Optimization:</b> legacy\'s 550-line <code>useMemo</code> with 4 duplicated streak blocks collapses into a pure <code>lib/stats.ts</code> (<code>computeStats</code> + single <code>computeCurrentStreak</code>/<code>computeLongestStreak</code>), unit-tested (10 tests). Streak thresholds default 2/5 — user-configurable values wire in Phase 9. (doc 03)'},
+      {id:'p7-3', status:'done', text:'<b>Masterpieces</b> section (renamed from Hall of Fame — clearer) — <code>Math.round(overall*10)/10 >= 5</code> (exactly 5.0, excludes 4.9/5.1 auto-calc noise), mixed movie+TV, sorted <code>completedAt</code> desc / <code>addedAt</code> asc fallback, as <code>MediaCarousel</code> with empty state. (doc 06 §4)'},
+      {id:'p7-4', status:'done', text:'Completion managers <code>manage-completions</code> + <code>manage-tv-completions</code> (auto-registered stack routes, reached by tapping a StreakCalendar day). Movie manager backfills <code>completedAt</code> (single ISO — rewrite dropped legacy\'s <code>completionDates[]</code> array); TV manager has a show→season→episode picker (reuses <code>useSeasonDetails</code> + the <code>s{S}e{E}</code> key format) writing <code>episodesWatched</code>/<code>episodeWatchDates</code>. Writes go through <code>updateMovie(...,{silent:true})</code> (no activity-log spam). Verified: typecheck clean (1 pre-existing <code>global.css</code> error only), 42 unit tests pass (32 prior + 10 new stats), <code>expo export --platform web</code> builds the full route tree incl. Stats + both managers (5.2MB bundle, no errors). Not a real browser click-through/login — no browser tool available this session. (doc 03)'},
     ]
   },
   {
