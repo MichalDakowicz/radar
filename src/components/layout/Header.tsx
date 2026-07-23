@@ -2,6 +2,7 @@ import { Plus, Share2, Shuffle } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import Logo from '@/assets/brand/logo.svg';
 import { useQuickAddSheetStore } from '@/store/quickAddSheet';
 
 type HeaderProps = {
@@ -24,9 +25,7 @@ export function Header({ onRandomPick, onShare, refreshingLabel }: HeaderProps) 
       style={{ paddingTop: insets.top + 10 }}
     >
       <View className="flex-1 flex-row items-center gap-2.5">
-        <View className="h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <Text className="text-lg font-extrabold text-primary-foreground">R</Text>
-        </View>
+        <Logo width={32} height={32} />
         <Text className="text-2xl font-bold tracking-tight text-foreground">Radar</Text>
         {!!refreshingLabel && (
           <View className="rounded bg-secondary px-2 py-1">
