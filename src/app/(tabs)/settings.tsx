@@ -1,86 +1,63 @@
-import { Check, LogOut, Settings as SettingsIcon } from 'lucide-react-native';
+import { BarChart3, Clock, Database, Globe, LogOut, Monitor, User } from 'lucide-react-native';
+import { useRef } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { Header } from '@/components/layout/Header';
+import type { BottomSheetModal } from '@/components/ui/Sheet';
 import { signOut } from '@/features/auth/authActions';
-import { useAuth } from '@/features/auth/AuthProvider';
-import { COUNTRIES } from '@/lib/countries';
-import { type GridSize, useLibraryPrefs } from '@/store/libraryPrefs';
+import { CardSizeControl } from '@/features/settings/AppearanceExtras';
+import { DataTools } from '@/features/settings/DataTools';
+import { EditProfileSheet } from '@/features/settings/EditProfileSheet';
+import { ImportExportSheet } from '@/features/settings/ImportExportSheet';
+import { PrivacyControl } from '@/features/settings/PrivacyControl';
+import { ProfileHeader } from '@/features/settings/ProfileHeader';
+import { RecentlyAddedControl } from '@/features/settings/RecentlyAddedControl';
+import { RegionControl } from '@/features/settings/RegionControl';
+import { SettingsSection } from '@/features/settings/SettingsSection';
+import { StreakThresholdsControl } from '@/features/settings/StreakThresholdsControl';
+import { ThemeControl } from '@/features/settings/ThemeControl';
 
-const CARD_SIZES: { key: GridSize; label: string }[] = [
-  { key: 'compact', label: 'Compact' },
-  { key: 'normal', label: 'Normal' },
-  { key: 'large', label: 'Large' },
-];
+const MUTED = 'hsl(0 0% 63.9%)';
 
-// Placeholder - real Settings screen (theme, watch-provider country,
-// recently-added config, privacy, refresh metadata, import/export) lands in
-// Phase 9 (doc 03). Card size moved here out of the Library toolbar; sign-out
-// stays wired since it's the only way to log out.
+// Full Settings screen (doc 03, Phase 9). Thin composition layer: every control
+// is its own small file (doc 10) and reads/writes user_settings via
+// useUserSettings, except device-local prefs (theme runtime, card size).
 export default function Settings() {
-  const { user } = useAuth();
-  const { gridSize, setGridSize, watchProviderCountry, setWatchProviderCountry } = useLibraryPrefs();
+  const editProfileRef = useRef<BottomSheetModal>(null);
+  const importExportRef = useRef<BottomSheetModal>(null);
 
   return (
     <View className="flex-1 bg-background">
       <Header />
-      <ScrollView className="flex-1" contentContainerClassName="gap-8 px-6 pb-12 pt-6">
-        <View className="items-center gap-3">
-          <SettingsIcon size={40} color="hsl(0 0% 45%)" />
-          <Text className="text-lg font-semibold text-foreground">Settings</Text>
-          {!!user?.email && <Text className="text-sm text-muted-foreground">Signed in as {user.email}</Text>}
-        </View>
+      <ScrollView className="flex-1" contentContainerClassName="gap-10 px-6 pb-16 pt-6">
+        <SettingsSection icon={<User size={18} color={MUTED} />} title="Account">
+          <ProfileHeader onEdit={() => editProfileRef.current?.present()} />
+        </SettingsSection>
 
-        <View className="gap-3">
-          <Text className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Appearance</Text>
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="text-base font-medium text-foreground">Card size</Text>
-              <Text className="text-xs text-muted-foreground">Poster size in your library grid</Text>
-            </View>
-            <View className="flex-row rounded-lg border border-border bg-secondary p-1">
-              {CARD_SIZES.map((size) => {
-                const active = gridSize === size.key;
-                return (
-                  <Pressable
-                    key={size.key}
-                    onPress={() => setGridSize(size.key)}
-                    className="rounded-md px-3 py-1.5"
-                    style={{ backgroundColor: active ? 'hsl(0 0% 20%)' : 'transparent' }}
-                  >
-                    <Text className={active ? 'text-sm font-semibold text-foreground' : 'text-sm text-muted-foreground'}>{size.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-          <Text className="text-xs text-muted-foreground">Theme, privacy, and data tools land in Phase 9.</Text>
-        </View>
+        <SettingsSection icon={<Globe size={18} color={MUTED} />} title="Privacy">
+          <PrivacyControl />
+        </SettingsSection>
 
-        <View className="gap-3">
-          <Text className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Region</Text>
-          <Text className="text-xs text-muted-foreground">
-            Sets streaming availability and which country&apos;s release dates the Browse calendar uses.
-          </Text>
-          <View className="overflow-hidden rounded-xl border border-border">
-            {COUNTRIES.map((country, i) => {
-              const active = watchProviderCountry === country.code;
-              return (
-                <Pressable
-                  key={country.code}
-                  onPress={() => setWatchProviderCountry(country.code)}
-                  className={`flex-row items-center justify-between px-4 py-3 ${i > 0 ? 'border-t border-border' : ''}`}
-                  style={{ backgroundColor: active ? 'hsla(217,91%,60%,0.12)' : 'transparent' }}
-                >
-                  <Text className={active ? 'font-semibold text-primary' : 'text-foreground'}>
-                    {country.name} <Text className="text-muted-foreground">({country.code})</Text>
-                  </Text>
-                  {active && <Check size={16} color="hsl(217 91% 60%)" />}
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        <SettingsSection icon={<Monitor size={18} color={MUTED} />} title="Appearance">
+          <ThemeControl />
+          <CardSizeControl />
+        </SettingsSection>
+
+        <SettingsSection icon={<Clock size={18} color={MUTED} />} title="Library">
+          <RecentlyAddedControl />
+        </SettingsSection>
+
+        <SettingsSection icon={<Globe size={18} color={MUTED} />} title="Region">
+          <RegionControl />
+        </SettingsSection>
+
+        <SettingsSection icon={<BarChart3 size={18} color={MUTED} />} title="Stats">
+          <StreakThresholdsControl />
+        </SettingsSection>
+
+        <SettingsSection icon={<Database size={18} color={MUTED} />} title="Data">
+          <DataTools onOpenImportExport={() => importExportRef.current?.present()} />
+        </SettingsSection>
 
         <Pressable
           onPress={signOut}
@@ -90,6 +67,9 @@ export default function Settings() {
           <Text className="font-medium text-foreground">Sign out</Text>
         </Pressable>
       </ScrollView>
+
+      <EditProfileSheet ref={editProfileRef} />
+      <ImportExportSheet ref={importExportRef} />
     </View>
   );
 }

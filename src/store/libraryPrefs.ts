@@ -21,9 +21,6 @@ type LibraryPrefsState = {
   statusFilter: StatusFilter;
   selectedServices: string[];
   comingSoonCollapsed: boolean;
-  // Region used for watch providers + the release calendar (legacy
-  // useWatchProviderCountry, now local/persisted until Phase 9 user_settings).
-  watchProviderCountry: string;
   setViewMode: (viewMode: ViewMode) => void;
   setGridSize: (gridSize: GridSize) => void;
   toggleComingSoonCollapsed: () => void;
@@ -31,7 +28,6 @@ type LibraryPrefsState = {
   setGroupBy: (groupBy: GroupBy) => void;
   setStatusFilter: (statusFilter: StatusFilter) => void;
   toggleService: (service: string) => void;
-  setWatchProviderCountry: (country: string) => void;
   resetFilters: () => void;
 };
 
@@ -45,14 +41,12 @@ export const useLibraryPrefs = create<LibraryPrefsState>()(
       statusFilter: 'all',
       selectedServices: [],
       comingSoonCollapsed: false,
-      watchProviderCountry: 'US',
       setViewMode: (viewMode) => set({ viewMode }),
       setGridSize: (gridSize) => set({ gridSize }),
       toggleComingSoonCollapsed: () => set((state) => ({ comingSoonCollapsed: !state.comingSoonCollapsed })),
       setSortBy: (sortBy) => set({ sortBy }),
       setGroupBy: (groupBy) => set({ groupBy }),
       setStatusFilter: (statusFilter) => set({ statusFilter }),
-      setWatchProviderCountry: (watchProviderCountry) => set({ watchProviderCountry }),
       toggleService: (service) =>
         set((state) => ({
           selectedServices: state.selectedServices.includes(service)

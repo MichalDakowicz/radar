@@ -7,6 +7,7 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { StatsView } from '@/features/stats/StatsView';
 import { useActivity } from '@/hooks/useActivity';
 import { useMovies } from '@/hooks/useMovies';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import type { Movie } from '@/types/movie';
 
 // Own-stats screen. Data fetching + navigation wiring live here; the actual
@@ -16,6 +17,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { movies, loading, error } = useMovies();
   const { activities } = useActivity(20);
+  const { settings } = useUserSettings();
 
   const openMovie = (movie: Movie) => router.push({ pathname: '/edit/[movieId]', params: { movieId: movie.id } });
 
@@ -42,6 +44,8 @@ export default function StatsScreen() {
       <StatsView
         movies={movies}
         activities={activities}
+        streakThreshold={settings.streakThreshold}
+        tvStreakThreshold={settings.tvStreakThreshold}
         onOpenMovie={openMovie}
         onManageMovies={(date) => router.push({ pathname: '/manage-completions', params: { date } })}
         onManageTV={(date) => router.push({ pathname: '/manage-tv-completions', params: { date } })}

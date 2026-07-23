@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { useAuth } from '@/features/auth/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types/movie';
 
@@ -46,4 +47,47 @@ export function useProfile(id: string | undefined) {
     staleTime: 5 * 60 * 1000,
   });
   return { profile: query.data ?? null, loading: query.isLoading, error: query.error };
+}
+
+export type ProfileUpdate = {
+  username: string;
+  displayName: string;
+  pfp: string; // data URI or empty string to clear
+};
+
+// Edits the signed-in user's own profile row (profiles_update RLS: id =
+// auth.uid()). username is unique in the schema, so a conflict on another
+// user's row is surfaced as a friendly error before the write. Legacy's
+// separate usernames/ + userSearchIndex/ side-tables are gone - the rewrite
+// queries profiles directly (doc 11), so there's a single row to update.
+export function useUpdateProfile() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ username, displayName, pfp }: ProfileUpdate) => {
+      if (!user) throw new Error('Not signed in');
+      const cleanUsername = username.trim().toLowerCase();
+      if (!cleanUsername) throw new Error('Username is required.');
+      if (!/^[a-z0-9_]+$/.test(cleanUsername)) throw new Error('Username may only contain lowercase letters, numbers, and underscores.');
+
+      const { data: taken, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', cleanUsername)
+        .neq('id', user.id)
+        .maybeSingle();
+      if (checkError) throw checkError;
+      if (taken) throw new Error('Username already taken.');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ username: cleanUsername, display_name: displayName.trim() || null, pfp: pfp.trim() || null })
+        .eq('id', user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      if (user) queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+    },
+  });
 }

@@ -10,10 +10,10 @@ import { MovieCard } from '@/components/media/MovieCard';
 import { BottomSheetModal, Sheet } from '@/components/ui/Sheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { countryName } from '@/lib/countries';
 import { cn } from '@/lib/utils';
 import * as tmdb from '@/lib/tmdb';
-import { useLibraryPrefs } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
 
 import { toDiscoveryMovie } from './toDiscoveryMovie';
@@ -41,7 +41,7 @@ export function ReleaseCalendar({ onPress, onAdd, onRemove, isAdded }: ReleaseCa
   const today = useMemo(() => new Date(), []);
   const [cursor, setCursor] = useState(() => ({ year: today.getFullYear(), month: today.getMonth() }));
   const { year, month } = cursor;
-  const region = useLibraryPrefs((s) => s.watchProviderCountry);
+  const region = useUserSettings().settings.watchProviderCountry;
 
   // Explicit cell size, not flex-1: flex growth wasn't equalizing widths across
   // poster/empty cells, leaving the grid crooked. Fixed width = uniform grid.

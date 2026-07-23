@@ -7,8 +7,6 @@ import { directorToDisplayString } from '@/lib/utils';
 import type { GroupBy, SortBy, StatusFilter } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
 
-// TODO(Phase 9): wire to real user_settings once Settings exists - defaults
-// mirror the legacy app's defaults in the meantime.
 const COMING_SOON_WINDOW_MONTHS = 6;
 
 function averageRating(movie: Movie): number {
@@ -87,6 +85,7 @@ export type LibraryGroup = { title: string; movies: Movie[] };
 
 export type LibraryFilters = {
   continueWatching: Movie[];
+  recentlyAdded: Movie[];
   comingSoon: Movie[];
   mainMovies: Movie[];
   groups: LibraryGroup[] | null;
@@ -104,11 +103,26 @@ export function useLibraryFilters(
   selectedServices: string[],
   sortBy: SortBy,
   groupBy: GroupBy,
+  recentlyAddedDays = 30,
+  showRecentlyAdded = false,
 ): LibraryFilters {
   const continueWatching = useMemo(() => {
     const inProgress = movies.filter((m) => isInProgress(m)).slice(0, 30);
     return searchQuery.trim() ? inProgress.filter((m) => movieMatchesSearchQuery(m, searchQuery)) : inProgress;
   }, [movies, searchQuery]);
+
+  // "Recently added" carousel (user_settings.show_recently_added + _days, Phase
+  // 9). Titles added within the window, newest first; empty when the setting is
+  // off so the section collapses.
+  const recentlyAdded = useMemo(() => {
+    if (!showRecentlyAdded) return [];
+    const cutoff = Date.now() - recentlyAddedDays * 24 * 60 * 60 * 1000;
+    const recent = movies
+      .filter((m) => m.addedAt && new Date(m.addedAt).getTime() >= cutoff)
+      .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
+      .slice(0, 30);
+    return searchQuery.trim() ? recent.filter((m) => movieMatchesSearchQuery(m, searchQuery)) : recent;
+  }, [movies, searchQuery, showRecentlyAdded, recentlyAddedDays]);
 
   const comingSoon = useMemo(() => {
     const now = Date.now();
@@ -136,9 +150,10 @@ export function useLibraryFilters(
   const sectionIds = useMemo(() => {
     const ids = new Set<string>();
     continueWatching.forEach((m) => ids.add(m.id));
+    recentlyAdded.forEach((m) => ids.add(m.id));
     comingSoon.forEach((m) => ids.add(m.id));
     return ids;
-  }, [continueWatching, comingSoon]);
+  }, [continueWatching, recentlyAdded, comingSoon]);
 
   const mainMovies = useMemo(
     () => (groupBy !== 'none' ? filteredMovies : filteredMovies.filter((m) => !sectionIds.has(m.id))),
@@ -167,6 +182,7 @@ export function useLibraryFilters(
 
   return {
     continueWatching,
+    recentlyAdded,
     comingSoon,
     mainMovies,
     groups,

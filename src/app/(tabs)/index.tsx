@@ -16,6 +16,7 @@ import { RandomPickSheet } from '@/features/library/RandomPickSheet';
 import { useLibraryFilters } from '@/features/library/useLibraryFilters';
 import { useLibraryReorder } from '@/features/library/useLibraryReorder';
 import { useMovies } from '@/hooks/useMovies';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { useLibraryPrefs } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
 
@@ -30,7 +31,17 @@ export default function LibraryScreen() {
 
   const { viewMode, gridSize, statusFilter, selectedServices, sortBy, groupBy, comingSoonCollapsed, toggleComingSoonCollapsed } =
     useLibraryPrefs();
-  const filters = useLibraryFilters(movies, searchQuery, statusFilter, selectedServices, sortBy, groupBy);
+  const { settings } = useUserSettings();
+  const filters = useLibraryFilters(
+    movies,
+    searchQuery,
+    statusFilter,
+    selectedServices,
+    sortBy,
+    groupBy,
+    settings.recentlyAddedDays,
+    settings.showRecentlyAdded,
+  );
   const { handleDragEnd } = useLibraryReorder();
 
   const filterSheetRef = useRef<BottomSheetModal>(null);
@@ -65,6 +76,7 @@ export default function LibraryScreen() {
   const sections = (
     <>
       <LibrarySection title="Continue watching" movies={filters.continueWatching} onPress={openMovie} highlightedId={highlightedId} />
+      <LibrarySection title="Recently added" movies={filters.recentlyAdded} onPress={openMovie} highlightedId={highlightedId} />
       <LibrarySection
         title="Coming soon"
         movies={filters.comingSoon}

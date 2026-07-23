@@ -19,8 +19,8 @@ import { toDiscoveryMovie } from '@/features/browse/toDiscoveryMovie';
 import { useBrowseSearch } from '@/features/browse/useBrowseSearch';
 import { type BrowseTabId, useDiscoveryFeed } from '@/features/browse/useDiscoveryFeed';
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import * as tmdb from '@/lib/tmdb';
-import { useLibraryPrefs } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
 
 // Thin composition layer only (doc 10) - discovery logic lives in
@@ -32,7 +32,7 @@ export default function Browse() {
   const [rerollNonce, setRerollNonce] = useState(0);
   const search = useBrowseSearch();
   const filterSheetRef = useRef<BottomSheetModal>(null);
-  const region = useLibraryPrefs((s) => s.watchProviderCountry);
+  const region = useUserSettings().settings.watchProviderCountry;
 
   const quickAdd = useQuickAdd();
   // Calendar isn't a discovery feed - keep the feed/hero on the last media tab

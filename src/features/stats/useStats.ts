@@ -3,9 +3,15 @@ import { useMemo } from 'react';
 import { computeStats, type Stats } from '@/lib/stats';
 import type { Movie } from '@/types/movie';
 
-// Thin memo wrapper. Streak thresholds are hardcoded to the legacy defaults
-// for now; the user-configurable values live in user_settings and get wired
-// in Phase 9 (doc 03 Settings).
-export function useStats(movies: Movie[]): Stats | null {
-  return useMemo(() => computeStats(movies), [movies]);
+type ThresholdOpts = { streakThreshold?: number; tvStreakThreshold?: number };
+
+// Thin memo wrapper. Streak thresholds come from user_settings on the own-stats
+// screen (Phase 9); the public shelf omits them and computeStats falls back to
+// the legacy defaults (2 movies / 5 episodes per week).
+export function useStats(movies: Movie[], opts: ThresholdOpts = {}): Stats | null {
+  const { streakThreshold, tvStreakThreshold } = opts;
+  return useMemo(
+    () => computeStats(movies, { streakThreshold, tvStreakThreshold }),
+    [movies, streakThreshold, tvStreakThreshold],
+  );
 }

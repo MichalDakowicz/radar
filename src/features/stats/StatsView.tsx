@@ -32,13 +32,26 @@ type StatsViewProps = {
   onOpenMovie?: (movie: Movie) => void;
   onManageMovies?: (date: string) => void;
   onManageTV?: (date: string) => void;
+  // Own screen passes the user's configured weekly streak thresholds (Phase 9);
+  // the public shelf omits them (user_settings is owner-only) so streaks use
+  // the defaults.
+  streakThreshold?: number;
+  tvStreakThreshold?: number;
 };
 
 // The shared Stats body (own screen + public shelf render the same component,
 // per doc 03 "same component reads userId"). All derivation is in lib/stats.ts;
 // this is the composition layer, extracted from (tabs)/stats.tsx in Phase 8.
-export function StatsView({ movies, activities, onOpenMovie, onManageMovies, onManageTV }: StatsViewProps) {
-  const stats = useStats(movies);
+export function StatsView({
+  movies,
+  activities,
+  onOpenMovie,
+  onManageMovies,
+  onManageTV,
+  streakThreshold,
+  tvStreakThreshold,
+}: StatsViewProps) {
+  const stats = useStats(movies, { streakThreshold, tvStreakThreshold });
   const [calendarView, setCalendarView] = useState<'movies' | 'tv'>('movies');
 
   if (!stats) {
