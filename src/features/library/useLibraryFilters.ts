@@ -105,6 +105,7 @@ export function useLibraryFilters(
   groupBy: GroupBy,
   recentlyAddedDays = 30,
   showRecentlyAdded = false,
+  reorderMode = false,
 ): LibraryFilters {
   const continueWatching = useMemo(() => {
     const inProgress = movies.filter((m) => isInProgress(m)).slice(0, 30);
@@ -178,7 +179,12 @@ export function useLibraryFilters(
   );
 
   const isReorderEnabled =
-    sortBy === 'custom' && groupBy === 'none' && !searchQuery.trim() && statusFilter === 'all' && selectedServices.length === 0;
+    reorderMode &&
+    sortBy === 'custom' &&
+    groupBy === 'none' &&
+    !searchQuery.trim() &&
+    statusFilter === 'all' &&
+    selectedServices.length === 0;
 
   return {
     continueWatching,

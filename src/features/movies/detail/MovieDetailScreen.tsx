@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Building2, Calculator, Calendar, Clock, Save, Users, Wallet } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -53,6 +54,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 // header CTA becomes "Remove from Library" instead of jumping to a separate
 // Edit page.
 export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenProps) {
+  const router = useRouter();
   const { show } = useToast();
   const { movies } = useMovies();
   const quickAdd = useQuickAdd();
@@ -180,9 +182,14 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
             </View>
             <View className="flex-row flex-wrap gap-2">
               {metadata!.productionCompanies.map((c) => (
-                <View key={c.name} className="rounded-full border border-border bg-secondary px-3 py-1.5">
+                <Pressable
+                  key={c.id ?? c.name}
+                  disabled={!c.id}
+                  onPress={() => c.id && router.push({ pathname: '/studio/[id]', params: { id: String(c.id) } })}
+                  className="rounded-full border border-border bg-secondary px-3 py-1.5"
+                >
                   <Text className="text-sm text-muted-foreground">{c.name}</Text>
-                </View>
+                </Pressable>
               ))}
             </View>
           </View>
@@ -193,9 +200,14 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
             <Text className="text-sm font-bold uppercase text-muted-foreground">Genres</Text>
             <View className="flex-row flex-wrap gap-2">
               {metadata!.genres.map((g) => (
-                <View key={g.id ?? g.name} className="rounded-full border border-border bg-secondary px-3 py-1.5">
+                <Pressable
+                  key={g.id ?? g.name}
+                  disabled={!g.id}
+                  onPress={() => g.id && router.push({ pathname: '/genre/[id]', params: { id: String(g.id) } })}
+                  className="rounded-full border border-border bg-secondary px-3 py-1.5"
+                >
                   <Text className="text-sm text-foreground">{g.name}</Text>
-                </View>
+                </Pressable>
               ))}
             </View>
           </View>

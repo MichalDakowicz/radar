@@ -82,7 +82,13 @@ export function MediaGrid({
       numColumns={columns}
       keyExtractor={(item) => item.id}
       contentContainerStyle={{ padding: halfGap }}
-      ListHeaderComponent={ListHeaderComponent}
+      ListHeaderComponent={
+        // Cancel the container padding so full-bleed headers (PersonHero) reach
+        // the screen edges instead of being framed by a halfGap border.
+        ListHeaderComponent ? (
+          <View style={{ marginHorizontal: -halfGap, marginTop: -halfGap }}>{ListHeaderComponent}</View>
+        ) : undefined
+      }
       ListFooterComponent={ListFooterComponent}
       ListEmptyComponent={ListEmptyComponent}
       onEndReached={onEndReached}

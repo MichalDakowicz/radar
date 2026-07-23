@@ -21,9 +21,11 @@ type LibraryPrefsState = {
   statusFilter: StatusFilter;
   selectedServices: string[];
   comingSoonCollapsed: boolean;
+  reorderMode: boolean;
   setViewMode: (viewMode: ViewMode) => void;
   setGridSize: (gridSize: GridSize) => void;
   toggleComingSoonCollapsed: () => void;
+  toggleReorderMode: () => void;
   setSortBy: (sortBy: SortBy) => void;
   setGroupBy: (groupBy: GroupBy) => void;
   setStatusFilter: (statusFilter: StatusFilter) => void;
@@ -41,9 +43,15 @@ export const useLibraryPrefs = create<LibraryPrefsState>()(
       statusFilter: 'all',
       selectedServices: [],
       comingSoonCollapsed: false,
+      // Drag-to-reorder is opt-in: while on, the whole list is a
+      // DraggableFlatList whose long-press pan wrapper swallows the header
+      // carousels' horizontal swipe. Default off so Continue watching / Coming
+      // soon scroll; user flips it on only to rearrange (custom sort).
+      reorderMode: false,
       setViewMode: (viewMode) => set({ viewMode }),
       setGridSize: (gridSize) => set({ gridSize }),
       toggleComingSoonCollapsed: () => set((state) => ({ comingSoonCollapsed: !state.comingSoonCollapsed })),
+      toggleReorderMode: () => set((state) => ({ reorderMode: !state.reorderMode })),
       setSortBy: (sortBy) => set({ sortBy }),
       setGroupBy: (groupBy) => set({ groupBy }),
       setStatusFilter: (statusFilter) => set({ statusFilter }),

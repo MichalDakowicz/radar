@@ -94,6 +94,25 @@ export function useGenreMoviesInfinite(genreId: number | null) {
   });
 }
 
+// Paginated studio titles (mirrors useGenreMoviesInfinite).
+export function useCompanyMoviesInfinite(companyId: number | null) {
+  return useInfiniteQuery({
+    queryKey: ['tmdb', 'companyMovies', 'infinite', companyId],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => tmdb.fetchCompanyMovies(companyId as number, pageParam),
+    getNextPageParam: (lastPage, pages) => (pages.length < lastPage.totalPages ? pages.length + 1 : undefined),
+    enabled: !!companyId,
+  });
+}
+
+export function useCompanyDetails(companyId: number | null) {
+  return useQuery({
+    queryKey: ['tmdb', 'company', companyId],
+    queryFn: () => tmdb.fetchCompanyDetails(companyId as number),
+    enabled: !!companyId,
+  });
+}
+
 export function useSimilarMedia(tmdbId: number | null, type: MediaType = 'movie') {
   return useQuery({
     queryKey: ['tmdb', 'similar', type, tmdbId],

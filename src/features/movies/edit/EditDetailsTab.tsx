@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { Check, RefreshCw, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
@@ -34,23 +35,39 @@ function ChipList({
   items,
   editable,
   onRemove,
+  linkTo,
 }: {
   items: NamedRef[];
   editable: boolean;
   onRemove: (index: number) => void;
+  linkTo?: 'actor' | 'genre';
 }) {
+  const router = useRouter();
   if (items.length === 0 && !editable) return <Text className="text-sm text-muted-foreground">None</Text>;
+  // editable chips carry no TMDB id (manual entries) so tap-through is inert
+  // there; the remove X only renders when editable, so the two never nest.
+  const open = (item: NamedRef) => {
+    if (!linkTo || !item.id) return;
+    const id = String(item.id);
+    if (linkTo === 'actor') router.push({ pathname: '/actor/[id]', params: { id } });
+    else router.push({ pathname: '/genre/[id]', params: { id } });
+  };
   return (
     <View className="flex-row flex-wrap gap-2">
       {items.map((item, i) => (
-        <View key={item.id ?? `${item.name}-${i}`} className="flex-row items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1.5">
+        <Pressable
+          key={item.id ?? `${item.name}-${i}`}
+          disabled={!linkTo || !item.id}
+          onPress={() => open(item)}
+          className="flex-row items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1.5"
+        >
           <Text className="text-sm text-foreground">{item.name}</Text>
           {editable && (
             <Pressable onPress={() => onRemove(i)}>
               <X size={13} color="hsl(0 0% 63.9%)" />
             </Pressable>
           )}
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -143,12 +160,12 @@ export function EditDetailsTab({
       </View>
 
       <Field label="Genres">
-        <ChipList items={form.genres} editable={editableTaxonomy} onRemove={onRemoveGenre} />
+        <ChipList items={form.genres} editable={editableTaxonomy} onRemove={onRemoveGenre} linkTo="genre" />
         {editableTaxonomy && <AddChipRow placeholder="Add genre…" onAdd={onAddGenre} />}
       </Field>
 
       <Field label="Cast">
-        <ChipList items={form.cast} editable={editableTaxonomy} onRemove={onRemoveCast} />
+        <ChipList items={form.cast} editable={editableTaxonomy} onRemove={onRemoveCast} linkTo="actor" />
         {editableTaxonomy && <AddChipRow placeholder="Add actor…" onAdd={onAddCast} />}
       </Field>
 

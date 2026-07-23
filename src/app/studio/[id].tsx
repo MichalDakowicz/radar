@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Film } from 'lucide-react-native';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { Building2 } from 'lucide-react-native';
+import { ActivityIndicator, Image, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MediaGrid } from '@/components/media/MediaGrid';
@@ -9,20 +9,20 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { toDiscoveryMovie } from '@/features/browse/toDiscoveryMovie';
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
-import { useGenreMoviesInfinite, useGenres } from '@/hooks/useTmdb';
+import { useCompanyDetails, useCompanyMoviesInfinite } from '@/hooks/useTmdb';
 import type { Movie } from '@/types/movie';
 
-// Genre landing page - paginated TMDB titles for one genre (doc 03
-// `GenreDetails`). No id param carries the name, so it's resolved from the
-// cached movie-genre list rather than legacy's hardcoded id->name table.
-export default function GenreDetails() {
+// Studio landing page - paginated TMDB titles for one production company.
+// Mirrors GenreDetails; name comes from the company endpoint since the id
+// param carries no name.
+export default function StudioDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const genreId = Number(id);
+  const companyId = Number(id);
   const quickAdd = useQuickAdd();
 
-  const { data: genres = [], isLoading: loadingGenres } = useGenres('movie');
+  const { data: company, isLoading: loadingCompany } = useCompanyDetails(companyId);
   const {
     data: moviePages,
     isLoading: loadingMovies,
@@ -31,24 +31,24 @@ export default function GenreDetails() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useGenreMoviesInfinite(genreId);
+  } = useCompanyMoviesInfinite(companyId);
 
-  if (loadingGenres || loadingMovies) {
+  if (loadingCompany || loadingMovies) {
     return (
       <View className="flex-1 bg-background">
-        <LoadingState label="Loading genre…" />
+        <LoadingState label="Loading studio…" />
       </View>
     );
   }
   if (isError) {
     return (
       <View className="flex-1 bg-background">
-        <ErrorState message="Couldn't load this genre" onRetry={refetch} />
+        <ErrorState message="Couldn't load this studio" onRetry={refetch} />
       </View>
     );
   }
 
-  const genreName = genres.find((g) => g.id === genreId)?.name ?? 'Genre';
+  const studioName = company?.name ?? 'Studio';
   const totalCount = moviePages?.pages[0]?.totalCount ?? 0;
   const movies = (moviePages?.pages.flatMap((p) => p.movies) ?? []).map(toDiscoveryMovie);
 
@@ -75,11 +75,18 @@ export default function GenreDetails() {
           ) : undefined
         }
         ListHeaderComponent={
-          <View className="gap-1 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+          <View className="gap-2 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
             <BackButton className="mb-3" />
-            <Text className="text-3xl font-bold text-foreground">{genreName}</Text>
+            {company?.logoUrl ? (
+              <Image
+                source={{ uri: company.logoUrl }}
+                resizeMode="contain"
+                className="h-14 w-32"
+              />
+            ) : null}
+            <Text className="text-3xl font-bold text-foreground">{studioName}</Text>
             <View className="flex-row items-center gap-1.5">
-              <Film size={14} color="#3b82f6" />
+              <Building2 size={14} color="#06b6d4" />
               <Text className="text-sm text-muted-foreground">
                 {totalCount} {totalCount === 1 ? 'title' : 'titles'}
               </Text>

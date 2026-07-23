@@ -3,10 +3,10 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Calculator, Check, Clapperboard, Plus, Quote, Search, Sparkles, X } from 'lucide-react-native';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StatusPicker } from '@/components/media/StatusPicker';
-import { BottomSheetModal, Sheet } from '@/components/ui/Sheet';
+import { BottomSheetModal, BottomSheetTextInput, Sheet } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
 import { type CategoryRatings, EMPTY_CATEGORY_RATINGS, recalcOverall } from '@/features/movies/edit/editForm';
 import { RatingSlider, RatingSliderPrecise, RatingValue } from '@/features/movies/edit/RatingSlider';
@@ -306,7 +306,7 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
           <View className="flex-1 gap-3">
             <View className="mx-4 flex-row items-center gap-2 rounded-full border border-border bg-secondary px-4 py-2.5">
               <Search size={18} color={MUTED} />
-              <TextInput
+              <BottomSheetTextInput
                 autoFocus
                 value={query}
                 onChangeText={setQuery}
@@ -374,7 +374,7 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
           <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 20 }}>
             <View className="gap-2">
               <SectionLabel>Title</SectionLabel>
-              <TextInput
+              <BottomSheetTextInput
                 autoFocus
                 value={manualTitle}
                 onChangeText={setManualTitle}

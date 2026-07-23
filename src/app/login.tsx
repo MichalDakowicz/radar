@@ -1,7 +1,19 @@
 import { Redirect, type Href } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 
+import Logo from '@/assets/brand/logo.svg';
 import { useToast } from '@/components/ui/Toast';
 import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/features/auth/authActions';
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -38,10 +50,19 @@ export default function Login() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center gap-10 bg-background px-6">
+    <KeyboardAvoidingView
+      className="flex-1 bg-background"
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView
+          contentContainerClassName="flex-grow items-center justify-center gap-10 px-6 py-12"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
       <View className="items-center gap-2">
         <View className="h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-          <Text className="text-4xl font-bold text-primary">R</Text>
+          <Logo width={48} height={48} />
         </View>
         <Text className="text-4xl font-bold tracking-tight text-foreground">Radar</Text>
         <Text className="text-muted-foreground">Curate and track your movie watchlist.</Text>
@@ -100,6 +121,8 @@ export default function Login() {
           </Text>
         </Pressable>
       </View>
-    </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 }

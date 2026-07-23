@@ -298,7 +298,7 @@ export async function fetchMediaMetadata(
       revenue: data.revenue || 0,
       tagline: data.tagline || '',
       productionCompanies: data.production_companies
-        ? data.production_companies.map((c: any) => ({ name: c.name, logo: posterUrl(c.logo_path) }))
+        ? data.production_companies.map((c: any) => ({ id: c.id, name: c.name, logo: posterUrl(c.logo_path) }))
         : [],
       voteCount: data.vote_count || 0,
     };
@@ -621,6 +621,50 @@ export async function fetchGenreMovies(genreId: number, page = 1): Promise<Genre
     return { movies, totalPages: data.total_pages, totalCount: data.total_results };
   } catch (error) {
     console.error('TMDB Genre Movies Error:', error);
+    return { movies: [], totalPages: 1, totalCount: 0 };
+  }
+}
+
+export type CompanyDetails = { id: number; name: string; logoUrl: string | null };
+
+export async function fetchCompanyDetails(companyId: number): Promise<CompanyDetails | null> {
+  if (!companyId) return null;
+  try {
+    const res = await fetch(`${BASE_URL}/company/${companyId}`, { headers });
+    if (!res.ok) throw new Error('Failed to fetch company');
+    const data = await res.json();
+    return { id: data.id, name: data.name, logoUrl: posterUrl(data.logo_path) };
+  } catch (error) {
+    console.error('TMDB Company Details Error:', error);
+    return null;
+  }
+}
+
+// Titles produced by one studio (mirrors fetchGenreMovies, discover by company).
+export async function fetchCompanyMovies(companyId: number, page = 1): Promise<GenreMoviesResult> {
+  if (!companyId) return { movies: [], totalPages: 1, totalCount: 0 };
+  try {
+    const res = await fetch(
+      `${BASE_URL}/discover/movie?with_companies=${companyId}&sort_by=vote_average.desc&vote_count.gte=100&page=${page}`,
+      { headers },
+    );
+    if (!res.ok) throw new Error('Failed to fetch company movies');
+    const data = await res.json();
+
+    const movies = (data.results as any[]).map((movie) => ({
+      tmdbId: movie.id,
+      type: 'movie' as const,
+      title: movie.title,
+      releaseDate: movie.release_date || null,
+      coverUrl: posterUrl(movie.poster_path),
+      overview: movie.overview || '',
+      voteAverage: movie.vote_average || 0,
+      voteCount: movie.vote_count || 0,
+    }));
+
+    return { movies, totalPages: data.total_pages, totalCount: data.total_results };
+  } catch (error) {
+    console.error('TMDB Company Movies Error:', error);
     return { movies: [], totalPages: 1, totalCount: 0 };
   }
 }

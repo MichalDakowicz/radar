@@ -29,7 +29,7 @@ export default function LibraryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
-  const { viewMode, gridSize, statusFilter, selectedServices, sortBy, groupBy, comingSoonCollapsed, toggleComingSoonCollapsed } =
+  const { viewMode, gridSize, statusFilter, selectedServices, sortBy, groupBy, comingSoonCollapsed, toggleComingSoonCollapsed, reorderMode } =
     useLibraryPrefs();
   const { settings } = useUserSettings();
   const filters = useLibraryFilters(
@@ -41,6 +41,7 @@ export default function LibraryScreen() {
     groupBy,
     settings.recentlyAddedDays,
     settings.showRecentlyAdded,
+    reorderMode,
   );
   const { handleDragEnd } = useLibraryReorder();
 

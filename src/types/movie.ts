@@ -11,7 +11,7 @@ export type Ratings = {
   seasons?: Record<string, { overall?: number; story?: number; acting?: number; ending?: number; enjoyment?: number }>;
 };
 
-export type ProductionCompany = { name: string; logo: string | null };
+export type ProductionCompany = { id?: number; name: string; logo: string | null };
 
 // App-side shape produced by normalizeMovie() at the read boundary (doc 02, 10).
 // Mirrors the current Firebase Movie object; only the storage layer changed.

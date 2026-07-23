@@ -316,16 +316,16 @@ const PHASES = [
     ]
   },
   {
-    id:'p10', status:'todo', title:'Phase 10 — Platform polish & release',
+    id:'p10', status:'doing', title:'Phase 10 — Platform polish & release',
     goal:'Ship on Android + iOS + Web.',
     docs:['08','07','05'],
     deliver:'Shippable builds on all three targets.',
     subtasks:[
-      {id:'p10-1', status:'todo', text:'Deep links (<code>radar://</code> + public-shelf URLs), splash/icon (from <code>assets/</code>), safe areas, keyboard. (doc 09, 07)'},
-      {id:'p10-2', status:'todo', text:'Expo <b>Web</b> pass (public shelf must work). (doc 00, 08)'},
-      {id:'p10-3', status:'todo', text:'Performance: FlashList tuning, image cache, memoized selectors. (doc 04, 05)'},
-      {id:'p10-4', status:'todo', text:'EAS builds Android + iOS; web deploy. Add Apple Sign-In before iOS submission. (doc 08, 11)'},
-      {id:'p10-5', status:'todo', text:'Testing checkpoints: migration fidelity, scroll restoration, Browse stability, status matrix. (doc 08 §testing)'},
+      {id:'p10-1', status:'done', text:'Deep links: <code>radar://</code> scheme set in <code>app.json</code>; Expo Router derives the link map from the file routes, so <code>radar://u/&lt;id&gt;</code> (public shelf) and the OAuth <code>radar:///</code> redirect (<code>Linking.createURL(\'/\')</code> in <code>authActions</code>) both resolve with no extra config. Splash/icon already wired in Phase 0 from real <code>assets/images/*</code> (icon, adaptive-icon fg/bg/mono, splash, favicon). Safe areas: <code>Header</code>/<code>PublicHeader</code> pad <code>insets.top</code>; scroll screens carry bottom padding clear of the tab bar. Keyboard: wrapped <code>login.tsx</code> in <code>KeyboardAvoidingView</code> + tap-to-dismiss <code>ScrollView</code> (<code>keyboardShouldPersistTaps="handled"</code>); edit/manage-completion screens already used <code>KeyboardAvoidingView</code>. <b>Not doable headless:</b> https universal/app links need a deployed web domain (none yet) - custom-scheme links cover in-app/OAuth now. (doc 09, 07)'},
+      {id:'p10-2', status:'done', text:'Expo <b>Web</b> pass: <code>expo export --platform web</code> builds the full route tree incl. the anon-reachable <code>u/[userId]</code> public shelf (5.3MB bundle, no errors); <code>web.output:"single"</code>, AuthGate gates on auth <i>resolving</i> not being signed in, so public shelves render for logged-out visitors. Real browser click-through/login still pending - no browser tool this session. (doc 00, 08)'},
+      {id:'p10-3', status:'done', text:'Performance: posters (the hot FlashList path) now use <code>cachePolicy="memory-disk"</code> + <code>recyclingKey={uri}</code> so scroll-back is instant and recycled cells swap cleanly instead of flashing the prior poster; <code>MovieCard</code> wrapped in <code>React.memo</code> so unrelated parent re-renders (filter/search/theme) don\'t re-render every mounted card. FlashList is v2 (2.0.2) - auto-sizes, so no <code>estimatedItemSize</code> needed. Verified: typecheck clean, 54 tests, web export builds. (doc 04, 05)'},
+      {id:'p10-4', status:'todo', text:'Authored <code>eas.json</code> (development/preview/production profiles + submit). <b>⚠️ User action (blocked on Step 0 k-expo):</b> running <code>eas build</code> for Android + iOS needs an Expo/EAS account (+ Apple Developer / Google Play for submission); web deploy needs a host. <b>Apple Sign-In</b> native module still to add before iOS submission (App Store requires it when Google sign-in is offered). (doc 08, 11)'},
+      {id:'p10-5', status:'todo', text:'Automated checks green: 54 unit tests (migration transforms via <code>migrateStatus</code>/<code>normalizeServiceName</code>, <code>buildMoviePayload</code>, <code>movieStatus</code>, <code>stats</code>, <code>dataTransfer</code>) + clean typecheck + web export. <b>Pending real device/browser (no tool this session):</b> scroll restoration on navigate-back, Browse stability across visits, and the movie/TV × watchlist/in-progress/watched/rewatch status matrix - these are interaction checks that need a running app. Migration fidelity already spot-verified in <code>mig-4</code> (482/482 movies + 347/347 activity). (doc 08 §testing)'},
     ]
   },
 ];

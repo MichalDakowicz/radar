@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, Clapperboard, Plus, StickyNote, Tv } from 'lucide-react-native';
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DualRating, RatingStars } from '@/components/media/RatingStars';
@@ -27,7 +28,12 @@ export type MovieCardProps = {
   readOnly?: boolean;
 };
 
-export function MovieCard(props: MovieCardProps) {
+// Memoized: rendered in every FlashList cell (grid + carousels). Without this,
+// a parent re-render (filter/search/theme change) re-renders every mounted
+// card even when its own props are unchanged (doc 04 perf pass).
+export const MovieCard = memo(MovieCardImpl);
+
+function MovieCardImpl(props: MovieCardProps) {
   switch (props.variant) {
     case 'row':
       return <RowCard {...props} />;
@@ -61,6 +67,12 @@ function PosterImage({ uri, dimmed }: { uri: string | null; dimmed?: boolean }) 
       style={[StyleSheet.absoluteFill, { opacity: dimmed ? 0.7 : 1 }]}
       contentFit="cover"
       transition={200}
+      // Phase 10 perf: keep posters in the memory cache (not just disk) so
+      // scrolling back up is instant, and key the image by uri so FlashList
+      // cell recycling swaps the source cleanly instead of flashing the
+      // previous poster during reuse.
+      cachePolicy="memory-disk"
+      recyclingKey={uri}
     />
   );
 }

@@ -1,6 +1,7 @@
+import { useRouter } from 'expo-router';
 import { BarChart3, CheckCircle2, Clock, Film, Flame, History, Star, Trophy } from 'lucide-react-native';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ContentMix } from '@/components/stats/ContentMix';
 import { DecadeBars } from '@/components/stats/DecadeBars';
@@ -51,6 +52,7 @@ export function StatsView({
   streakThreshold,
   tvStreakThreshold,
 }: StatsViewProps) {
+  const router = useRouter();
   const stats = useStats(movies, { streakThreshold, tvStreakThreshold });
   const [calendarView, setCalendarView] = useState<'movies' | 'tv'>('movies');
 
@@ -65,6 +67,7 @@ export function StatsView({
   }
 
   const topGenre = stats.topGenres[0]?.name ?? 'N/A';
+  const topGenreId = stats.topGenres[0]?.id;
   const maxDirector = stats.topDirectors[0]?.count ?? 1;
   const isMovieView = calendarView === 'movies';
 
@@ -96,9 +99,13 @@ export function StatsView({
         <View className="w-[47%]">
           <QuickStat value={stats.watchedCount} label="Completed" icon={<CheckCircle2 size={16} color={MUTED} />} />
         </View>
-        <View className="w-[47%]">
+        <Pressable
+          className="w-[47%]"
+          disabled={!topGenreId}
+          onPress={() => topGenreId && router.push({ pathname: '/genre/[id]', params: { id: String(topGenreId) } })}
+        >
           <QuickStat value={topGenre} label="Top Genre" icon={<Trophy size={16} color={MUTED} />} />
-        </View>
+        </Pressable>
         <View className="w-[47%]">
           <QuickStat value={stats.avgRating} label="Avg Rating" icon={<Star size={16} color={MUTED} />} suffix="/5" />
         </View>

@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 
+import { ServiceLogo } from '@/components/media/ServiceLogo';
 import { normalizeAvailability } from '@/lib/services';
 
 type AvailabilityBadgesProps = {
@@ -15,7 +16,11 @@ export function AvailabilityBadges({ availability }: AvailabilityBadgesProps) {
   return (
     <View className="flex-row flex-wrap gap-2">
       {services.map((service) => (
-        <View key={service} className="rounded-full border border-border bg-secondary px-3 py-1.5">
+        <View
+          key={service}
+          className="flex-row items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1.5"
+        >
+          <ServiceLogo service={service} size={16} />
           <Text className="text-sm font-medium text-foreground">{service}</Text>
         </View>
       ))}
