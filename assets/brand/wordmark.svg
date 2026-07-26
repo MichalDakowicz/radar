@@ -1,14 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 236 64" width="236" height="64" fill="none">
-  <defs>
-    <linearGradient id="radarWordmark" x1="11" y1="7" x2="51" y2="57" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7DB3FB" />
-      <stop offset=".5" stop-color="#3B82F6" />
-      <stop offset="1" stop-color="#6366F1" />
-    </linearGradient>
-  </defs>
-  <path d="M53.86 18.87A25.5 25.5 0 1 1 39.03 7.49" stroke="url(#radarWordmark)" stroke-width="4.5" stroke-linecap="round" />
-  <circle cx="48.44" cy="10.58" r="3.6" fill="url(#radarWordmark)" />
-  <path d="M26.2 22.5 43.7 32 26.2 41.5Z" fill="url(#radarWordmark)" stroke="url(#radarWordmark)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+  <path d="M53.86 18.87A25.5 25.5 0 1 1 39.03 7.49" stroke="#3B82F6" stroke-width="4.5" stroke-linecap="round" />
+  <circle cx="48.44" cy="10.58" r="3.6" fill="#3B82F6" />
+  <path d="M26.2 22.5 43.7 32 26.2 41.5Z" fill="#3B82F6" stroke="#3B82F6" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
   <text
     x="78"
     y="32"

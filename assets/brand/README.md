@@ -25,6 +25,5 @@ gradient fill itself.
 
 ## Palette
 
-The gradient runs `#7DB3FB` -> `#3B82F6` -> `#6366F1`. `#3B82F6` is the
-`--primary` token from `src/theme/colors.ts`; the backdrop everywhere is
-`#09090B` (`--background`).
+One flat colour, no gradients: `#3B82F6` - the `--primary` token from
+`src/theme/colors.ts`. The backdrop everywhere is `#09090B` (`--background`).
