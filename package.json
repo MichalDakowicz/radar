@@ -69,6 +69,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "test": "jest",
+    "icons": "node ./scripts/generate-icons.mjs",
     "migrate:data": "node --env-file=.env --import tsx ./scripts/migrate-data.ts"
   },
   "jest": {
