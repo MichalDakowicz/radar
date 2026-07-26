@@ -1,6 +1,11 @@
-# Radar
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/wordmark-dark.svg">
+    <img src="assets/brand/wordmark.svg" alt="Radar" width="240">
+  </picture>
+</p>
 
-**Curate your movie watchlist & collection.**
+<p align="center"><strong>Curate your movie watchlist &amp; collection.</strong></p>
 
 Radar is a modern, cross-platform application designed for movie enthusiasts to track, manage, and share their watchlist. Radar helps you keep a beautiful digital archive of your watchlist.
 
