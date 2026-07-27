@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 
 import type { BottomSheetModal } from '@/components/ui/Sheet';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { useBrowsePreload } from '@/features/browse/useBrowsePreload';
 import { FriendRequestListener } from '@/features/friends/FriendRequestListener';
 import { QuickAddSheet } from '@/features/movies/add/QuickAddSheet';
 import { useQuickAddSheetStore } from '@/store/quickAddSheet';
@@ -25,6 +26,9 @@ export default function TabsLayout() {
   const setPresent = useQuickAddSheetStore((s) => s.setPresent);
   const bump = useTabReload((s) => s.bump);
   const lastPress = useRef<{ name: string; time: number } | null>(null);
+
+  // Warm the Browse discovery feed in the background so its first open is instant.
+  useBrowsePreload();
 
   // Reload only on the *second* press of the same tab inside the window - by
   // then the tab is already focused, so this fires both when you switch to a

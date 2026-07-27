@@ -19,28 +19,29 @@ Radar is a modern, cross-platform application designed for movie enthusiasts to 
 - **Public Shelf:** Share a read-only link to your collection so anyone can browse your library.
 - **Rich Organization:** Filter and group by Director, Genre, Year, Format, or Status (Watchlist, Watched, etc.).
 - **Data Management:** Easy JSON import/export to backup your hard-curated data.
-- **Cross-Platform:** Built to run as a responsive web app and a native Android application.
+- **Preloaded Browse:** The discovery feed warms in the background after login, so the first open of the Browse tab is instant instead of a spinner.
+- **Cross-Platform:** A single Expo codebase running as a native iOS and Android app, plus a responsive web build.
 
 ## Tech Stack
 
-**Frontend:**
-- [React](https://react.dev/) + [Vite](https://vitejs.dev/)
-- [TailwindCSS](https://tailwindcss.com/) for styling
-- [Lucide React](https://lucide.dev/) for icons
-- [Radix UI](https://www.radix-ui.com/) primitives
+**App:**
+- [Expo](https://expo.dev/) + [React Native](https://reactnative.dev/) (`react-native-web` for web)
+- [Expo Router](https://docs.expo.dev/router/introduction/) for file-based routing
+- [NativeWind](https://www.nativewind.dev/) / [TailwindCSS](https://tailwindcss.com/) for styling
+- [TanStack Query](https://tanstack.com/query) for data fetching & caching
+- [Zustand](https://zustand-demo.pmnd.rs/) for local state
+- [Lucide](https://lucide.dev/) icons, [Reanimated](https://docs.swmansion.com/react-native-reanimated/) + [Gesture Handler](https://docs.swmansion.com/react-native-gesture-handler/)
 
 **Backend & Services:**
-- [Firebase](https://firebase.google.com/) (Authentication, Realtime Database)
+- [Supabase](https://supabase.com/) (Auth, Postgres, Realtime)
 - [TMDB API](https://www.themoviedb.org/) for movie metadata
-
-**Mobile:**
-- [Capacitor](https://capacitorjs.com/) for native Android runtime
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js (v18+)
-- Firebase project credentials
+- A [Supabase](https://supabase.com/) project
+- A [TMDB API](https://www.themoviedb.org/settings/api) read access token
 
 ### Installation
 
@@ -55,21 +56,24 @@ Radar is a modern, cross-platform application designed for movie enthusiasts to 
    npm install
    ```
 
-3. Configure Firebase:
-   - Create a `firebase.js` or `.env` configuration (refer to `src/lib/firebase.js`).
-   - Ensure your Firebase Realtime Database rules allow the appropriate read/write for auth users.
-
-4. Run the development server:
+3. Configure environment variables. Create a `.env` file in the project root:
    ```bash
-   npm run dev
+   EXPO_PUBLIC_SUPABASE_URL=your-supabase-url
+   EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   EXPO_PUBLIC_TMDB_ACCESS_TOKEN=your-tmdb-read-access-token
    ```
 
-### Mobile Build (Android)
+4. Start the dev server:
+   ```bash
+   npm start
+   ```
+   Then press `i` (iOS), `a` (Android), or `w` (web) — or scan the QR code with Expo Go / a dev client.
 
-To build and run the app on an Android device/emulator:
+### Native Builds
+
+Run directly on a device/emulator:
 
 ```bash
-npm run build
-npx cap sync
-npx cap open android
+npm run android   # build & run on Android
+npm run ios       # build & run on iOS
 ```
