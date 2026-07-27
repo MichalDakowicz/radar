@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import GoogleIcon from '@/assets/brand/google.svg';
 import Logo from '@/assets/brand/logo.svg';
 import { useToast } from '@/components/ui/Toast';
 import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/features/auth/authActions';
@@ -74,6 +75,7 @@ export default function Login() {
           disabled={busy}
           className="flex-row items-center justify-center gap-2 rounded-full bg-foreground py-3 active:opacity-80 disabled:opacity-50"
         >
+          <GoogleIcon width={18} height={18} />
           <Text className="font-medium text-background">Sign in with Google</Text>
         </Pressable>
 

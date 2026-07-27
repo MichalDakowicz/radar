@@ -21,11 +21,14 @@ import { type BrowseTabId, useDiscoveryFeed } from '@/features/browse/useDiscove
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import * as tmdb from '@/lib/tmdb';
+import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
 
 // Thin composition layer only (doc 10) - discovery logic lives in
 // useDiscoveryFeed, search in useBrowseSearch, mutation in useQuickAdd.
-export default function Browse() {
+export default withTabReload(Browse, 'browse');
+
+function Browse() {
   const router = useRouter();
   const { show } = useToast();
   const [tab, setTab] = useState<BrowseTabId>('movies');

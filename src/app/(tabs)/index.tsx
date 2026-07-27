@@ -18,12 +18,15 @@ import { useLibraryReorder } from '@/features/library/useLibraryReorder';
 import { useMovies } from '@/hooks/useMovies';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useLibraryPrefs } from '@/store/libraryPrefs';
+import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
 
 // Thin composition layer only (doc 10) - all derive logic lives in
 // useLibraryFilters/useLibraryReorder, all durable prefs in the zustand+MMKV
 // store, all rendering in the Library* components.
-export default function LibraryScreen() {
+export default withTabReload(LibraryScreen, 'index');
+
+function LibraryScreen() {
   const router = useRouter();
   const { movies, loading, error } = useMovies();
   const [searchQuery, setSearchQuery] = useState('');

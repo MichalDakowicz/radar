@@ -11,12 +11,15 @@ import { FriendCard } from '@/features/friends/FriendCard';
 import { FriendRequestItem } from '@/features/friends/FriendRequestItem';
 import { UserSearchPanel } from '@/features/friends/UserSearchPanel';
 import { useFriends } from '@/hooks/useFriends';
+import { withTabReload } from '@/store/tabReload';
 
 const MUTED = 'hsl(0 0% 45%)';
 
 type Tab = 'list' | 'search';
 
-export default function FriendsScreen() {
+export default withTabReload(FriendsScreen, 'friends');
+
+function FriendsScreen() {
   const { friends, requests, loading, error, sendRequest, acceptRequest, rejectRequest, removeFriend } = useFriends();
   const { show } = useToast();
   const [tab, setTab] = useState<Tab>('list');

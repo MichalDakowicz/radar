@@ -16,13 +16,16 @@ import { RegionControl } from '@/features/settings/RegionControl';
 import { SettingsSection } from '@/features/settings/SettingsSection';
 import { StreakThresholdsControl } from '@/features/settings/StreakThresholdsControl';
 import { ThemeControl } from '@/features/settings/ThemeControl';
+import { withTabReload } from '@/store/tabReload';
 
 const MUTED = 'hsl(0 0% 63.9%)';
 
 // Full Settings screen (doc 03, Phase 9). Thin composition layer: every control
 // is its own small file (doc 10) and reads/writes user_settings via
 // useUserSettings, except device-local prefs (theme runtime, card size).
-export default function Settings() {
+export default withTabReload(Settings, 'settings');
+
+function Settings() {
   const editProfileRef = useRef<BottomSheetModal>(null);
   const importExportRef = useRef<BottomSheetModal>(null);
 

@@ -8,12 +8,15 @@ import { StatsView } from '@/features/stats/StatsView';
 import { useActivity } from '@/hooks/useActivity';
 import { useMovies } from '@/hooks/useMovies';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
 
 // Own-stats screen. Data fetching + navigation wiring live here; the actual
 // stats composition is the shared StatsView (also used by the public shelf,
 // Phase 8). All derivation is in lib/stats.ts.
-export default function StatsScreen() {
+export default withTabReload(StatsScreen, 'stats');
+
+function StatsScreen() {
   const router = useRouter();
   const { movies, loading, error } = useMovies();
   const { activities } = useActivity(20);
