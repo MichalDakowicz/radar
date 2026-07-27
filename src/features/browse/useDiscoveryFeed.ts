@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { type QueryClient, useInfiniteQuery } from '@tanstack/react-query';
 
 import * as tmdb from '@/lib/tmdb';
 import type { MediaType, Movie } from '@/types/movie';
@@ -103,6 +103,27 @@ async function buildBatch(tab: BrowseTabId, movies: Movie[], seed: number): Prom
   return categories.filter((c) => c.items.length > 0);
 }
 
+// Seed is stable per day/tab/reroll so revisiting Browse hits the cache. Note
+// `movies` is NOT in the key: personalization rides along inside queryFn, so a
+// preload warmed with the real library (see prefetchDiscoveryFeed) is reused by
+// the live query under the same key.
+function discoverySeed(rerollNonce: number) {
+  return Math.floor(Date.now() / DAY_MS) * 1000 + rerollNonce;
+}
+
+function discoveryFeedOptions(tab: BrowseTabId, movies: Movie[], rerollNonce: number) {
+  const seed = discoverySeed(rerollNonce);
+  return {
+    queryKey: ['discovery', tab, seed],
+    initialPageParam: 0,
+    getNextPageParam: (_last: DiscoveryCategory[], pages: DiscoveryCategory[][]) =>
+      pages.length < MAX_BATCHES ? pages.length : undefined,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    queryFn: ({ pageParam }: { pageParam: number }) => buildBatch(tab, movies, seed + pageParam * 7919),
+  };
+}
+
 /**
  * Seeded + react-query cached discovery feed (doc 04-B fix): the legacy
  * `generateCategories()` reshuffled with `Math.random()`/`Date.now()` on every
@@ -112,14 +133,14 @@ async function buildBatch(tab: BrowseTabId, movies: Movie[], seed: number): Prom
  * refresh (bumping rerollNonce) is the only way to get new rows.
  */
 export function useDiscoveryFeed(tab: BrowseTabId, rerollNonce: number, movies: Movie[]) {
-  const seed = Math.floor(Date.now() / DAY_MS) * 1000 + rerollNonce;
+  return useInfiniteQuery<DiscoveryCategory[], Error, { pages: DiscoveryCategory[][] }, unknown[], number>(
+    discoveryFeedOptions(tab, movies, rerollNonce),
+  );
+}
 
-  return useInfiniteQuery<DiscoveryCategory[], Error, { pages: DiscoveryCategory[][] }, unknown[], number>({
-    queryKey: ['discovery', tab, seed],
-    initialPageParam: 0,
-    getNextPageParam: (_last, pages) => (pages.length < MAX_BATCHES ? pages.length : undefined),
-    staleTime: 60 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
-    queryFn: ({ pageParam }) => buildBatch(tab, movies, seed + pageParam * 7919),
-  });
+// Warm the first Browse page before the user ever taps the tab. Uses reroll 0
+// (the default the screen mounts with) so the warmed pages are exactly what
+// useDiscoveryFeed asks for. prefetchInfiniteQuery only fetches the first page.
+export function prefetchDiscoveryFeed(queryClient: QueryClient, tab: BrowseTabId, movies: Movie[]) {
+  return queryClient.prefetchInfiniteQuery(discoveryFeedOptions(tab, movies, 0));
 }

@@ -13,14 +13,13 @@ import { BrowseResultFilterSheet } from '@/features/browse/BrowseResultFilterShe
 import { BrowseSearchBar } from '@/features/browse/BrowseSearchBar';
 import { BrowseTabs } from '@/features/browse/BrowseTabs';
 import { DiscoveryRow } from '@/features/browse/DiscoveryRow';
+import { heroPopularOptions } from '@/features/browse/heroQuery';
 import { ReleaseCalendar } from '@/features/browse/ReleaseCalendar';
 import { SearchResultsGrid } from '@/features/browse/SearchResultsGrid';
-import { toDiscoveryMovie } from '@/features/browse/toDiscoveryMovie';
 import { useBrowseSearch } from '@/features/browse/useBrowseSearch';
 import { type BrowseTabId, useDiscoveryFeed } from '@/features/browse/useDiscoveryFeed';
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import * as tmdb from '@/lib/tmdb';
 import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
 
@@ -46,14 +45,7 @@ function Browse() {
 
   // Hero shows popular titles for the active tab, independent of the seeded
   // first discovery row (which reshuffles on every reroll).
-  const heroQuery = useQuery({
-    queryKey: ['hero-popular', feedTab],
-    queryFn: async () => {
-      const items = feedTab === 'tv' ? await tmdb.getTVShows('popular') : await tmdb.getMovies('popular');
-      return items.map(toDiscoveryMovie);
-    },
-    staleTime: 60 * 60 * 1000,
-  });
+  const heroQuery = useQuery(heroPopularOptions(feedTab));
   const heroItems = heroQuery.data ?? [];
   const isAdded = (movie: Movie) => quickAdd.isAdded(movie.tmdbId);
 
