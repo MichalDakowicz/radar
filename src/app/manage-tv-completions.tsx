@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useMovies } from '@/hooks/useMovies';
+import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { useSeasonDetails } from '@/hooks/useTmdb';
 import { dateKey } from '@/lib/stats';
 import { goBackOrHome } from '@/lib/utils';
@@ -73,6 +74,7 @@ function SeasonEpisodePicker({
 export default function ManageTVCompletions() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const contentStyle = useCenteredContentStyle(MAX_W.text);
   const { date } = useLocalSearchParams<{ date?: string }>();
   const { movies, updateMovie } = useMovies();
 
@@ -153,7 +155,10 @@ export default function ManageTVCompletions() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 24 }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[{ padding: 16, paddingBottom: 48, gap: 24 }, contentStyle]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Episodes already on this day */}
         {episodesOnThisDay.length > 0 && (
           <View className="gap-3">

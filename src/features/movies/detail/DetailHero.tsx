@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useIsDesktop } from '@/hooks/useResponsive';
 import { goBackOrHome } from '@/lib/utils';
 import type { NamedRef } from '@/types/movie';
 
@@ -34,11 +35,12 @@ type DetailHeroProps = {
 export function DetailHero({ title, tagline, coverUrl, releaseDate, director, action }: DetailHeroProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isDesktop = useIsDesktop();
   const year = releaseDate ? releaseDate.slice(0, 4) : null;
 
   return (
     <View className="relative">
-      <View className="h-72 w-full overflow-hidden bg-neutral-900">
+      <View className={isDesktop ? "h-96 w-full overflow-hidden bg-neutral-900" : "h-72 w-full overflow-hidden bg-neutral-900"}>
         {coverUrl && <Image source={{ uri: coverUrl }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={40} />}
         <LinearGradient colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']} style={StyleSheet.absoluteFill} />
       </View>
@@ -51,8 +53,14 @@ export function DetailHero({ title, tagline, coverUrl, releaseDate, director, ac
         <ArrowLeft size={22} color="#fff" />
       </Pressable>
 
-      <View className="-mt-32 flex-row gap-4 px-4">
-        <View className="aspect-[2/3] w-28 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-800 shadow-2xl">
+      <View className={isDesktop ? '-mt-48 flex-row gap-6 px-8' : '-mt-32 flex-row gap-4 px-4'}>
+        <View
+          className={
+            isDesktop
+              ? 'aspect-[2/3] w-44 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-800 shadow-2xl'
+              : 'aspect-[2/3] w-28 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-800 shadow-2xl'
+          }
+        >
           {coverUrl ? (
             <Image source={{ uri: coverUrl }} style={{ flex: 1 }} contentFit="cover" />
           ) : (
@@ -63,7 +71,7 @@ export function DetailHero({ title, tagline, coverUrl, releaseDate, director, ac
         </View>
 
         <View className="flex-1 justify-end gap-1.5 pb-1">
-          <Text className="text-2xl font-bold leading-tight text-white">{title}</Text>
+          <Text className={isDesktop ? 'text-4xl font-bold leading-tight text-white' : 'text-2xl font-bold leading-tight text-white'}>{title}</Text>
           {!!tagline && (
             <View className="flex-row items-center gap-1.5">
               <Quote size={12} color="#a3a3a3" />
@@ -95,7 +103,13 @@ export function DetailHero({ title, tagline, coverUrl, releaseDate, director, ac
         </View>
       </View>
 
-      {!!action && <View className="px-4 pt-4">{action}</View>}
+      {!!action && (
+        // The CTA is a full-width bar on phones; at desktop width that reads as
+        // a banner, so it shrinks to a button-sized block under the poster.
+        <View className={isDesktop ? 'px-8 pt-5' : 'px-4 pt-4'} style={isDesktop ? { maxWidth: 320 } : undefined}>
+          {action}
+        </View>
+      )}
     </View>
   );
 }

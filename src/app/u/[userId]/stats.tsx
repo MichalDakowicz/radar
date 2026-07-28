@@ -5,8 +5,10 @@ import { View } from 'react-native';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { ContentShell } from '@/components/layout/ContentShell';
 import { StatsView } from '@/features/stats/StatsView';
 import { useCanViewUser, usePublicActivity, usePublicMovies } from '@/hooks/usePublicMovies';
+import { MAX_W } from '@/hooks/useResponsive';
 
 const MUTED = 'hsl(0 0% 45%)';
 
@@ -45,7 +47,9 @@ export default function PublicStats() {
 
   return (
     <View className="flex-1 bg-background">
-      <StatsView movies={movies} activities={activities} />
+      <ContentShell fill maxWidth={MAX_W.detail}>
+        <StatsView movies={movies} activities={activities} />
+      </ContentShell>
     </View>
   );
 }

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <!--
+    Document shell for the web build. web.output is "single" (a client-rendered
+    SPA); in that mode Expo reads this file if it exists and otherwise falls back
+    to its stock template, so this is where document-level concerns live. An
+    app/+html.tsx is only consulted for static rendering and would be ignored.
+
+    Expo fills the placeholders and injects bundle tags by plain string replace
+    on the first match - so never repeat a placeholder or a closing head tag in a
+    comment here, or the substitution lands inside the comment instead.
+  -->
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <!-- No maximum-scale: pinch-zoom stays available on touch devices. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#09090b" />
+    <meta name="description" content="Radar — curate and track your movie and TV watchlist." />
+    <title>%WEB_TITLE%</title>
+
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+
+    <style id="radar-desktop">
+      /* `--background` of the dark theme (src/theme/colors.ts) - painted on the
+         document so the first frame before hydration isn't a white flash. */
+      html,
+      body {
+        background-color: #09090b;
+        overscroll-behavior-y: none;
+      }
+
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+
+      /* Thin dark scrollbars. Every scroll container is in-app (React Native
+         owns scrolling), so the OS-default light scrollbar would sit against
+         near-black surfaces everywhere - hence the global rule. */
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: #3f3f46 transparent;
+      }
+
+      *::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+
+      *::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      *::-webkit-scrollbar-thumb {
+        background-color: #3f3f46;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        background-clip: content-box;
+      }
+
+      *::-webkit-scrollbar-thumb:hover {
+        background-color: #52525b;
+        background-clip: content-box;
+      }
+
+      *::-webkit-scrollbar-corner {
+        background: transparent;
+      }
+
+      ::selection {
+        background-color: hsl(217 91% 60% / 0.35);
+      }
+
+      /* React Native has no cursor concept and react-native-web marks every
+         pressable focusable, so this is what makes the whole app feel clickable
+         with a mouse instead of annotating hundreds of Pressables. */
+      [tabindex='0']:not(input):not(textarea):not([role='none']) {
+        cursor: pointer;
+      }
+
+      /* Keyboard focus stays visible (the app is keyboard-navigable on desktop),
+         but a mouse click doesn't leave a ring behind. */
+      :focus:not(:focus-visible) {
+        outline: none;
+      }
+
+      :focus-visible {
+        outline: 2px solid hsl(217 91% 60%);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript> You need to enable JavaScript to run this app. </noscript>
+    <div id="root"></div>
+  </body>
+</html>

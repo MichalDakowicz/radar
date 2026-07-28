@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 
+import { ContentShell } from '@/components/layout/ContentShell';
 import { Header } from '@/components/layout/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
@@ -16,6 +17,7 @@ import { RandomPickSheet } from '@/features/library/RandomPickSheet';
 import { useLibraryFilters } from '@/features/library/useLibraryFilters';
 import { useLibraryReorder } from '@/features/library/useLibraryReorder';
 import { useMovies } from '@/hooks/useMovies';
+import { MAX_W } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useLibraryPrefs } from '@/store/libraryPrefs';
 import { withTabReload } from '@/store/tabReload';
@@ -96,15 +98,17 @@ function LibraryScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header onRandomPick={() => randomPickRef.current?.present()} />
-      <LibraryToolbar
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onOpenFilters={() => filterSheetRef.current?.present()}
-        onOpenGroup={() => groupSheetRef.current?.present()}
-      />
+      <Header onRandomPick={() => randomPickRef.current?.present()} maxWidth={MAX_W.grid} />
+      <ContentShell maxWidth={MAX_W.grid}>
+        <LibraryToolbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onOpenFilters={() => filterSheetRef.current?.present()}
+          onOpenGroup={() => groupSheetRef.current?.present()}
+        />
+      </ContentShell>
 
-      <View className="flex-1">
+      <ContentShell fill maxWidth={MAX_W.grid}>
         {filters.groups ? (
           <LibraryGroupedList
             groups={filters.groups}
@@ -125,7 +129,7 @@ function LibraryScreen() {
             ListHeaderComponent={sections}
           />
         )}
-      </View>
+      </ContentShell>
 
       <LibraryFilterSheet ref={filterSheetRef} />
       <GroupBySheet ref={groupSheetRef} />

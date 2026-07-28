@@ -11,6 +11,7 @@ import { FriendCard } from '@/features/friends/FriendCard';
 import { FriendRequestItem } from '@/features/friends/FriendRequestItem';
 import { UserSearchPanel } from '@/features/friends/UserSearchPanel';
 import { useFriends } from '@/hooks/useFriends';
+import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { withTabReload } from '@/store/tabReload';
 
 const MUTED = 'hsl(0 0% 45%)';
@@ -23,6 +24,7 @@ function FriendsScreen() {
   const { friends, requests, loading, error, sendRequest, acceptRequest, rejectRequest, removeFriend } = useFriends();
   const { show } = useToast();
   const [tab, setTab] = useState<Tab>('list');
+  const contentStyle = useCenteredContentStyle(MAX_W.text);
 
   const friendIds = useMemo(() => new Set(friends.map((f) => f.id)), [friends]);
 
@@ -47,8 +49,12 @@ function FriendsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header />
-      <ScrollView contentContainerClassName="gap-6 px-4 pb-12 pt-4" showsVerticalScrollIndicator={false}>
+      <Header maxWidth={MAX_W.text} />
+      <ScrollView
+        contentContainerClassName="gap-6 px-4 pb-12 pt-4"
+        contentContainerStyle={contentStyle}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Segmented control */}
         <View className="flex-row rounded-lg bg-secondary p-1">
           <SegBtn active={tab === 'list'} onPress={() => setTab('list')} icon={<Users size={16} color={tab === 'list' ? '#fff' : MUTED} />}>

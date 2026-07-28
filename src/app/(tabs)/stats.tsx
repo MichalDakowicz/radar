@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
+import { ContentShell } from '@/components/layout/ContentShell';
 import { Header } from '@/components/layout/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { StatsView } from '@/features/stats/StatsView';
 import { useActivity } from '@/hooks/useActivity';
 import { useMovies } from '@/hooks/useMovies';
+import { MAX_W } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
@@ -43,16 +45,18 @@ function StatsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header />
-      <StatsView
-        movies={movies}
-        activities={activities}
-        streakThreshold={settings.streakThreshold}
-        tvStreakThreshold={settings.tvStreakThreshold}
-        onOpenMovie={openMovie}
-        onManageMovies={(date) => router.push({ pathname: '/manage-completions', params: { date } })}
-        onManageTV={(date) => router.push({ pathname: '/manage-tv-completions', params: { date } })}
-      />
+      <Header maxWidth={MAX_W.detail} />
+      <ContentShell fill maxWidth={MAX_W.detail}>
+        <StatsView
+          movies={movies}
+          activities={activities}
+          streakThreshold={settings.streakThreshold}
+          tvStreakThreshold={settings.tvStreakThreshold}
+          onOpenMovie={openMovie}
+          onManageMovies={(date) => router.push({ pathname: '/manage-completions', params: { date } })}
+          onManageTV={(date) => router.push({ pathname: '/manage-tv-completions', params: { date } })}
+        />
+      </ContentShell>
     </View>
   );
 }

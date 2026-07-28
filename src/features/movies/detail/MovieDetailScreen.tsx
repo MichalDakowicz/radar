@@ -15,6 +15,7 @@ import { EditRatingsTab } from '@/features/movies/edit/EditRatingsTab';
 import { RatingSliderPrecise, RatingValue } from '@/features/movies/edit/RatingSlider';
 import { useEditMovieForm } from '@/features/movies/edit/useEditMovieForm';
 import { useMovies } from '@/hooks/useMovies';
+import { MAX_W, useCenteredContentStyle, useIsDesktop } from '@/hooks/useResponsive';
 import { useMediaMetadata, useSimilarMedia } from '@/hooks/useTmdb';
 import type { MediaType } from '@/types/movie';
 
@@ -58,6 +59,8 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
   const { show } = useToast();
   const { movies } = useMovies();
   const quickAdd = useQuickAdd();
+  const isDesktop = useIsDesktop();
+  const contentStyle = useCenteredContentStyle(MAX_W.detail);
 
   const owned = movieId ? (movies.find((m) => m.id === movieId) ?? null) : quickAdd.findByTmdbId(tmdbId);
   const pending = tmdbId != null && quickAdd.pendingTmdbId === tmdbId;
@@ -93,9 +96,86 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
     { key: 'ratings', label: 'Ratings' },
   ];
 
+  // Extracted so desktop can reorder them into two columns without duplicating
+  // markup - the phone layout renders the exact same nodes in the old order.
+  const statsBlock = !owned ? (
+    <View className={isDesktop ? 'gap-3' : 'flex-row gap-3'}>
+      <Stat icon={<Calendar size={16} color="#3b82f6" />} label="Release" value={display.releaseDate || 'Unknown'} />
+      <Stat icon={<Clock size={16} color="#a855f7" />} label="Runtime" value={display.runtime ? `${display.runtime}m` : 'N/A'} />
+      {display.budget > 0 && (
+        <Stat icon={<Wallet size={16} color="#10b981" />} label="Budget" value={`$${(display.budget / 1_000_000).toFixed(1)}M`} />
+      )}
+    </View>
+  ) : null;
+
+  const castBlock =
+    !owned && metadata!.cast.length > 0 ? (
+      <View className="gap-2">
+        <View className="flex-row items-center gap-2 px-0">
+          <Users size={18} color="#ec4899" />
+          <Text className="text-lg font-bold text-foreground">Cast</Text>
+        </View>
+        <CastRow cast={metadata!.cast} />
+      </View>
+    ) : null;
+
+  const productionBlock =
+    !owned && metadata!.productionCompanies.length > 0 ? (
+      <View className="gap-2">
+        <View className="flex-row items-center gap-2">
+          <Building2 size={18} color="#06b6d4" />
+          <Text className="text-lg font-bold text-foreground">Production</Text>
+        </View>
+        <View className="flex-row flex-wrap gap-2">
+          {metadata!.productionCompanies.map((c) => (
+            <Pressable
+              key={c.id ?? c.name}
+              disabled={!c.id}
+              onPress={() => c.id && router.push({ pathname: '/studio/[id]', params: { id: String(c.id) } })}
+              className="rounded-full border border-border bg-secondary px-3 py-1.5"
+            >
+              <Text className="text-sm text-muted-foreground">{c.name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    ) : null;
+
+  const genresBlock =
+    !owned && metadata!.genres.length > 0 ? (
+      <View className="gap-2">
+        <Text className="text-sm font-bold uppercase text-muted-foreground">Genres</Text>
+        <View className="flex-row flex-wrap gap-2">
+          {metadata!.genres.map((g) => (
+            <Pressable
+              key={g.id ?? g.name}
+              disabled={!g.id}
+              onPress={() => g.id && router.push({ pathname: '/genre/[id]', params: { id: String(g.id) } })}
+              className="rounded-full border border-border bg-secondary px-3 py-1.5"
+            >
+              <Text className="text-sm text-foreground">{g.name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+    ) : null;
+
+  const availabilityBlock =
+    !owned && metadata!.availability.length > 0 ? (
+      <View className="gap-2">
+        <Text className="text-sm font-bold uppercase text-muted-foreground">Available on</Text>
+        <AvailabilityBadges availability={metadata!.availability} />
+      </View>
+    ) : null;
+
   return (
     <View className="flex-1 bg-background">
-      <ScrollView className="flex-1 bg-background" contentContainerClassName="pb-24" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        className="flex-1 bg-background"
+        contentContainerClassName="pb-24"
+        contentContainerStyle={contentStyle}
+        keyboardShouldPersistTaps="handled"
+      >
       <DetailHero
         title={display.title}
         tagline={display.tagline}
@@ -105,20 +185,29 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
         action={<AddToLibraryButton isAdded={!!owned} pending={pending} onAdd={handleAdd} onRemove={() => setConfirmDelete(true)} />}
       />
 
-      <View className="gap-6 px-4 pt-6">
-        {!owned && (
-          <View className="flex-row gap-3">
-            <Stat icon={<Calendar size={16} color="#3b82f6" />} label="Release" value={display.releaseDate || 'Unknown'} />
-            <Stat
-              icon={<Clock size={16} color="#a855f7" />}
-              label="Runtime"
-              value={display.runtime ? `${display.runtime}m` : 'N/A'}
+      {isDesktop && !owned ? (
+        // Wide viewports read a 900px-long single column badly: the primary
+        // text keeps a comfortable measure on the left while the facts
+        // (release/runtime/budget, genres, availability) stack in a rail.
+        <View className="flex-row gap-8 px-6 pt-8">
+          <View className="min-w-0 flex-1 gap-6">
+            <OverviewSection
+              overview={display.overview}
+              editable={false}
+              onChange={(overview) => editForm.update({ overview })}
             />
-            {display.budget > 0 && (
-              <Stat icon={<Wallet size={16} color="#10b981" />} label="Budget" value={`$${(display.budget / 1_000_000).toFixed(1)}M`} />
-            )}
+            {castBlock}
+            {productionBlock}
           </View>
-        )}
+          <View className="gap-5" style={{ width: 320 }}>
+            {statsBlock}
+            {genresBlock}
+            {availabilityBlock}
+          </View>
+        </View>
+      ) : (
+      <View className="gap-6 px-4 pt-6">
+        {statsBlock}
 
         <OverviewSection
           overview={display.overview}
@@ -164,62 +253,12 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
           </View>
         )}
 
-        {!owned && metadata!.cast.length > 0 && (
-          <View className="gap-2">
-            <View className="flex-row items-center gap-2 px-0">
-              <Users size={18} color="#ec4899" />
-              <Text className="text-lg font-bold text-foreground">Cast</Text>
-            </View>
-            <CastRow cast={metadata!.cast} />
-          </View>
-        )}
-
-        {!owned && metadata!.productionCompanies.length > 0 && (
-          <View className="gap-2">
-            <View className="flex-row items-center gap-2">
-              <Building2 size={18} color="#06b6d4" />
-              <Text className="text-lg font-bold text-foreground">Production</Text>
-            </View>
-            <View className="flex-row flex-wrap gap-2">
-              {metadata!.productionCompanies.map((c) => (
-                <Pressable
-                  key={c.id ?? c.name}
-                  disabled={!c.id}
-                  onPress={() => c.id && router.push({ pathname: '/studio/[id]', params: { id: String(c.id) } })}
-                  className="rounded-full border border-border bg-secondary px-3 py-1.5"
-                >
-                  <Text className="text-sm text-muted-foreground">{c.name}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {!owned && metadata!.genres.length > 0 && (
-          <View className="gap-2">
-            <Text className="text-sm font-bold uppercase text-muted-foreground">Genres</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {metadata!.genres.map((g) => (
-                <Pressable
-                  key={g.id ?? g.name}
-                  disabled={!g.id}
-                  onPress={() => g.id && router.push({ pathname: '/genre/[id]', params: { id: String(g.id) } })}
-                  className="rounded-full border border-border bg-secondary px-3 py-1.5"
-                >
-                  <Text className="text-sm text-foreground">{g.name}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {!owned && metadata!.availability.length > 0 && (
-          <View className="gap-2">
-            <Text className="text-sm font-bold uppercase text-muted-foreground">Available on</Text>
-            <AvailabilityBadges availability={metadata!.availability} />
-          </View>
-        )}
+        {castBlock}
+        {productionBlock}
+        {genresBlock}
+        {availabilityBlock}
       </View>
+      )}
 
       {owned && form && (
         <>

@@ -42,8 +42,7 @@ export function OverviewSection({ overview, editable, onChange }: OverviewSectio
               web too. */}
           <Text
             className="text-muted-foreground"
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, opacity: 0, lineHeight: LINE_HEIGHT }}
-            pointerEvents="none"
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, opacity: 0, lineHeight: LINE_HEIGHT, pointerEvents: 'none' }}
             onLayout={(e) => setTruncated(Math.round(e.nativeEvent.layout.height / LINE_HEIGHT) > COLLAPSED_LINES)}
           >
             {overview || 'No overview available.'}

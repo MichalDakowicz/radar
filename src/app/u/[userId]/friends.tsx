@@ -8,6 +8,7 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { FriendCard } from '@/features/friends/FriendCard';
 import { usePublicFriends } from '@/hooks/useFriends';
 import { useCanViewUser } from '@/hooks/usePublicMovies';
+import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 
 const MUTED = 'hsl(0 0% 45%)';
 
@@ -18,6 +19,7 @@ export default function PublicFriendsScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const { canView, loading: viewLoading } = useCanViewUser(userId);
   const { friends, loading, error } = usePublicFriends(canView ? userId : undefined);
+  const contentStyle = useCenteredContentStyle(MAX_W.text);
 
   if (viewLoading || (canView && loading)) {
     return (
@@ -53,7 +55,7 @@ export default function PublicFriendsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScrollView contentContainerClassName="gap-3 p-4" showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerClassName="gap-3 p-4" contentContainerStyle={contentStyle} showsVerticalScrollIndicator={false}>
         {friends.map((profile) => (
           <FriendCard key={profile.id} profile={profile} />
         ))}

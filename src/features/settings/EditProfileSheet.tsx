@@ -1,4 +1,3 @@
-import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
@@ -6,7 +5,7 @@ import { ImageIcon, Trash2, Upload } from 'lucide-react-native';
 import { forwardRef, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
-import { Sheet, type BottomSheetModal } from '@/components/ui/Sheet';
+import { BottomSheetTextInput, Sheet, SheetScrollView, type BottomSheetModal } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useProfile, useUpdateProfile } from '@/hooks/useProfile';
@@ -85,7 +84,7 @@ export const EditProfileSheet = forwardRef<BottomSheetModal>(function EditProfil
 
   return (
     <Sheet ref={ref} snapPoints={['70%', '90%']}>
-      <BottomSheetScrollView contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 32 }}>
+      <SheetScrollView contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 32 }}>
         <Text className="text-lg font-bold text-foreground">Edit profile</Text>
 
         {!!error && (
@@ -159,7 +158,7 @@ export const EditProfileSheet = forwardRef<BottomSheetModal>(function EditProfil
             {updateProfile.isPending ? 'Saving…' : 'Save changes'}
           </Text>
         </Pressable>
-      </BottomSheetScrollView>
+      </SheetScrollView>
     </Sheet>
   );
 });

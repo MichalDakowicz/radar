@@ -1,7 +1,9 @@
 import { ArrowUpDown, LayoutGrid, Layers, List, Search, SlidersHorizontal } from 'lucide-react-native';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { useIsDesktop } from '@/hooks/useResponsive';
 import { useLibraryPrefs } from '@/store/libraryPrefs';
+import { useSearchFocusRegistration } from '@/hooks/useSearchFocusRegistration';
 
 type LibraryToolbarProps = {
   searchQuery: string;
@@ -19,6 +21,8 @@ function ToolbarGroup({ children }: { children: React.ReactNode }) {
 // to the global Header. Icon-only pill buttons so the row fits phone widths.
 export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters, onOpenGroup }: LibraryToolbarProps) {
   const { viewMode, groupBy, statusFilter, selectedServices, sortBy, reorderMode, setViewMode, toggleReorderMode } = useLibraryPrefs();
+  const isDesktop = useIsDesktop();
+  const searchRef = useSearchFocusRegistration();
 
   const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (selectedServices.length > 0 ? 1 : 0);
 
@@ -29,19 +33,25 @@ export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters, onO
     sortBy === 'custom' && groupBy === 'none' && statusFilter === 'all' && selectedServices.length === 0 && !searchQuery.trim();
 
   return (
-    <View className="flex-row items-center gap-2 px-4 pb-3 pt-2">
-      <View className="relative min-w-0 flex-1">
+    <View className={isDesktop ? 'flex-row items-center gap-2 px-8 pb-4 pt-4' : 'flex-row items-center gap-2 px-4 pb-3 pt-2'}>
+      <View className="relative min-w-0 flex-1" style={isDesktop ? { maxWidth: 420 } : undefined}>
         <View className="absolute bottom-0 left-3 top-0 z-10 justify-center">
           <Search size={18} color="hsl(0 0% 63.9%)" />
         </View>
         <TextInput
+          ref={searchRef}
           value={searchQuery}
           onChangeText={onSearchChange}
-          placeholder="Search library…"
+          // The hint is the discoverability for the global "/" shortcut.
+          placeholder={isDesktop ? 'Search library…    /' : 'Search library…'}
           placeholderTextColor="hsl(0 0% 63.9%)"
           className="h-10 w-full rounded-lg border border-border bg-secondary pl-10 pr-4 text-sm text-foreground"
         />
       </View>
+
+      {/* Search is capped on desktop, so the control groups need a spacer to
+          stay pinned to the right edge of the content column. */}
+      {isDesktop && <View className="flex-1" />}
 
       <View className="shrink-0 flex-row items-center gap-2">
         <ToolbarGroup>

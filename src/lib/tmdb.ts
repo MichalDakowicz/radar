@@ -12,6 +12,61 @@ const headers = {
   Accept: 'application/json',
 };
 
+// A single Browse batch fans out ~8 category rows, and every row then fetches
+// credits per item (withDirectors) - well over a hundred requests in flight at
+// once, which TMDB answers with 429s. The callers all swallow failures into an
+// empty list, so the only symptom was rows silently vanishing from the feed with
+// a "Failed to fetch …" log. One process-wide gate plus a bounded retry keeps
+// the burst inside TMDB's budget instead.
+const MAX_IN_FLIGHT = 10;
+const MAX_ATTEMPTS = 3;
+
+let inFlight = 0;
+const waiting: (() => void)[] = [];
+
+function acquireSlot(): Promise<void> {
+  if (inFlight < MAX_IN_FLIGHT) {
+    inFlight++;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => waiting.push(resolve));
+}
+
+function releaseSlot(): void {
+  const next = waiting.shift();
+  // Hand the slot straight to the next waiter rather than decrementing, so the
+  // in-flight count can't dip below the cap while requests are still queued.
+  if (next) next();
+  else inFlight--;
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function retryDelayMs(response: Response, attempt: number): number {
+  const retryAfter = Number(response.headers.get('Retry-After'));
+  if (Number.isFinite(retryAfter) && retryAfter > 0) return retryAfter * 1000;
+  return 250 * 2 ** attempt;
+}
+
+/**
+ * Every TMDB request in this module goes through here. Holds one of the
+ * MAX_IN_FLIGHT slots for the whole attempt chain (including backoff waits), so
+ * a rate-limited burst throttles itself instead of retrying into the same wall.
+ */
+async function tmdbFetch(url: string, init?: RequestInit): Promise<Response> {
+  await acquireSlot();
+  try {
+    for (let attempt = 0; ; attempt++) {
+      const response = await fetch(url, init);
+      const retriable = response.status === 429 || response.status >= 500;
+      if (!retriable || attempt >= MAX_ATTEMPTS - 1) return response;
+      await wait(retryDelayMs(response, attempt));
+    }
+  } finally {
+    releaseSlot();
+  }
+}
+
 export type MediaSummary = {
   tmdbId: number;
   type: MediaType;
@@ -55,12 +110,12 @@ function toMediaSummary(item: any): MediaSummary {
 async function fetchDirectorsFor(tmdbId: number, type: MediaType): Promise<NamedRef[]> {
   try {
     if (type === 'tv') {
-      const res = await fetch(`${BASE_URL}/tv/${tmdbId}`, { headers });
+      const res = await tmdbFetch(`${BASE_URL}/tv/${tmdbId}`, { headers });
       if (!res.ok) return [];
       const data = await res.json();
       return data.created_by?.map((p: any) => ({ id: p.id, name: p.name })) || [];
     }
-    const res = await fetch(`${BASE_URL}/movie/${tmdbId}/credits`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/movie/${tmdbId}/credits`, { headers });
     if (!res.ok) return [];
     const data = await res.json();
     return data.crew?.filter((p: any) => p.job === 'Director').map((p: any) => ({ id: p.id, name: p.name })) || [];
@@ -82,7 +137,7 @@ export async function searchMedia(query: string): Promise<MediaSummary[]> {
   if (!query) return [];
 
   try {
-    const res = await fetch(`${BASE_URL}/search/multi?query=${encodeURIComponent(query)}`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/search/multi?query=${encodeURIComponent(query)}`, { headers });
     if (!res.ok) throw new Error('Failed to search media');
     const data = await res.json();
 
@@ -105,7 +160,7 @@ async function getMovieGenresCached() {
   if (cachedMovieGenres && now - cachedMovieGenresAt < GENRE_CACHE_MS) {
     return cachedMovieGenres;
   }
-  const res = await fetch(`${BASE_URL}/genre/movie/list`, { headers });
+  const res = await tmdbFetch(`${BASE_URL}/genre/movie/list`, { headers });
   if (!res.ok) throw new Error('Failed to fetch movie genres');
   const data = await res.json();
   cachedMovieGenres = data.genres || [];
@@ -138,7 +193,7 @@ export async function searchBrowse(query: string): Promise<BrowseSearchResult[]>
 
   try {
     const [multiRes, movieGenres] = await Promise.all([
-      fetch(`${BASE_URL}/search/multi?query=${encodeURIComponent(q)}`, { headers }),
+      tmdbFetch(`${BASE_URL}/search/multi?query=${encodeURIComponent(q)}`, { headers }),
       getMovieGenresCached(),
     ]);
 
@@ -239,7 +294,7 @@ export async function fetchMediaMetadata(
 
   try {
     const endpoint = type === 'tv' ? `tv/${tmdbId}` : `movie/${tmdbId}`;
-    const res = await fetch(
+    const res = await tmdbFetch(
       `${BASE_URL}/${endpoint}?append_to_response=credits,aggregate_credits,external_ids,watch/providers`,
       { headers },
     );
@@ -315,7 +370,7 @@ export async function fetchMovieMetadata(tmdbId: number) {
 export async function fetchSeasonDetails(tmdbId: number, seasonNumber: number): Promise<any | null> {
   if (!tmdbId) return null;
   try {
-    const res = await fetch(`${BASE_URL}/tv/${tmdbId}/season/${seasonNumber}`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/tv/${tmdbId}/season/${seasonNumber}`, { headers });
     if (!res.ok) throw new Error('Failed to fetch season details');
     return await res.json();
   } catch (error) {
@@ -326,7 +381,7 @@ export async function fetchSeasonDetails(tmdbId: number, seasonNumber: number): 
 
 export async function getTrending(): Promise<CatalogItem[]> {
   try {
-    const res = await fetch(`${BASE_URL}/trending/all/week`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/trending/all/week`, { headers });
     if (!res.ok) throw new Error('Failed to fetch trending');
     const data = await res.json();
 
@@ -347,7 +402,7 @@ export async function getTrending(): Promise<CatalogItem[]> {
 
 export async function getMovies(category = 'popular'): Promise<CatalogItem[]> {
   try {
-    const res = await fetch(`${BASE_URL}/movie/${category}`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/movie/${category}`, { headers });
     if (!res.ok) throw new Error(`Failed to fetch movies: ${category}`);
     const data = await res.json();
 
@@ -373,7 +428,7 @@ export async function getMovies(category = 'popular'): Promise<CatalogItem[]> {
 
 export async function getTVShows(category = 'popular'): Promise<CatalogItem[]> {
   try {
-    const res = await fetch(`${BASE_URL}/tv/${category}`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/tv/${category}`, { headers });
     if (!res.ok) throw new Error(`Failed to fetch TV shows: ${category}`);
     const data = await res.json();
 
@@ -412,7 +467,7 @@ async function fetchCalendarPage(region: string, gte: string, lte: string, page:
     'release_date.lte': lte,
     page: String(page),
   });
-  const res = await fetch(`${BASE_URL}/discover/movie?${params.toString()}`, { headers });
+  const res = await tmdbFetch(`${BASE_URL}/discover/movie?${params.toString()}`, { headers });
   if (!res.ok) throw new Error('Failed to fetch release calendar');
   return res.json();
 }
@@ -472,7 +527,7 @@ export type PersonDetails = {
 async function fetchPersonDetails(personId: number, label: string): Promise<PersonDetails | null> {
   if (!personId) return null;
   try {
-    const res = await fetch(`${BASE_URL}/person/${personId}`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/person/${personId}`, { headers });
     if (!res.ok) throw new Error(`Failed to fetch ${label} details`);
     const data = await res.json();
     return {
@@ -513,7 +568,7 @@ export type CreditItem = {
 export async function fetchDirectorMovies(personId: number): Promise<CreditItem[]> {
   if (!personId) return [];
   try {
-    const res = await fetch(`${BASE_URL}/person/${personId}/movie_credits`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/person/${personId}/movie_credits`, { headers });
     if (!res.ok) throw new Error('Failed to fetch director movies');
     const data = await res.json();
 
@@ -540,7 +595,7 @@ export async function fetchDirectorMovies(personId: number): Promise<CreditItem[
 export async function searchDirectors(query: string) {
   if (!query) return [];
   try {
-    const res = await fetch(`${BASE_URL}/search/person?query=${encodeURIComponent(query)}`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/search/person?query=${encodeURIComponent(query)}`, { headers });
     if (!res.ok) throw new Error('Failed to search directors');
     const data = await res.json();
 
@@ -564,7 +619,7 @@ export type PaginatedCredits = { movies: (CreditItem & { character?: string; pop
 export async function fetchActorMovies(personId: number, page = 1): Promise<PaginatedCredits> {
   if (!personId) return { movies: [], totalPages: 1, totalCount: 0 };
   try {
-    const res = await fetch(`${BASE_URL}/person/${personId}/movie_credits`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/person/${personId}/movie_credits`, { headers });
     if (!res.ok) throw new Error('Failed to fetch actor movies');
     const data = await res.json();
 
@@ -600,7 +655,7 @@ export type GenreMoviesResult = { movies: CreditItem[]; totalPages: number; tota
 export async function fetchGenreMovies(genreId: number, page = 1): Promise<GenreMoviesResult> {
   if (!genreId) return { movies: [], totalPages: 1, totalCount: 0 };
   try {
-    const res = await fetch(
+    const res = await tmdbFetch(
       `${BASE_URL}/discover/movie?with_genres=${genreId}&sort_by=vote_average.desc&vote_count.gte=100&page=${page}`,
       { headers },
     );
@@ -630,7 +685,7 @@ export type CompanyDetails = { id: number; name: string; logoUrl: string | null 
 export async function fetchCompanyDetails(companyId: number): Promise<CompanyDetails | null> {
   if (!companyId) return null;
   try {
-    const res = await fetch(`${BASE_URL}/company/${companyId}`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/company/${companyId}`, { headers });
     if (!res.ok) throw new Error('Failed to fetch company');
     const data = await res.json();
     return { id: data.id, name: data.name, logoUrl: posterUrl(data.logo_path) };
@@ -644,7 +699,7 @@ export async function fetchCompanyDetails(companyId: number): Promise<CompanyDet
 export async function fetchCompanyMovies(companyId: number, page = 1): Promise<GenreMoviesResult> {
   if (!companyId) return { movies: [], totalPages: 1, totalCount: 0 };
   try {
-    const res = await fetch(
+    const res = await tmdbFetch(
       `${BASE_URL}/discover/movie?with_companies=${companyId}&sort_by=vote_average.desc&vote_count.gte=100&page=${page}`,
       { headers },
     );
@@ -673,7 +728,7 @@ export async function fetchSimilarMedia(tmdbId: number, type: MediaType = 'movie
   if (!tmdbId) return [];
   try {
     const endpoint = type === 'tv' ? `tv/${tmdbId}/similar` : `movie/${tmdbId}/similar`;
-    const res = await fetch(`${BASE_URL}/${endpoint}`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/${endpoint}`, { headers });
     if (!res.ok) {
       if (res.status === 404) return [];
       throw new Error('Failed to fetch similar media');
@@ -704,7 +759,7 @@ export async function getMoviesByGenre(genreId: number, type: MediaType = 'movie
   if (!genreId) return [];
   try {
     const endpoint = type === 'tv' ? 'discover/tv' : 'discover/movie';
-    const res = await fetch(`${BASE_URL}/${endpoint}?with_genres=${genreId}&sort_by=popularity.desc&vote_count.gte=100`, {
+    const res = await tmdbFetch(`${BASE_URL}/${endpoint}?with_genres=${genreId}&sort_by=popularity.desc&vote_count.gte=100`, {
       headers,
     });
     if (!res.ok) throw new Error('Failed to fetch genre movies');
@@ -735,7 +790,7 @@ export type Genre = { id: number; name: string };
 export async function getGenres(type: MediaType = 'movie'): Promise<Genre[]> {
   try {
     const endpoint = type === 'tv' ? 'genre/tv/list' : 'genre/movie/list';
-    const res = await fetch(`${BASE_URL}/${endpoint}`, { headers });
+    const res = await tmdbFetch(`${BASE_URL}/${endpoint}`, { headers });
     if (!res.ok) throw new Error('Failed to fetch genres');
     const data = await res.json();
     return data.genres;

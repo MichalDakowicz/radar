@@ -1,4 +1,3 @@
-import { BottomSheetScrollView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -6,7 +5,7 @@ import { AlertCircle, CheckCircle2, Download, FileUp, Upload } from 'lucide-reac
 import { forwardRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 
-import { Sheet, type BottomSheetModal } from '@/components/ui/Sheet';
+import { BottomSheetTextInput, Sheet, SheetScrollView, type BottomSheetModal } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
 import { useMovies } from '@/hooks/useMovies';
 
@@ -123,7 +122,7 @@ export const ImportExportSheet = forwardRef<BottomSheetModal>(function ImportExp
 
   return (
     <Sheet ref={ref} snapPoints={['70%', '92%']}>
-      <BottomSheetScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 32 }}>
+      <SheetScrollView contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 32 }}>
         <Text className="text-lg font-bold text-foreground">Import / Export</Text>
 
         <View className="flex-row gap-2 rounded-lg border border-border bg-secondary p-1">
@@ -202,7 +201,7 @@ export const ImportExportSheet = forwardRef<BottomSheetModal>(function ImportExp
             )}
           </View>
         )}
-      </BottomSheetScrollView>
+      </SheetScrollView>
     </Sheet>
   );
 });

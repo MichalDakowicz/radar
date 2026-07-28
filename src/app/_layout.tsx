@@ -2,14 +2,16 @@ import '@/global.css';
 
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { NAV_DESTINATIONS } from '@/components/layout/NavLinks';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { RefreshMetadataProvider } from '@/features/settings/RefreshMetadataProvider';
+import { useWebShortcuts } from '@/hooks/useWebShortcuts';
 import { queryClient } from '@/lib/queryClient';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 
@@ -28,6 +30,27 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Root-level keyboard wiring for the browser build. Nav chrome itself lives in
+ * the top bar (components/layout/Header), matching legacy - but the digit
+ * shortcuts have to be registered above the navigator so they work on every
+ * route, not just the five that render a Header.
+ */
+function AppShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+
+  const selectTab = useCallback(
+    (index: number) => {
+      const destination = NAV_DESTINATIONS[index];
+      if (destination) router.navigate(destination.href);
+    },
+    [router],
+  );
+  useWebShortcuts({ onSelectTab: selectTab });
+
+  return <>{children}</>;
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -38,7 +61,9 @@ export default function RootLayout() {
               <RefreshMetadataProvider>
                 <BottomSheetModalProvider>
                   <AuthGate>
-                    <Stack screenOptions={{ headerShown: false }} />
+                    <AppShell>
+                      <Stack screenOptions={{ headerShown: false }} />
+                    </AppShell>
                   </AuthGate>
                 </BottomSheetModalProvider>
               </RefreshMetadataProvider>

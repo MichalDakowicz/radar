@@ -5,6 +5,7 @@ import { MovieCard } from '@/components/media/MovieCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import type { LibraryGroup } from '@/features/library/useLibraryFilters';
+import { useIsDesktop } from '@/hooks/useResponsive';
 import type { ViewMode } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
 
@@ -21,6 +22,10 @@ type LibraryGroupedListProps = {
 };
 
 export function LibraryGroupedList({ groups, viewMode, onPress, highlightedId, header }: LibraryGroupedListProps) {
+  // Thumb-sized posters look lost in a desktop column; the wrapped rows just fit
+  // fewer, larger cards instead.
+  const cardWidth = useIsDesktop() ? 150 : 110;
+
   if (groups.length === 0) {
     return (
       <ScrollView contentContainerClassName="flex-1">
@@ -39,7 +44,7 @@ export function LibraryGroupedList({ groups, viewMode, onPress, highlightedId, h
           {viewMode === 'grid' ? (
             <View className="flex-row flex-wrap gap-4">
               {group.movies.map((movie) => (
-                <View key={movie.id} style={{ width: 110 }}>
+                <View key={movie.id} style={{ width: cardWidth }}>
                   <MovieCard movie={movie} variant="poster" onPress={onPress} highlighted={highlightedId === movie.id} />
                 </View>
               ))}

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useMovies } from '@/hooks/useMovies';
+import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { isWatched } from '@/lib/movieStatus';
 import { dateKey } from '@/lib/stats';
 import { goBackOrHome } from '@/lib/utils';
@@ -19,6 +20,7 @@ import type { Movie } from '@/types/movie';
 export default function ManageCompletions() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const contentStyle = useCenteredContentStyle(MAX_W.text);
   const { date } = useLocalSearchParams<{ date?: string }>();
   const { movies, updateMovie } = useMovies();
 
@@ -97,7 +99,10 @@ export default function ManageCompletions() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 24 }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[{ padding: 16, paddingBottom: 48, gap: 24 }, contentStyle]}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Movies already on this day */}
         {moviesOnThisDay.length > 0 && (
           <View className="gap-3">

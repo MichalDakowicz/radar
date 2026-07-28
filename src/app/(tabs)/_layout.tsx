@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { useBrowsePreload } from '@/features/browse/useBrowsePreload';
 import { FriendRequestListener } from '@/features/friends/FriendRequestListener';
 import { QuickAddSheet } from '@/features/movies/add/QuickAddSheet';
+import { useIsDesktop } from '@/hooks/useResponsive';
 import { useQuickAddSheetStore } from '@/store/quickAddSheet';
 import { useTabReload } from '@/store/tabReload';
 
@@ -20,8 +21,14 @@ const DOUBLE_PRESS_MS = 400;
 // with material-top-tabs once Browse/Stats/Friends/Settings have real content
 // (switching the nav primitive later, once four more screens exist, is a
 // bigger refactor than doing it now for one real tab).
+//
+// On desktop web this navigator renders no bar at all: navigation is the
+// persistent sidebar mounted in the root layout (components/layout/Sidebar),
+// which survives stack pushes like movie detail. Same route tree, two shells.
+// Keep the screen order below in sync with NAV_DESTINATIONS there.
 export default function TabsLayout() {
   const { user } = useAuth();
+  const isDesktop = useIsDesktop();
   const quickAddRef = useRef<BottomSheetModal>(null);
   const setPresent = useQuickAddSheetStore((s) => s.setPresent);
   const bump = useTabReload((s) => s.bump);
@@ -54,6 +61,9 @@ export default function TabsLayout() {
   return (
     <>
       <Tabs
+        // Desktop navigation is the persistent sidebar in the root layout, so
+        // this navigator renders no bar of its own there.
+        tabBar={isDesktop ? () => null : undefined}
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: 'hsl(217 91% 60%)',

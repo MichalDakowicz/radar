@@ -1,9 +1,10 @@
 import { FlashList } from '@shopify/flash-list';
-import { useWindowDimensions, View } from 'react-native';
+import { View } from 'react-native';
 
 import { columnsFor, gapForSize } from '@/components/media/MediaGrid';
 import { MovieCard } from '@/components/media/MovieCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useMeasuredWidth } from '@/hooks/useResponsive';
 import type { BrowseSearchResult } from '@/lib/tmdb';
 import type { Movie } from '@/types/movie';
 
@@ -32,7 +33,7 @@ export function SearchResultsGrid({
   onRemove,
   isAdded,
 }: SearchResultsGridProps) {
-  const { width } = useWindowDimensions();
+  const { width, onLayout } = useMeasuredWidth();
   const columns = columnsFor('normal', width);
   const halfGap = gapForSize('normal') / 2;
 
@@ -41,36 +42,38 @@ export function SearchResultsGrid({
   }
 
   return (
-    <FlashList
-      key={`search-${columns}`}
-      data={results}
-      numColumns={columns}
-      keyExtractor={(item) => item.resultKey}
-      contentContainerStyle={{ padding: halfGap }}
-      renderItem={({ item }) => (
-        <View style={{ flex: 1, padding: halfGap }}>
-          {item.resultType === 'person' ? (
-            <BrowseSearchResultTile
-              title={item.title}
-              subtitle={item.subtitle}
-              coverUrl={item.coverUrl}
-              kind="person"
-              onPress={() => onSelectPerson(item.personId, item.knownForDepartment)}
-            />
-          ) : item.resultType === 'genre' ? (
-            <BrowseSearchResultTile
-              title={item.title}
-              subtitle={item.subtitle}
-              coverUrl={null}
-              kind="genre"
-              onPress={() => onSelectGenre(item.genreId)}
-            />
-          ) : (
-            <MediaResultCard item={item} onSelectMedia={onSelectMedia} onAdd={onAdd} onRemove={onRemove} isAdded={isAdded} />
-          )}
-        </View>
-      )}
-    />
+    <View className="flex-1" onLayout={onLayout}>
+      <FlashList
+        key={`search-${columns}`}
+        data={results}
+        numColumns={columns}
+        keyExtractor={(item) => item.resultKey}
+        contentContainerStyle={{ padding: halfGap }}
+        renderItem={({ item }) => (
+          <View style={{ flex: 1, padding: halfGap }}>
+            {item.resultType === 'person' ? (
+              <BrowseSearchResultTile
+                title={item.title}
+                subtitle={item.subtitle}
+                coverUrl={item.coverUrl}
+                kind="person"
+                onPress={() => onSelectPerson(item.personId, item.knownForDepartment)}
+              />
+            ) : item.resultType === 'genre' ? (
+              <BrowseSearchResultTile
+                title={item.title}
+                subtitle={item.subtitle}
+                coverUrl={null}
+                kind="genre"
+                onPress={() => onSelectGenre(item.genreId)}
+              />
+            ) : (
+              <MediaResultCard item={item} onSelectMedia={onSelectMedia} onAdd={onAdd} onRemove={onRemove} isAdded={isAdded} />
+            )}
+          </View>
+        )}
+      />
+    </View>
   );
 }
 

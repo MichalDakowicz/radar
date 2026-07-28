@@ -1,10 +1,15 @@
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
-import { Pressable, useWindowDimensions, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { MediaCarousel } from '@/components/media/MediaCarousel';
 import { MovieCard } from '@/components/media/MovieCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { useMeasuredWidth } from '@/hooks/useResponsive';
 import type { Movie } from '@/types/movie';
+
+// A 16:9 banner that keeps growing with the viewport turns into a billboard on
+// a desktop monitor; past this the card stops scaling and the row just fits more.
+const MAX_FEATURED_WIDTH = 760;
 
 // Continue watching / Coming soon (doc 06 #1) - full-width featured cards. A
 // lone card renders as a plain full-width block (centered, no wasted edge); 2+
@@ -31,7 +36,7 @@ export function LibrarySection({
   onToggleCollapse,
   showFullDate,
 }: LibrarySectionProps) {
-  const { width } = useWindowDimensions();
+  const { width, onLayout } = useMeasuredWidth();
   if (movies.length === 0) return null;
 
   const Chevron = collapsed ? ChevronDown : ChevronUp;
@@ -42,11 +47,11 @@ export function LibrarySection({
   ) : undefined;
 
   return (
-    <View className="gap-2 pb-8 pt-2">
+    <View className="gap-2 pb-8 pt-2" onLayout={onLayout}>
       <SectionHeader title={title} count={movies.length} action={action} />
       {!collapsed &&
         (movies.length === 1 ? (
-          <View className="px-4">
+          <View className="px-4" style={{ maxWidth: MAX_FEATURED_WIDTH }}>
             <MovieCard
               movie={movies[0]}
               variant="featured"
@@ -60,7 +65,7 @@ export function LibrarySection({
           <MediaCarousel
             movies={movies}
             cardVariant="featured"
-            cardWidth={width - 64}
+            cardWidth={Math.min(MAX_FEATURED_WIDTH, width - 64)}
             onPress={onPress}
             highlightedId={highlightedId}
             showFullDate={showFullDate}

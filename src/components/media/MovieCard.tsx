@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DualRating, RatingStars } from '@/components/media/RatingStars';
 import { StatusBadge } from '@/components/media/StatusBadge';
+import { useHover, webTransition } from '@/hooks/useResponsive';
 import { watchProgressPercent } from '@/lib/movieStatus';
 import { cn, directorToDisplayString } from '@/lib/utils';
 import type { Movie } from '@/types/movie';
@@ -92,13 +93,21 @@ function PosterCard({
   const isTracked = movie.inWatchlist || movie.inProgress || movie.watched;
   const canAdd = !!onAdd && !isAdded && !isTracked;
   const canRemove = !!onAdd && (isAdded || isTracked);
+  const { hovered, bind } = useHover();
 
   return (
-    <View className="gap-1">
+    // zIndex so the hover lift renders over its neighbours instead of under them.
+    <View className="gap-1" style={hovered ? { zIndex: 10 } : undefined}>
       <Pressable
+        {...bind}
         onPress={() => onPress?.(movie)}
         className="relative aspect-[2/3] overflow-hidden rounded-md bg-neutral-900"
-        style={highlighted ? { borderWidth: 2, borderColor: '#3b82f6' } : undefined}
+        style={[
+          { cursor: 'pointer' },
+          webTransition('transform'),
+          highlighted ? { borderWidth: 2, borderColor: '#3b82f6' } : null,
+          hovered ? { transform: [{ scale: 1.035 }] } : null,
+        ]}
       >
         <PosterImage uri={movie.coverUrl} dimmed={isDimmed(movie)} />
         <LinearGradient
@@ -106,6 +115,26 @@ function PosterCard({
           locations={[0, 0.25, 0.55]}
           style={StyleSheet.absoluteFill}
         />
+
+        {/* Poster grids show no title on phones (no room, and a tap is cheap);
+            with a mouse the title is what you want on hover before clicking. */}
+        {hovered && (
+          <>
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.9)']}
+              locations={[0.4, 1]}
+              style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
+            />
+            <View
+              className={cn('absolute inset-x-0 bottom-0 p-2.5', canAdd || canRemove ? 'pr-11' : '')}
+              style={{ pointerEvents: 'none' }}
+            >
+              <Text numberOfLines={2} className="text-xs font-semibold leading-tight text-white">
+                {movie.title}
+              </Text>
+            </View>
+          </>
+        )}
 
         <View className="absolute inset-x-0 top-0 flex-row items-start justify-between gap-1.5 p-2.5">
           <View className="flex-1 flex-row items-center gap-1">
@@ -153,10 +182,13 @@ function PosterCard({
 function RowCard({ movie, onPress, showRatings = true, highlighted = false }: MovieCardProps) {
   const director = directorToDisplayString(movie.director);
   const year = movie.releaseDate ? movie.releaseDate.slice(0, 4) : '';
+  const { hovered, bind } = useHover();
 
   return (
     <Pressable
+      {...bind}
       onPress={() => onPress?.(movie)}
+      style={[{ cursor: 'pointer' }, webTransition('background-color'), hovered ? { backgroundColor: 'hsl(0 0% 16%)' } : null]}
       className={cn(
         'flex-row gap-3 rounded-xl border-l-4 p-3',
         highlighted ? 'border-l-blue-500 bg-neutral-800' : 'border-l-transparent bg-neutral-900',
@@ -190,7 +222,11 @@ function HeroCard({ movie, onPress, showRatings = true }: MovieCardProps) {
   const year = movie.releaseDate ? movie.releaseDate.slice(0, 4) : '';
 
   return (
-    <Pressable onPress={() => onPress?.(movie)} className="relative aspect-video w-full overflow-hidden rounded-2xl bg-neutral-900">
+    <Pressable
+      onPress={() => onPress?.(movie)}
+      style={{ cursor: 'pointer' }}
+      className="relative aspect-video w-full overflow-hidden rounded-2xl bg-neutral-900"
+    >
       <PosterImage uri={movie.coverUrl} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
       <View className="absolute inset-x-0 bottom-0 gap-1.5 p-4">
@@ -223,7 +259,7 @@ function FeaturedCard({ movie, onPress, showRatings = true, showFullDate = false
     <Pressable
       onPress={() => onPress?.(movie)}
       className="relative aspect-video w-full overflow-hidden rounded-xl bg-neutral-900"
-      style={highlighted ? { borderWidth: 2, borderColor: '#3b82f6' } : undefined}
+      style={[{ cursor: 'pointer' }, highlighted ? { borderWidth: 2, borderColor: '#3b82f6' } : null]}
     >
       <PosterImage uri={movie.backdropUrl || movie.coverUrl} dimmed={isDimmed(movie)} />
       {/* Left veil anchors the text, bottom veil blends into the progress bar. */}
@@ -277,11 +313,19 @@ function formatFullDate(releaseDate: string | null | undefined): string {
 }
 
 function CompactCard({ movie, onPress, showStatus = true, highlighted = false }: MovieCardProps) {
+  const { hovered, bind } = useHover();
+
   return (
     <Pressable
+      {...bind}
       onPress={() => onPress?.(movie)}
       className="relative aspect-[2/3] overflow-hidden rounded-md bg-neutral-900"
-      style={highlighted ? { borderWidth: 2, borderColor: '#3b82f6' } : undefined}
+      style={[
+        { cursor: 'pointer' },
+        webTransition('transform'),
+        highlighted ? { borderWidth: 2, borderColor: '#3b82f6' } : null,
+        hovered ? { transform: [{ scale: 1.04 }], zIndex: 10 } : null,
+      ]}
     >
       <PosterImage uri={movie.coverUrl} dimmed={isDimmed(movie)} />
       {showStatus && (

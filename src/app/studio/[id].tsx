@@ -3,6 +3,7 @@ import { Building2 } from 'lucide-react-native';
 import { ActivityIndicator, Image, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ContentShell } from '@/components/layout/ContentShell';
 import { MediaGrid } from '@/components/media/MediaGrid';
 import { BackButton } from '@/components/ui/BackButton';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -10,6 +11,7 @@ import { LoadingState } from '@/components/ui/LoadingState';
 import { toDiscoveryMovie } from '@/features/browse/toDiscoveryMovie';
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
 import { useCompanyDetails, useCompanyMoviesInfinite } from '@/hooks/useTmdb';
+import { MAX_W } from '@/hooks/useResponsive';
 import type { Movie } from '@/types/movie';
 
 // Studio landing page - paginated TMDB titles for one production company.
@@ -60,40 +62,42 @@ export default function StudioDetails() {
 
   return (
     <View className="flex-1 bg-background">
-      <MediaGrid
-        movies={movies}
-        onPress={openMovie}
-        showStatus={false}
-        showRatings={false}
-        onEndReached={() => hasNextPage && fetchNextPage()}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View className="items-center py-6">
-              <ActivityIndicator color="hsl(217 91% 60%)" />
+      <ContentShell fill maxWidth={MAX_W.grid}>
+        <MediaGrid
+          movies={movies}
+          onPress={openMovie}
+          showStatus={false}
+          showRatings={false}
+          onEndReached={() => hasNextPage && fetchNextPage()}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <View className="items-center py-6">
+                <ActivityIndicator color="hsl(217 91% 60%)" />
+              </View>
+            ) : undefined
+          }
+          ListHeaderComponent={
+            <View className="gap-2 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
+              <BackButton className="mb-3" />
+              {company?.logoUrl ? (
+                <Image
+                  source={{ uri: company.logoUrl }}
+                  resizeMode="contain"
+                  className="h-14 w-32"
+                />
+              ) : null}
+              <Text className="text-3xl font-bold text-foreground">{studioName}</Text>
+              <View className="flex-row items-center gap-1.5">
+                <Building2 size={14} color="#06b6d4" />
+                <Text className="text-sm text-muted-foreground">
+                  {totalCount} {totalCount === 1 ? 'title' : 'titles'}
+                </Text>
+              </View>
             </View>
-          ) : undefined
-        }
-        ListHeaderComponent={
-          <View className="gap-2 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
-            <BackButton className="mb-3" />
-            {company?.logoUrl ? (
-              <Image
-                source={{ uri: company.logoUrl }}
-                resizeMode="contain"
-                className="h-14 w-32"
-              />
-            ) : null}
-            <Text className="text-3xl font-bold text-foreground">{studioName}</Text>
-            <View className="flex-row items-center gap-1.5">
-              <Building2 size={14} color="#06b6d4" />
-              <Text className="text-sm text-muted-foreground">
-                {totalCount} {totalCount === 1 ? 'title' : 'titles'}
-              </Text>
-            </View>
-          </View>
-        }
-      />
+          }
+        />
+      </ContentShell>
     </View>
   );
 }

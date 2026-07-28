@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 
+import { ContentShell } from '@/components/layout/ContentShell';
 import { Header } from '@/components/layout/Header';
 import { useToast } from '@/components/ui/Toast';
 import { BottomSheetModal } from '@/components/ui/Sheet';
@@ -19,6 +20,7 @@ import { SearchResultsGrid } from '@/features/browse/SearchResultsGrid';
 import { useBrowseSearch } from '@/features/browse/useBrowseSearch';
 import { type BrowseTabId, useDiscoveryFeed } from '@/features/browse/useDiscoveryFeed';
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
+import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
@@ -37,6 +39,9 @@ function Browse() {
   const region = useUserSettings().settings.watchProviderCountry;
 
   const quickAdd = useQuickAdd();
+  // Feed stays edge-to-edge on phones; on desktop it's a centred column so the
+  // hero and the rows don't stretch across an ultrawide monitor.
+  const feedContentStyle = useCenteredContentStyle(MAX_W.grid);
   // Calendar isn't a discovery feed - keep the feed/hero on the last media tab
   // so switching back to Movies/TV hits warm cache instead of refetching.
   const feedTab = tab === 'calendar' ? 'movies' : tab;
@@ -93,37 +98,42 @@ function Browse() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header />
-      <BrowseSearchBar
-        value={search.query}
-        onChange={search.setQuery}
-        loading={search.isLoading}
-        activeFilterCount={search.resultFilter === 'All' ? 0 : 1}
-        onOpenFilters={() => filterSheetRef.current?.present()}
-      />
+      <Header maxWidth={MAX_W.grid} />
+      <ContentShell maxWidth={MAX_W.grid}>
+        <BrowseSearchBar
+          value={search.query}
+          onChange={search.setQuery}
+          loading={search.isLoading}
+          activeFilterCount={search.resultFilter === 'All' ? 0 : 1}
+          onOpenFilters={() => filterSheetRef.current?.present()}
+        />
+      </ContentShell>
 
       {search.isSearching ? (
-        <SearchResultsGrid
-          results={search.results}
-          onSelectMedia={openMedia}
-          onSelectPerson={openPerson}
-          onSelectGenre={openGenre}
-          onAdd={handleAdd}
-          onRemove={handleRemove}
-          isAdded={isAdded}
-        />
+        <ContentShell fill maxWidth={MAX_W.grid}>
+          <SearchResultsGrid
+            results={search.results}
+            onSelectMedia={openMedia}
+            onSelectPerson={openPerson}
+            onSelectGenre={openGenre}
+            onAdd={handleAdd}
+            onRemove={handleRemove}
+            isAdded={isAdded}
+          />
+        </ContentShell>
       ) : tab === 'calendar' ? (
-        <View className="flex-1">
+        <ContentShell fill maxWidth={MAX_W.grid}>
           <View className="bg-background px-4 pb-2 pt-3">
             <View className="mx-auto w-full max-w-md">
               <BrowseTabs active={tab} onChange={setTab} />
             </View>
           </View>
           <ReleaseCalendar onPress={openMedia} onAdd={handleAdd} onRemove={handleRemove} isAdded={isAdded} />
-        </View>
+        </ContentShell>
       ) : (
         <ScrollView
           contentContainerClassName="gap-8 pb-12"
+          contentContainerStyle={feedContentStyle}
           stickyHeaderIndices={[1]}
           refreshControl={<RefreshControl refreshing={feed.isRefetching} onRefresh={() => setRerollNonce((n) => n + 1)} />}
           onScroll={({ nativeEvent }) => {

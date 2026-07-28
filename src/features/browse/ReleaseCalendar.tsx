@@ -1,15 +1,15 @@
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, ChevronLeft, ChevronRight, Clapperboard, Plus } from 'lucide-react-native';
 import { forwardRef, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { MovieCard } from '@/components/media/MovieCard';
-import { BottomSheetModal, Sheet } from '@/components/ui/Sheet';
+import { BottomSheetModal, Sheet, SheetScrollView } from '@/components/ui/Sheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { useMeasuredWidth } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { countryName } from '@/lib/countries';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,13 @@ const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const PRIMARY = 'hsl(217 91% 60%)';
 const GRID_GAP = 4; // gap-1
 const GRID_PAD = 12; // px-3
+// A day cell is a poster thumbnail, not a feature card: without a cap, dividing
+// a desktop-width column by 7 gives ~250x375px cells and the month stops fitting
+// on screen. Past this the grid stays this size and centres instead of growing.
+const MAX_CELL_W = 92;
+// Same reasoning for the anticipated rail - narrower cards mean more of the
+// ranking is visible per screenful.
+const RAIL_CARD_W = 104;
 
 type ReleaseCalendarProps = {
   onPress: (movie: Movie) => void;
@@ -45,8 +52,10 @@ export function ReleaseCalendar({ onPress, onAdd, onRemove, isAdded }: ReleaseCa
 
   // Explicit cell size, not flex-1: flex growth wasn't equalizing widths across
   // poster/empty cells, leaving the grid crooked. Fixed width = uniform grid.
-  const { width } = useWindowDimensions();
-  const cellW = Math.floor((width - GRID_PAD * 2 - GRID_GAP * 6) / 7);
+  // Measured (not window) width: the calendar sits inside a capped content
+  // column on desktop.
+  const { width, onLayout } = useMeasuredWidth();
+  const cellW = Math.min(MAX_CELL_W, Math.floor((width - GRID_PAD * 2 - GRID_GAP * 6) / 7));
   const cellH = Math.round(cellW * 1.5);
 
   const daySheetRef = useRef<BottomSheetModal>(null);
@@ -144,7 +153,7 @@ export function ReleaseCalendar({ onPress, onAdd, onRemove, isAdded }: ReleaseCa
 
   return (
     <>
-      <ScrollView className="flex-1" contentContainerClassName="pb-12">
+      <ScrollView className="flex-1" contentContainerClassName="pb-12" onLayout={onLayout}>
         {/* Month navigation */}
         <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
           <Pressable onPress={() => step(-1)} className="h-9 w-9 items-center justify-center rounded-full border border-border">
@@ -162,7 +171,7 @@ export function ReleaseCalendar({ onPress, onAdd, onRemove, isAdded }: ReleaseCa
         </View>
 
         {/* Weekday header */}
-        <View className="flex-row px-3 pb-1 pt-2" style={{ gap: GRID_GAP }}>
+        <View className="flex-row justify-center px-3 pb-1 pt-2" style={{ gap: GRID_GAP }}>
           {WEEKDAYS.map((d, i) => (
             <Text
               key={i}
@@ -179,7 +188,7 @@ export function ReleaseCalendar({ onPress, onAdd, onRemove, isAdded }: ReleaseCa
         ) : query.isError ? (
           <ErrorState message="Failed to load calendar" onRetry={() => query.refetch()} />
         ) : (
-          <View className="px-3" style={{ gap: GRID_GAP }}>
+          <View className="items-center px-3" style={{ gap: GRID_GAP }}>
             {weeks.map((week, wi) => (
               <View key={wi} className="flex-row" style={{ gap: GRID_GAP }}>
                 {week.map((day, di) => (
@@ -210,7 +219,7 @@ export function ReleaseCalendar({ onPress, onAdd, onRemove, isAdded }: ReleaseCa
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-4 px-4">
               {anticipated.map((e, i) => (
-                <View key={e.movie.id} style={{ width: 120 }} className="gap-1.5">
+                <View key={e.movie.id} style={{ width: RAIL_CARD_W }} className="gap-1.5">
                   <View className="relative">
                     <MovieCard
                       movie={e.movie}
@@ -345,7 +354,7 @@ const ReleaseDaySheet = forwardRef<BottomSheetModal, ReleaseDaySheetProps>(funct
 ) {
   return (
     <Sheet ref={ref} snapPoints={['55%', '85%']}>
-      <BottomSheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <SheetScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {data && (
           <>
             <Text className="pb-1 text-lg font-bold text-foreground">
@@ -389,7 +398,7 @@ const ReleaseDaySheet = forwardRef<BottomSheetModal, ReleaseDaySheetProps>(funct
             </View>
           </>
         )}
-      </BottomSheetScrollView>
+      </SheetScrollView>
     </Sheet>
   );
 });

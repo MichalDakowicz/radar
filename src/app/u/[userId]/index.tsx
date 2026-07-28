@@ -3,12 +3,14 @@ import { Lock, Search } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { TextInput, View } from 'react-native';
 
+import { ContentShell } from '@/components/layout/ContentShell';
 import { MediaGrid } from '@/components/media/MediaGrid';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { movieMatchesSearchQuery } from '@/lib/librarySearch';
 import { useCanViewUser, usePublicMovies } from '@/hooks/usePublicMovies';
+import { MAX_W } from '@/hooks/useResponsive';
 import type { Movie } from '@/types/movie';
 
 const MUTED = 'hsl(0 0% 45%)';
@@ -69,7 +71,7 @@ export default function PublicLibrary() {
           className="flex-1 text-foreground"
         />
       </View>
-      <View className="flex-1">
+      <ContentShell fill maxWidth={MAX_W.grid}>
         <MediaGrid
           movies={filtered}
           size="normal"
@@ -78,7 +80,7 @@ export default function PublicLibrary() {
           showRatings
           ListEmptyComponent={<EmptyState title="Nothing here yet" description="This collection is empty." />}
         />
-      </View>
+      </ContentShell>
     </View>
   );
 }

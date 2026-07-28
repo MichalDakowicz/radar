@@ -18,6 +18,7 @@ import Logo from '@/assets/brand/logo.svg';
 import { useToast } from '@/components/ui/Toast';
 import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/features/auth/authActions';
 import { useAuth } from '@/features/auth/AuthProvider';
+import { MAX_W, useIsDesktop } from '@/hooks/useResponsive';
 
 export default function Login() {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
   const [busy, setBusy] = useState(false);
+  const isDesktop = useIsDesktop();
 
   // `as Href`: expo-router's generated route union is unstable for the
   // transparent (tabs) group across typegen runs (observed in Phase 3) -
@@ -69,7 +71,12 @@ export default function Login() {
         <Text className="text-muted-foreground">Curate and track your movie watchlist.</Text>
       </View>
 
-      <View className="w-full gap-3">
+      {/* Capped and boxed so a 1440p browser shows a sign-in card rather than
+          inputs stretched the full width of the monitor. */}
+      <View
+        className={isDesktop ? 'w-full gap-3 rounded-2xl border border-border bg-card p-8' : 'w-full gap-3'}
+        style={{ maxWidth: MAX_W.form }}
+      >
         <Pressable
           onPress={handleGoogle}
           disabled={busy}

@@ -16,6 +16,7 @@ import { RegionControl } from '@/features/settings/RegionControl';
 import { SettingsSection } from '@/features/settings/SettingsSection';
 import { StreakThresholdsControl } from '@/features/settings/StreakThresholdsControl';
 import { ThemeControl } from '@/features/settings/ThemeControl';
+import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { withTabReload } from '@/store/tabReload';
 
 const MUTED = 'hsl(0 0% 63.9%)';
@@ -26,13 +27,14 @@ const MUTED = 'hsl(0 0% 63.9%)';
 export default withTabReload(Settings, 'settings');
 
 function Settings() {
+  const contentStyle = useCenteredContentStyle(MAX_W.text);
   const editProfileRef = useRef<BottomSheetModal>(null);
   const importExportRef = useRef<BottomSheetModal>(null);
 
   return (
     <View className="flex-1 bg-background">
-      <Header />
-      <ScrollView className="flex-1" contentContainerClassName="gap-10 px-6 pb-16 pt-6">
+      <Header maxWidth={MAX_W.text} />
+      <ScrollView className="flex-1" contentContainerClassName="gap-10 px-6 pb-16 pt-6" contentContainerStyle={contentStyle}>
         <SettingsSection icon={<User size={18} color={MUTED} />} title="Account">
           <ProfileHeader onEdit={() => editProfileRef.current?.present()} />
         </SettingsSection>

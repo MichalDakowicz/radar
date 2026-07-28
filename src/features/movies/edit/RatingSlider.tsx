@@ -73,8 +73,7 @@ export function RatingSliderPrecise({ value, onChange, step = 0.1, max = 5 }: Ra
         </View>
         <View
           className="absolute h-5 w-5 rounded-full border-2 border-primary bg-white"
-          style={{ left: `${percent}%`, marginLeft: -10 }}
-          pointerEvents="none"
+          style={{ left: `${percent}%`, marginLeft: -10, pointerEvents: 'none' }}
         />
       </View>
     </View>

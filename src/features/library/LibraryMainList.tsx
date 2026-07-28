@@ -1,11 +1,12 @@
 import { FlashList } from '@shopify/flash-list';
 import type { ReactElement } from 'react';
-import { Platform, Pressable, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import DraggableFlatList, { ScaleDecorator, type RenderItemParams } from 'react-native-draggable-flatlist';
 
 import { columnsFor, gapForSize } from '@/components/media/MediaGrid';
 import { MovieCard } from '@/components/media/MovieCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useMeasuredWidth } from '@/hooks/useResponsive';
 import type { GridSize, ViewMode } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
 
@@ -33,7 +34,9 @@ export function LibraryMainList({
   onReorder,
   ListHeaderComponent,
 }: LibraryMainListProps) {
-  const { width } = useWindowDimensions();
+  // Measured, not window width: on desktop the sidebar + centred content column
+  // make the window hundreds of pixels wider than this list actually gets.
+  const { width, onLayout } = useMeasuredWidth();
   const columns = viewMode === 'grid' ? columnsFor(gridSize, width) : 1;
   const cardVariant = viewMode === 'grid' ? 'poster' : 'row';
   const emptyState = <EmptyState title="Your library is empty" description="Add a title to start tracking." />;
@@ -59,46 +62,50 @@ export function LibraryMainList({
     const itemInnerWidth = itemOuterWidth != null ? itemOuterWidth - halfGap * 2 : undefined;
 
     return (
-      <DraggableFlatList
-        key={`reorder-${viewMode}-${columns}-${gridSize}`}
-        data={movies}
-        numColumns={columns}
-        keyExtractor={(item) => item.id}
-        onDragEnd={({ data }) => onReorder(data)}
-        ListHeaderComponent={ListHeaderComponent}
-        ListEmptyComponent={emptyState}
-        contentContainerStyle={{ padding: halfGap }}
-        renderItem={({ item, drag, isActive }: RenderItemParams<Movie>) => (
-          <ScaleDecorator>
-            <Pressable onLongPress={drag} disabled={isActive} style={{ width: itemOuterWidth, padding: halfGap }}>
-              {itemInnerWidth != null ? (
-                <View style={{ width: itemInnerWidth, height: itemInnerWidth * 1.5 }}>
+      <View className="flex-1" onLayout={onLayout}>
+        <DraggableFlatList
+          key={`reorder-${viewMode}-${columns}-${gridSize}`}
+          data={movies}
+          numColumns={columns}
+          keyExtractor={(item) => item.id}
+          onDragEnd={({ data }) => onReorder(data)}
+          ListHeaderComponent={ListHeaderComponent}
+          ListEmptyComponent={emptyState}
+          contentContainerStyle={{ padding: halfGap }}
+          renderItem={({ item, drag, isActive }: RenderItemParams<Movie>) => (
+            <ScaleDecorator>
+              <Pressable onLongPress={drag} disabled={isActive} style={{ width: itemOuterWidth, padding: halfGap }}>
+                {itemInnerWidth != null ? (
+                  <View style={{ width: itemInnerWidth, height: itemInnerWidth * 1.5 }}>
+                    <MovieCard movie={item} variant={cardVariant} onPress={onPress} highlighted={highlightedId === item.id} />
+                  </View>
+                ) : (
                   <MovieCard movie={item} variant={cardVariant} onPress={onPress} highlighted={highlightedId === item.id} />
-                </View>
-              ) : (
-                <MovieCard movie={item} variant={cardVariant} onPress={onPress} highlighted={highlightedId === item.id} />
-              )}
-            </Pressable>
-          </ScaleDecorator>
-        )}
-      />
+                )}
+              </Pressable>
+            </ScaleDecorator>
+          )}
+        />
+      </View>
     );
   }
 
   return (
-    <FlashList
-      key={`main-${viewMode}-${columns}-${gridSize}`}
-      data={movies}
-      numColumns={columns}
-      keyExtractor={(item) => item.id}
-      ListHeaderComponent={ListHeaderComponent}
-      ListEmptyComponent={emptyState}
-      contentContainerStyle={{ padding: halfGap }}
-      renderItem={({ item }) => (
-        <View style={viewMode === 'grid' ? { flex: 1, padding: halfGap } : { paddingHorizontal: halfGap, paddingBottom: halfGap * 2 }}>
-          <MovieCard movie={item} variant={cardVariant} onPress={onPress} highlighted={highlightedId === item.id} />
-        </View>
-      )}
-    />
+    <View className="flex-1" onLayout={onLayout}>
+      <FlashList
+        key={`main-${viewMode}-${columns}-${gridSize}`}
+        data={movies}
+        numColumns={columns}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={ListHeaderComponent}
+        ListEmptyComponent={emptyState}
+        contentContainerStyle={{ padding: halfGap }}
+        renderItem={({ item }) => (
+          <View style={viewMode === 'grid' ? { flex: 1, padding: halfGap } : { paddingHorizontal: halfGap, paddingBottom: halfGap * 2 }}>
+            <MovieCard movie={item} variant={cardVariant} onPress={onPress} highlighted={highlightedId === item.id} />
+          </View>
+        )}
+      />
+    </View>
   );
 }

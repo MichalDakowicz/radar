@@ -1,4 +1,3 @@
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Calculator, Check, Clapperboard, Plus, Quote, Search, Sparkles, X } from 'lucide-react-native';
@@ -6,7 +5,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { StatusPicker } from '@/components/media/StatusPicker';
-import { BottomSheetModal, BottomSheetTextInput, Sheet } from '@/components/ui/Sheet';
+import { BottomSheetModal, BottomSheetTextInput, Sheet, SheetScrollView } from '@/components/ui/Sheet';
 import { useToast } from '@/components/ui/Toast';
 import { type CategoryRatings, EMPTY_CATEGORY_RATINGS, recalcOverall } from '@/features/movies/edit/editForm';
 import { RatingSlider, RatingSliderPrecise, RatingValue } from '@/features/movies/edit/RatingSlider';
@@ -276,7 +275,9 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
         : 'Add to Library';
 
   return (
-    <Sheet ref={sheetRef} snapPoints={['60%', '95%']} onDismiss={reset}>
+    // maxWidth: wider than the default desktop dialog, since this sheet holds a
+    // list of search results with posters and cramps at 560px.
+    <Sheet ref={sheetRef} snapPoints={['60%', '95%']} onDismiss={reset} maxWidth={680}>
       <View className="flex-1 pb-2">
         {/* Header — back arrow (when past the search step) / icon badge, in line
             with the title, never overlaid on the backdrop. */}
@@ -358,7 +359,7 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
         )}
 
         {mode === 'search' && selected && (
-          <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 20 }}>
+          <SheetScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 20 }}>
             <SelectedPreview summary={selected} metadata={metadata ?? undefined} isLoading={isLoadingMetadata} />
             <View className="gap-3">
               <SectionLabel>Watch status</SectionLabel>
@@ -367,11 +368,11 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
             {status.watched && (
               <RatingSection overall={overallRating} onOverall={setOverallRating} categories={categories} onCategories={setCategories} />
             )}
-          </BottomSheetScrollView>
+          </SheetScrollView>
         )}
 
         {mode === 'manual' && (
-          <BottomSheetScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 20 }}>
+          <SheetScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 20 }}>
             <View className="gap-2">
               <SectionLabel>Title</SectionLabel>
               <BottomSheetTextInput
@@ -397,7 +398,7 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
             {status.watched && (
               <RatingSection overall={overallRating} onOverall={setOverallRating} categories={categories} onCategories={setCategories} />
             )}
-          </BottomSheetScrollView>
+          </SheetScrollView>
         )}
 
         {showFooter && (
