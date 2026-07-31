@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
+import { GenreIcon } from '@/components/media/GenreIcon';
+
 // Favorite-genre chip (legacy GenreTag.jsx). Rank drives emphasis; the genre
 // id now rides on Movie.genres so navigation needs no hardcoded name->id map.
 export type GenreRank = 'top' | 'high' | 'mid' | 'low';
@@ -38,6 +40,7 @@ export function GenreTag({ name, count, rank, genreId }: GenreTagProps) {
       disabled={!genreId}
       className={`flex-row items-center gap-2 rounded-full border px-4 py-2.5 ${RANK_STYLES[rank]}`}
     >
+      <GenreIcon genre={name} size={14} />
       <Text className={`text-sm font-medium ${RANK_TEXT[rank]}`}>{name}</Text>
       <View className="h-1 w-1 rounded-full bg-muted-foreground/40" />
       <Text className={`text-xs font-semibold ${RANK_TEXT[rank]}`} style={{ opacity: 0.7 }}>

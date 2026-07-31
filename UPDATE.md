@@ -2,6 +2,21 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
+## 2.2.0 — 31.07.2026
+
+### Added
+
+- Tap the poster on a title to see it full size, then save it to your gallery or copy it
+
+### Changed
+
+- Movie and show detail leads with a bigger poster on the right of the header
+- Title, cast, genres and overview are read-only on detail; rating and notes stay editable
+- Removing a title leaves you on its page, so you can add it straight back if it was a slip
+- Titles in your library show the same cast, studios and score as ones you have not added
+- Genre chips carry an icon for the genre, on detail and everywhere they appear
+- The public score card traces its border as far round as the score, so 7.9 fills 79%
+
 ## 2.1.0 — 31.07.2026
 
 ### Added

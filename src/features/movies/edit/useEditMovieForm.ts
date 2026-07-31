@@ -33,19 +33,9 @@ export function useEditMovieForm(movie: Movie | undefined) {
 
   const update = (patch: Partial<EditForm>) => setForm((f) => (f ? { ...f, ...patch } : f));
 
-  const addDirector = (name: string) => form && update({ director: [...form.director, { name }] });
-  const removeDirector = (index: number) => form && update({ director: form.director.filter((_, i) => i !== index) });
-  const addGenre = (name: string) => form && update({ genres: [...form.genres, { name }] });
-  const removeGenre = (index: number) => form && update({ genres: form.genres.filter((_, i) => i !== index) });
-  const addCast = (name: string) => form && update({ cast: [...form.cast, { name }] });
-  const removeCast = (index: number) => form && update({ cast: form.cast.filter((_, i) => i !== index) });
-
-  const toggleAvailability = (service: string) => {
-    if (!form) return;
-    const isSelected = form.availability.includes(service);
-    update({ availability: isSelected ? form.availability.filter((s) => s !== service) : [...form.availability, service] });
-  };
-
+  // Catalogue fields (title, cast, genres, availability, overview…) have no
+  // hand-editing path anymore - they are TMDB facts, and Smart-fill below is
+  // the only thing that rewrites them. The user owns status, rating and notes.
   const handleSmartFill = async () => {
     if (!form?.title) return;
     setIsSmartFilling(true);
@@ -145,12 +135,13 @@ export function useEditMovieForm(movie: Movie | undefined) {
     }
   };
 
+  // No navigation here - the detail screen decides where the user lands after
+  // a removal (it keeps them on the title so they can add it straight back).
   const remove = async () => {
     if (!movie) return;
     setIsSaving(true);
     try {
       await removeMovie(movie.id);
-      goBackOrHome(router);
     } finally {
       setIsSaving(false);
     }
@@ -159,13 +150,6 @@ export function useEditMovieForm(movie: Movie | undefined) {
   return {
     form,
     update,
-    addDirector,
-    removeDirector,
-    addGenre,
-    removeGenre,
-    addCast,
-    removeCast,
-    toggleAvailability,
     handleSmartFill,
     recalcMovieOverall,
     recalcSeasonOverall,
