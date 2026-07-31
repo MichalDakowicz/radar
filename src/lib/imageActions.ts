@@ -1,12 +1,19 @@
 import * as Clipboard from 'expo-clipboard';
 import { File, Paths } from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
 // Save/copy for a remote poster, split per platform. Native stages the file in
-// the cache dir and hands it to the share sheet (that is where "Save to
-// Photos"/Drive live on Android); web pulls the bytes down as a blob so the
-// browser download keeps our filename instead of navigating to TMDB.
+// the cache dir and then writes it into the device gallery; web pulls the bytes
+// down as a blob so the browser download keeps our filename instead of
+// navigating to TMDB.
+
+// expo-media-library's current entry point calls requireNativeModule() at
+// import time and ships no web shim, so a static import would break the web
+// bundle. Only the native branch ever reaches this.
+function mediaLibrary() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('expo-media-library') as typeof import('expo-media-library');
+}
 
 // Downloads onto an explicit destination file so the share sheet and the saved
 // copy are labelled after the title, not TMDB's hashed path segment.
@@ -27,7 +34,11 @@ function webDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(objectUrl);
 }
 
-/** Saves the image to disk (web) or opens the share sheet for it (native). */
+/**
+ * Saves the image straight to the gallery (native) or downloads it (web) - no
+ * share sheet, no picker. Asks for write access the first time and throws with
+ * a readable message if it is refused.
+ */
 export async function saveImage(url: string, filename: string): Promise<void> {
   if (Platform.OS === 'web') {
     const res = await fetch(url);
@@ -35,9 +46,13 @@ export async function saveImage(url: string, filename: string): Promise<void> {
     webDownload(await res.blob(), filename);
     return;
   }
+  const MediaLibrary = mediaLibrary();
+  const permission = await MediaLibrary.requestPermissionsAsync(true);
+  if (!permission.granted) throw new Error('Allow photo access to save posters');
   const file = await stageInCache(url, filename);
-  if (!(await Sharing.isAvailableAsync())) throw new Error('Sharing is not available on this device');
-  await Sharing.shareAsync(file.uri, { mimeType: 'image/jpeg', dialogTitle: filename });
+  await MediaLibrary.Asset.create(file.uri);
+  // The gallery owns its own copy now, so the staged one is dead weight.
+  if (file.exists) file.delete();
 }
 
 // Chrome only accepts PNG in the async clipboard, so a JPEG poster has to go

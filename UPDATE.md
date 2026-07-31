@@ -6,7 +6,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ### Added
 
-- Tap the poster on a movie or show to see it full size, then save or copy the artwork
+- Tap the poster on a title to see it full size, then save it to your gallery or copy it
 
 ### Changed
 

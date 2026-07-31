@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Copy, Download, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
 
 import { useToast } from '@/components/ui/Toast';
 import { copyImage, saveImage } from '@/lib/imageActions';
@@ -63,6 +63,7 @@ export function ImageViewer({ visible, uri, title, onClose }: ImageViewerProps) 
     try {
       if (kind === 'save') {
         await saveImage(fullUri, filename);
+        show(Platform.OS === 'web' ? 'Poster downloaded' : 'Poster saved to your gallery');
       } else {
         const result = await copyImage(fullUri, filename);
         show(result === 'image' ? 'Poster copied' : 'Link copied — your browser blocks image copying');

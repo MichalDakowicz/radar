@@ -35,7 +35,15 @@
           "imageWidth": 76
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Allow Radar to save posters to your photos.",
+          "photosPermission": "Allow Radar to access your photos.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false,
