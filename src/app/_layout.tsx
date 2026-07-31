@@ -1,6 +1,5 @@
 import '@/global.css';
 
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -11,6 +10,7 @@ import { NAV_DESTINATIONS } from '@/components/layout/NavLinks';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { RefreshMetadataProvider } from '@/features/settings/RefreshMetadataProvider';
+import { UpdateNotice } from '@/features/updates/UpdateNotice';
 import { useWebShortcuts } from '@/hooks/useWebShortcuts';
 import { queryClient } from '@/lib/queryClient';
 import { ThemeProvider } from '@/theme/ThemeProvider';
@@ -48,7 +48,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
   );
   useWebShortcuts({ onSelectTab: selectTab });
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <UpdateNotice />
+    </>
+  );
 }
 
 export default function RootLayout() {
@@ -59,13 +64,15 @@ export default function RootLayout() {
           <ThemeProvider>
             <ToastProvider>
               <RefreshMetadataProvider>
-                <BottomSheetModalProvider>
-                  <AuthGate>
-                    <AppShell>
-                      <Stack screenOptions={{ headerShown: false }} />
-                    </AppShell>
-                  </AuthGate>
-                </BottomSheetModalProvider>
+                {/* No BottomSheetModalProvider: sheets are plain RN Modals now
+                    (components/ui/SheetPanel). GestureHandlerRootView stays —
+                    the card hover/press affordances and draggable library
+                    reorder still use react-native-gesture-handler. */}
+                <AuthGate>
+                  <AppShell>
+                    <Stack screenOptions={{ headerShown: false }} />
+                  </AppShell>
+                </AuthGate>
               </RefreshMetadataProvider>
             </ToastProvider>
           </ThemeProvider>

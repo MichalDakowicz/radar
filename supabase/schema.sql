@@ -1,23 +1,49 @@
--- Radar rewrite — initial schema, RLS, and auth trigger.
+-- Radar rewrite — schema, RLS, and auth trigger.
 -- Source of design intent: rewrite/11-supabase-migration.md
--- Run this once in Supabase Dashboard → SQL Editor → New query → paste → Run.
 -- Verify against current Supabase docs/changelog before running on prod (APIs drift).
+--
+-- HOW TO RUN: Supabase Dashboard → SQL Editor → New query → paste the whole
+-- file → Run. Safe on an empty project AND on a live one: every statement here
+-- is idempotent (`if not exists`, `create or replace`, or a guarded do-block),
+-- so re-running only applies what is actually missing. It never drops a table,
+-- a column, or a row — the only things it replaces are policies and functions,
+-- which are re-created immediately from the definitions below.
 
 -- ============================================================================
 -- SCHEMA
 -- ============================================================================
 
-create table public.profiles (
+create table if not exists public.profiles (
   id           uuid primary key references auth.users(id) on delete cascade,
   username     text unique not null,
   display_name text,
   pfp          text,
+  -- Letterboxd-style "top 4": an ordered snapshot of up to 4 titles
+  -- ({tmdbId,type,title,coverUrl}), not FKs into public.movies. Snapshotting
+  -- keeps the pick renderable from the world-readable profiles row alone, so a
+  -- favourite survives being removed from the owner's library and needs no
+  -- second, RLS-gated read to draw a poster.
+  -- CASE, not AND: jsonb_array_length() errors on a non-array, and Postgres
+  -- does not promise left-to-right evaluation of a conjunction.
+  favorites    jsonb not null default '[]'
+                 check (case when jsonb_typeof(favorites) = 'array'
+                             then jsonb_array_length(favorites) <= 4
+                             else false end),
   created_at   timestamptz not null default now()
 );
 
-create type media_type as enum ('movie','tv');
+-- CREATE TYPE has no `if not exists`; to_regtype() returns null when absent.
+do $$
+begin
+  if to_regtype('public.media_type') is null then
+    create type public.media_type as enum ('movie','tv');
+  end if;
+  if to_regtype('public.friends_visibility') is null then
+    create type public.friends_visibility as enum ('public','friends','noone');
+  end if;
+end $$;
 
-create table public.movies (
+create table if not exists public.movies (
   id             uuid primary key default gen_random_uuid(),
   user_id        uuid not null references auth.users(id) on delete cascade,
   tmdb_id        bigint,
@@ -58,13 +84,17 @@ create table public.movies (
   added_at       timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
-create index on public.movies (user_id);
-create index on public.movies (user_id, tmdb_id);
-create index on public.movies (user_id, watched);
-create index on public.movies (user_id, in_watchlist);
-create index on public.movies (user_id, ((ratings->>'overall')::numeric));
 
-create table public.activity (
+-- Named explicitly, matching what Postgres auto-generated for the unnamed
+-- `create index on ...` these replaced — `if not exists` can only match a name,
+-- so an anonymous index would be re-created under a second name on every run.
+create index if not exists movies_user_id_idx              on public.movies (user_id);
+create index if not exists movies_user_id_tmdb_id_idx      on public.movies (user_id, tmdb_id);
+create index if not exists movies_user_id_watched_idx      on public.movies (user_id, watched);
+create index if not exists movies_user_id_in_watchlist_idx on public.movies (user_id, in_watchlist);
+create index if not exists movies_user_id_expr_idx         on public.movies (user_id, ((ratings->>'overall')::numeric));
+
+create table if not exists public.activity (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
   movie_id    uuid references public.movies(id) on delete set null,
@@ -74,11 +104,9 @@ create table public.activity (
   details     jsonb not null default '{}',
   created_at  timestamptz not null default now()
 );
-create index on public.activity (user_id, created_at desc);
+create index if not exists activity_user_id_created_at_idx on public.activity (user_id, created_at desc);
 
-create type friends_visibility as enum ('public','friends','noone');
-
-create table public.user_settings (
+create table if not exists public.user_settings (
   user_id                   uuid primary key references auth.users(id) on delete cascade,
   watch_provider_country    text not null default 'US',
   recently_added_days       int  not null default 30 check (recently_added_days between 1 and 365),
@@ -89,20 +117,41 @@ create table public.user_settings (
   theme                     text default 'dark'
 );
 
-create table public.friendships (
+create table if not exists public.friendships (
   user_id    uuid not null references auth.users(id) on delete cascade,
   friend_id  uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (user_id, friend_id)
 );
 
-create table public.friend_requests (
+create table if not exists public.friend_requests (
   sender_id    uuid not null references auth.users(id) on delete cascade,
   recipient_id uuid not null references auth.users(id) on delete cascade,
   status       text not null default 'pending',
   created_at   timestamptz not null default now(),
   primary key (sender_id, recipient_id)
 );
+
+-- ============================================================================
+-- COLUMN MIGRATIONS — for tables that predate a column. The CREATE TABLEs above
+-- are skipped entirely on a live database, so anything added after the initial
+-- deploy has to be applied here too.
+-- ============================================================================
+
+-- profiles.favorites (profile top 4).
+alter table public.profiles
+  add column if not exists favorites jsonb not null default '[]';
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_favorites_check') then
+    alter table public.profiles
+      add constraint profiles_favorites_check
+      check (case when jsonb_typeof(favorites) = 'array'
+                  then jsonb_array_length(favorites) <= 4
+                  else false end);
+  end if;
+end $$;
 
 -- ============================================================================
 -- RLS
@@ -142,39 +191,55 @@ alter table public.user_settings  enable row level security;
 alter table public.friendships    enable row level security;
 alter table public.friend_requests enable row level security;
 
+-- CREATE POLICY has no `if not exists` and no `or replace`, so each one is
+-- dropped and re-created. The drop/create pair runs inside the SQL Editor's
+-- single transaction, so there is no window where a table sits unprotected.
+drop policy if exists profiles_read on public.profiles;
 create policy profiles_read   on public.profiles for select
   to anon, authenticated using (true);
+drop policy if exists profiles_write on public.profiles;
 create policy profiles_write  on public.profiles for insert
   to authenticated with check ((select auth.uid()) = id);
+drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles for update
   to authenticated using ((select auth.uid()) = id)
   with check ((select auth.uid()) = id);
 
+drop policy if exists movies_owner_all on public.movies;
 create policy movies_owner_all on public.movies for all
   to authenticated using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
+drop policy if exists movies_visible_read on public.movies;
 create policy movies_visible_read on public.movies for select
   to anon, authenticated using (private.can_view(user_id));
 
+drop policy if exists activity_visible_read on public.activity;
 create policy activity_visible_read on public.activity for select
   to anon, authenticated using (private.can_view(user_id));
+drop policy if exists activity_owner_write on public.activity;
 create policy activity_owner_write on public.activity for insert
   to authenticated with check ((select auth.uid()) = user_id);
 
+drop policy if exists settings_owner_all on public.user_settings;
 create policy settings_owner_all on public.user_settings for all
   to authenticated using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+drop policy if exists friendships_read on public.friendships;
 create policy friendships_read on public.friendships for select
   to anon, authenticated using (private.can_view(user_id));
+drop policy if exists friendships_write on public.friendships;
 create policy friendships_write on public.friendships for all
   to authenticated using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+drop policy if exists fr_read on public.friend_requests;
 create policy fr_read on public.friend_requests for select
   to authenticated using ((select auth.uid()) in (sender_id, recipient_id));
+drop policy if exists fr_insert on public.friend_requests;
 create policy fr_insert on public.friend_requests for insert
   to authenticated with check ((select auth.uid()) = sender_id);
+drop policy if exists fr_update on public.friend_requests;
 create policy fr_update on public.friend_requests for update
   to authenticated using ((select auth.uid()) = recipient_id)
   with check ((select auth.uid()) = recipient_id);
@@ -197,7 +262,7 @@ begin
   return new;
 end $$;
 
-create trigger on_auth_user_created
+create or replace trigger on_auth_user_created
   after insert on auth.users
   for each row execute function private.handle_new_user();
 
@@ -300,7 +365,18 @@ grant execute on function public.can_view_user(uuid) to authenticated, anon;
 -- REALTIME — needed starting Phase 1 (useMovies), harmless to enable now.
 -- ============================================================================
 
-alter publication supabase_realtime add table public.movies;
-alter publication supabase_realtime add table public.friend_requests;
-alter publication supabase_realtime add table public.friendships;
-alter publication supabase_realtime add table public.activity;
+-- ALTER PUBLICATION ... ADD TABLE errors if the table is already a member,
+-- so each is added only when missing.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['movies','friend_requests','friendships','activity'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;

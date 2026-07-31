@@ -1,4 +1,4 @@
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ServiceFilterChips } from '@/components/media/ServiceFilterChips';
@@ -62,10 +62,16 @@ function FilterRow({ title, children }: { title: string; children: ReactNode }) 
 // Filters/Group popovers rather than one combined panel.
 export const LibraryFilterSheet = forwardRef<BottomSheetModal>(function LibraryFilterSheet(_props, ref) {
   const { statusFilter, setStatusFilter, selectedServices, toggleService, sortBy, setSortBy, resetFilters } = useLibraryPrefs();
+  // Chips + three labels come to a fixed height, so the sheet is sized to what
+  // it measures rather than to a fraction of the screen - at '70%' alone it
+  // rendered with roughly half its height empty. The snap point stays as the
+  // ceiling for narrow screens where the chips wrap onto more rows, and the
+  // starting estimate keeps the first open from visibly resizing once measured.
+  const [contentHeight, setContentHeight] = useState(470);
 
   return (
-    <Sheet ref={ref} snapPoints={['70%']}>
-      <ScrollView contentContainerClassName="gap-6 p-4">
+    <Sheet ref={ref} snapPoints={['70%']} contentHeight={contentHeight}>
+      <ScrollView contentContainerClassName="gap-6 p-4" onContentSizeChange={(_width, height) => setContentHeight(height)}>
         <View className="flex-row items-center justify-between">
           <Text className="text-lg font-bold text-foreground">Filter &amp; Sort</Text>
           <Pressable onPress={resetFilters} className="flex-row items-center gap-1">

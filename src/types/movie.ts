@@ -83,11 +83,23 @@ export type ActivityEvent = {
   createdAt: string;
 };
 
+// One of the up-to-4 titles pinned to a profile (Letterboxd's "favourite
+// films"). A snapshot, not a reference: profiles.favorites is world-readable
+// while public.movies is RLS-gated, and a pinned title should survive being
+// removed from the library. tmdbId+type is enough to route to the detail page.
+export type FavoriteItem = {
+  tmdbId: number;
+  type: MediaType;
+  title: string;
+  coverUrl: string | null;
+};
+
 export type Profile = {
   id: string;
   username: string;
   displayName: string | null;
   pfp: string | null;
+  favorites: FavoriteItem[];
   createdAt: string;
 };
 

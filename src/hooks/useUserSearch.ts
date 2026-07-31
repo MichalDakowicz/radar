@@ -1,16 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/AuthProvider';
+import { normalizeProfile, type ProfileRow } from '@/hooks/useProfile';
 import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/types/movie';
-
-type ProfileRow = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  pfp: string | null;
-  created_at: string;
-};
 
 async function searchProfiles(term: string, selfId: string | undefined): Promise<Profile[]> {
   const q = term.trim();
@@ -23,9 +16,7 @@ async function searchProfiles(term: string, selfId: string | undefined): Promise
     .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
     .limit(20);
   if (error) throw error;
-  return (data as ProfileRow[])
-    .filter((r) => r.id !== selfId)
-    .map((r) => ({ id: r.id, username: r.username, displayName: r.display_name, pfp: r.pfp, createdAt: r.created_at }));
+  return (data as ProfileRow[]).filter((r) => r.id !== selfId).map(normalizeProfile);
 }
 
 // Username/display-name search for the "Find friends" panel. Debounce lives in
