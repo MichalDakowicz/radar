@@ -1,6 +1,6 @@
 import { Save } from 'lucide-react-native';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -13,6 +13,7 @@ import type { MediaType } from '@/types/movie';
 import { AddToLibraryButton } from './AddToLibraryButton';
 import { DetailAvailability, DetailCast, DetailGenres, DetailProduction, DetailStats } from './DetailFacts';
 import { DetailHero } from './DetailHero';
+import { DetailTabs, type DetailTab } from './DetailTabs';
 import { OverviewSection } from './OverviewSection';
 import { OwnedControls, SmartFillButton } from './OwnedControls';
 import { SimilarRow } from './SimilarRow';
@@ -35,8 +36,14 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
   const contentStyle = useCenteredContentStyle(MAX_W.detail);
   const detail = useMovieDetail({ tmdbId, type, movieId });
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [tab, setTab] = useState<DetailTab>('details');
 
   const { display, editForm, form, owned } = detail;
+  const tabs: { key: DetailTab; label: string }[] = [
+    ...(form?.type === 'tv' ? [{ key: 'episodes' as DetailTab, label: 'Episodes' }] : []),
+    { key: 'details', label: 'Details' },
+    { key: 'ratings', label: 'Ratings' },
+  ];
 
   if (detail.isLoading || detail.isFormLoading) return <LoadingState label="Loading…" />;
   if (detail.isError) return <ErrorState message="Couldn't load this title" onRetry={detail.refetch} />;
@@ -99,14 +106,13 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
           }
         />
 
-        {isDesktop ? (
+        {isDesktop && !owned ? (
           // Wide viewports read a 900px-long single column badly: the primary
           // text keeps a comfortable measure on the left while the facts
           // (release/runtime/budget/score, genres, availability) stack in a rail.
           <View className="flex-row gap-8 px-6 pt-8">
             <View className="min-w-0 flex-1 gap-6">
               <OverviewSection overview={display.overview} />
-              {ownControls}
               {people}
             </View>
             <View className="gap-5" style={{ width: 320 }}>
@@ -119,31 +125,42 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
             {stats}
             <OverviewSection overview={display.overview} />
             {ownControls}
-            {people}
-            {taxonomy}
+            {/* Owned titles file these under the Details tab below instead. */}
+            {!owned && people}
+            {!owned && taxonomy}
           </View>
         )}
 
         {owned && form && (
-          <View className="gap-6 px-4 pt-6">
-            <Text className="text-lg font-bold text-foreground">Your ratings</Text>
-            <EditRatingsTab
-              form={form}
-              onChange={editForm.update}
-              onRecalcSeasonOverall={editForm.recalcSeasonOverall}
-              onChangeSeasonRating={editForm.setSeasonRating}
-            />
-            {form.type === 'tv' && (
-              <EditEpisodesTab
-                tmdbId={form.tmdbId}
-                numberOfSeasons={form.numberOfSeasons}
-                episodesWatched={form.episodesWatched}
-                onToggleEpisode={editForm.toggleEpisodeWatched}
-                onMarkSeasonComplete={editForm.markSeasonComplete}
-              />
-            )}
-            <SmartFillButton onPress={editForm.handleSmartFill} busy={editForm.isSmartFilling} />
-          </View>
+          <>
+            <DetailTabs tabs={tabs} value={tab} onChange={setTab} />
+            <View className="gap-6 px-4">
+              {tab === 'details' && (
+                <>
+                  {people}
+                  {taxonomy}
+                  <SmartFillButton onPress={editForm.handleSmartFill} busy={editForm.isSmartFilling} />
+                </>
+              )}
+              {tab === 'ratings' && (
+                <EditRatingsTab
+                  form={form}
+                  onChange={editForm.update}
+                  onRecalcSeasonOverall={editForm.recalcSeasonOverall}
+                  onChangeSeasonRating={editForm.setSeasonRating}
+                />
+              )}
+              {tab === 'episodes' && form.type === 'tv' && (
+                <EditEpisodesTab
+                  tmdbId={form.tmdbId}
+                  numberOfSeasons={form.numberOfSeasons}
+                  episodesWatched={form.episodesWatched}
+                  onToggleEpisode={editForm.toggleEpisodeWatched}
+                  onMarkSeasonComplete={editForm.markSeasonComplete}
+                />
+              )}
+            </View>
+          </>
         )}
 
         <View className="mt-6">

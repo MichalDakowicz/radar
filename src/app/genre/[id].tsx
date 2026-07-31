@@ -4,6 +4,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ContentShell } from '@/components/layout/ContentShell';
+import { GenreIcon } from '@/components/media/GenreIcon';
 import { MediaGrid } from '@/components/media/MediaGrid';
 import { BackButton } from '@/components/ui/BackButton';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -80,7 +81,10 @@ export default function GenreDetails() {
           ListHeaderComponent={
             <View className="gap-1 px-4 pb-4" style={{ paddingTop: insets.top + 8 }}>
               <BackButton className="mb-3" />
-              <Text className="text-3xl font-bold text-foreground">{genreName}</Text>
+              <View className="flex-row items-center gap-2">
+                <GenreIcon genre={genreName} size={26} color="hsl(0 0% 98%)" />
+                <Text className="text-3xl font-bold text-foreground">{genreName}</Text>
+              </View>
               <View className="flex-row items-center gap-1.5">
                 <Film size={14} color="#3b82f6" />
                 <Text className="text-sm text-muted-foreground">

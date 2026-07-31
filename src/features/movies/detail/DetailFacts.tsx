@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Building2, Calendar, Clock, Star, Users, Wallet } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 
+import { GenreIcon } from '@/components/media/GenreIcon';
 import type { NamedRef, ProductionCompany } from '@/types/movie';
 
 import { AvailabilityBadges } from './AvailabilityBadges';
@@ -102,8 +103,9 @@ export function DetailGenres({ genres }: { genres: NamedRef[] }) {
             key={g.id ?? g.name}
             disabled={!g.id}
             onPress={() => g.id && router.push({ pathname: '/genre/[id]', params: { id: String(g.id) } })}
-            className="rounded-full border border-border bg-secondary px-3 py-1.5"
+            className="flex-row items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1.5"
           >
+            <GenreIcon genre={g.name} />
             <Text className="text-sm text-foreground">{g.name}</Text>
           </Pressable>
         ))}
