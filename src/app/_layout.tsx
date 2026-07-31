@@ -66,8 +66,8 @@ export default function RootLayout() {
               <RefreshMetadataProvider>
                 {/* No BottomSheetModalProvider: sheets are plain RN Modals now
                     (components/ui/SheetPanel). GestureHandlerRootView stays —
-                    the card hover/press affordances and draggable library
-                    reorder still use react-native-gesture-handler. */}
+                    the card hover/press affordances still use
+                    react-native-gesture-handler. */}
                 <AuthGate>
                   <AppShell>
                     <Stack screenOptions={{ headerShown: false }} />

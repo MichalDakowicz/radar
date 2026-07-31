@@ -15,7 +15,6 @@ import { LibrarySection } from '@/features/library/LibrarySection';
 import { LibraryToolbar } from '@/features/library/LibraryToolbar';
 import { RandomPickSheet } from '@/features/library/RandomPickSheet';
 import { useLibraryFilters } from '@/features/library/useLibraryFilters';
-import { useLibraryReorder } from '@/features/library/useLibraryReorder';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -24,8 +23,8 @@ import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
 
 // Thin composition layer only (doc 10) - all derive logic lives in
-// useLibraryFilters/useLibraryReorder, all durable prefs in the zustand+MMKV
-// store, all rendering in the Library* components.
+// useLibraryFilters, all durable prefs in the zustand+MMKV store, all
+// rendering in the Library* components.
 export default withTabReload(LibraryScreen, 'index');
 
 function LibraryScreen() {
@@ -34,7 +33,7 @@ function LibraryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
-  const { viewMode, gridSize, statusFilter, selectedServices, sortBy, groupBy, comingSoonCollapsed, toggleComingSoonCollapsed, reorderMode } =
+  const { viewMode, gridSize, statusFilter, selectedServices, sortBy, sortDir, groupBy, comingSoonCollapsed, toggleComingSoonCollapsed } =
     useLibraryPrefs();
   const { settings } = useUserSettings();
   const filters = useLibraryFilters(
@@ -43,12 +42,11 @@ function LibraryScreen() {
     statusFilter,
     selectedServices,
     sortBy,
+    sortDir,
     groupBy,
     settings.recentlyAddedDays,
     settings.showRecentlyAdded,
-    reorderMode,
   );
-  const { handleDragEnd } = useLibraryReorder();
 
   const filterSheetRef = useRef<BottomSheetModal>(null);
   const groupSheetRef = useRef<BottomSheetModal>(null);
@@ -122,10 +120,8 @@ function LibraryScreen() {
             movies={filters.mainMovies}
             viewMode={viewMode}
             gridSize={gridSize}
-            reorderEnabled={filters.isReorderEnabled}
             highlightedId={highlightedId}
             onPress={openMovie}
-            onReorder={handleDragEnd}
             ListHeaderComponent={sections}
           />
         )}

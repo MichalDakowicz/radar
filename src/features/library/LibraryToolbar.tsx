@@ -1,6 +1,7 @@
-import { ArrowUpDown, LayoutGrid, Layers, List, Search, SlidersHorizontal } from 'lucide-react-native';
+import { LayoutGrid, Layers, List, Search, SlidersHorizontal } from 'lucide-react-native';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
+import { SortDirectionToggle } from '@/features/library/SortDirectionToggle';
 import { useIsDesktop } from '@/hooks/useResponsive';
 import { useLibraryPrefs } from '@/store/libraryPrefs';
 import { useSearchFocusRegistration } from '@/hooks/useSearchFocusRegistration';
@@ -20,17 +21,11 @@ function ToolbarGroup({ children }: { children: React.ReactNode }) {
 // the Filters / Group / Grid-List pill-groups on the right. Random pick moved
 // to the global Header. Icon-only pill buttons so the row fits phone widths.
 export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters, onOpenGroup }: LibraryToolbarProps) {
-  const { viewMode, groupBy, statusFilter, selectedServices, sortBy, reorderMode, setViewMode, toggleReorderMode } = useLibraryPrefs();
+  const { viewMode, groupBy, statusFilter, selectedServices, sortDir, setViewMode, toggleSortDir } = useLibraryPrefs();
   const isDesktop = useIsDesktop();
   const searchRef = useSearchFocusRegistration();
 
   const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (selectedServices.length > 0 ? 1 : 0);
-
-  // Reorder needs custom sort + an unfiltered, unsearched, ungrouped list (the
-  // same gate as useLibraryFilters.isReorderEnabled) - otherwise the on-screen
-  // order isn't the stored custom order and a drag would be meaningless.
-  const canReorder =
-    sortBy === 'custom' && groupBy === 'none' && statusFilter === 'all' && selectedServices.length === 0 && !searchQuery.trim();
 
   return (
     <View className={isDesktop ? 'flex-row items-center gap-2 px-8 pb-4 pt-4' : 'flex-row items-center gap-2 px-4 pb-3 pt-2'}>
@@ -72,14 +67,7 @@ export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters, onO
         </ToolbarGroup>
 
         <ToolbarGroup>
-          <Pressable
-            onPress={toggleReorderMode}
-            disabled={!canReorder}
-            className="rounded px-2 py-1"
-            style={{ backgroundColor: reorderMode && canReorder ? 'hsl(0 0% 20%)' : 'transparent', opacity: canReorder ? 1 : 0.35 }}
-          >
-            <ArrowUpDown size={16} color={reorderMode && canReorder ? 'hsl(217 91% 60%)' : 'hsl(0 0% 63.9%)'} />
-          </Pressable>
+          <SortDirectionToggle dir={sortDir} onToggle={toggleSortDir} />
         </ToolbarGroup>
 
         <ToolbarGroup>

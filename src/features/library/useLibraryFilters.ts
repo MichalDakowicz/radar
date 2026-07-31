@@ -1,18 +1,13 @@
 import { useMemo } from 'react';
 
 import { movieMatchesSearchQuery } from '@/lib/librarySearch';
+import { compareMovies } from '@/lib/librarySort';
 import { isInProgress, isInWatchlist, isRewatch, isWatched } from '@/lib/movieStatus';
 import { normalizeAvailability, OTHER_SERVICE_KEY, isPopularService } from '@/lib/services';
 import { selectComingSoon } from '@/lib/upcoming';
 import { directorToDisplayString } from '@/lib/utils';
-import type { GroupBy, SortBy, StatusFilter } from '@/store/libraryPrefs';
+import type { GroupBy, SortBy, SortDir, StatusFilter } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
-
-function averageRating(movie: Movie): number {
-  if (!movie.ratings) return 0;
-  const vals = Object.values(movie.ratings).filter((v): v is number => typeof v === 'number' && v > 0);
-  return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-}
 
 function matchesStatusFilter(movie: Movie, filter: StatusFilter): boolean {
   switch (filter) {
@@ -35,32 +30,6 @@ function matchesServiceFilter(movie: Movie, selected: string[]): boolean {
   const matchesPopular = selected.some((s) => s !== OTHER_SERVICE_KEY && services.includes(s));
   const matchesOther = selected.includes(OTHER_SERVICE_KEY) && services.some((s) => !isPopularService(s));
   return matchesPopular || matchesOther;
-}
-
-function compareBySort(a: Movie, b: Movie, sortBy: SortBy): number {
-  switch (sortBy) {
-    case 'custom': {
-      const orderA = a.customOrder ?? -new Date(a.addedAt).getTime();
-      const orderB = b.customOrder ?? -new Date(b.addedAt).getTime();
-      return orderA - orderB;
-    }
-    case 'dateAdded':
-      return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
-    case 'rating':
-      return averageRating(b) - averageRating(a);
-    case 'releaseDate':
-      return new Date(b.releaseDate || 0).getTime() - new Date(a.releaseDate || 0).getTime();
-    case 'director':
-      return directorToDisplayString(a.director)
-        .split(',')[0]
-        .trim()
-        .localeCompare(directorToDisplayString(b.director).split(',')[0].trim());
-    case 'runtime':
-      return (a.runtime || 0) - (b.runtime || 0);
-    case 'title':
-    default:
-      return a.title.localeCompare(b.title);
-  }
 }
 
 function groupKey(movie: Movie, groupBy: GroupBy): string {
@@ -89,7 +58,6 @@ export type LibraryFilters = {
   mainMovies: Movie[];
   groups: LibraryGroup[] | null;
   validPickMovies: Movie[];
-  isReorderEnabled: boolean;
   totalCount: number;
 };
 
@@ -101,10 +69,10 @@ export function useLibraryFilters(
   statusFilter: StatusFilter,
   selectedServices: string[],
   sortBy: SortBy,
+  sortDir: SortDir,
   groupBy: GroupBy,
   recentlyAddedDays = 30,
   showRecentlyAdded = false,
-  reorderMode = false,
 ): LibraryFilters {
   const continueWatching = useMemo(() => {
     const inProgress = movies.filter((m) => isInProgress(m)).slice(0, 30);
@@ -134,8 +102,8 @@ export function useLibraryFilters(
     if (searchQuery.trim()) result = result.filter((m) => movieMatchesSearchQuery(m, searchQuery));
     result = result.filter((m) => matchesStatusFilter(m, statusFilter));
     result = result.filter((m) => matchesServiceFilter(m, selectedServices));
-    return [...result].sort((a, b) => compareBySort(a, b, sortBy));
-  }, [movies, searchQuery, statusFilter, selectedServices, sortBy]);
+    return [...result].sort((a, b) => compareMovies(a, b, sortBy, sortDir));
+  }, [movies, searchQuery, statusFilter, selectedServices, sortBy, sortDir]);
 
   const sectionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -167,14 +135,6 @@ export function useLibraryFilters(
     [filteredMovies, statusFilter],
   );
 
-  const isReorderEnabled =
-    reorderMode &&
-    sortBy === 'custom' &&
-    groupBy === 'none' &&
-    !searchQuery.trim() &&
-    statusFilter === 'all' &&
-    selectedServices.length === 0;
-
   return {
     continueWatching,
     recentlyAdded,
@@ -182,7 +142,6 @@ export function useLibraryFilters(
     mainMovies,
     groups,
     validPickMovies,
-    isReorderEnabled,
     totalCount: movies.length,
   };
 }

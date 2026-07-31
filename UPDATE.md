@@ -4,10 +4,19 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.2.1 — Unreleased
 
+### Changed
+
+- The Library arrows button now flips the sort direction, with the live arrow drawn bold
+- Choosing a sort starts in its natural order — newest, highest or soonest first
+
 ### Fixed
 
 - Coming soon lists every unreleased title you are waiting for, not only the next 6 months
 - A title releasing today stays in Coming soon for the whole day
+
+### Removed
+
+- Drag-to-reorder in Library, which the arrows button used to toggle
 
 ## 2.2.0 — 31.07.2026
 
