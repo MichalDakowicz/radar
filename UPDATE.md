@@ -2,6 +2,12 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
+## 2.2.2 — Unreleased
+
+### Fixed
+
+- The public score border on movie and show detail fills anticlockwise, not clockwise
+
 ## 2.2.1 — 31.07.2026
 
 ### Added

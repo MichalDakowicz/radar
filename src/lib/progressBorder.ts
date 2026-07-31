@@ -18,6 +18,37 @@ export function progressDash(perimeter: number, progress: number): [number, numb
   return [filled, perimeter - filled];
 }
 
+/**
+ * A rounded rect traced anticlockwise from the top-left corner: the stroke leaves that
+ * point heading left, down the near side and around the bottom, so a partial dash fills
+ * leftwards. An SVG `Rect` can only be stroked the other way, hence the explicit path.
+ */
+export function roundedRectPathReverse(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): string {
+  if (width <= 0 || height <= 0) return '';
+  const r = Math.max(0, Math.min(radius, Math.min(width, height) / 2));
+  const x2 = x + width;
+  const y2 = y + height;
+  // Sweep flag 0 turns each corner the short way round for an anticlockwise loop.
+  const arc = (ex: number, ey: number) => `A ${r} ${r} 0 0 0 ${ex} ${ey}`;
+  return [
+    `M ${x + r} ${y}`,
+    arc(x, y + r),
+    `L ${x} ${y2 - r}`,
+    arc(x + r, y2),
+    `L ${x2 - r} ${y2}`,
+    arc(x2, y2 - r),
+    `L ${x2} ${y + r}`,
+    arc(x2 - r, y),
+    'Z',
+  ].join(' ');
+}
+
 /** A 0-10 score (TMDB's scale) as a 0-1 fraction. */
 export function scoreToProgress(score: number, max = 10): number {
   if (!Number.isFinite(score) || max <= 0) return 0;
