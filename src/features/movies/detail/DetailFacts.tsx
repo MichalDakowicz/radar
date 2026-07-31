@@ -3,10 +3,14 @@ import { Building2, Calendar, Clock, Star, Users, Wallet } from 'lucide-react-na
 import { Pressable, Text, View } from 'react-native';
 
 import { GenreIcon } from '@/components/media/GenreIcon';
+import { ProgressBorder } from '@/components/ui/ProgressBorder';
+import { scoreToProgress } from '@/lib/progressBorder';
 import type { NamedRef, ProductionCompany } from '@/types/movie';
 
 import { AvailabilityBadges } from './AvailabilityBadges';
 import { CastRow } from './CastRow';
+
+const SCORE_COLOR = '#f59e0b';
 
 // The catalogue half of the detail screen: facts that come from TMDB and are
 // the same whether or not the title is in the library (doc 12 part 1 unify).
@@ -14,7 +18,19 @@ import { CastRow } from './CastRow';
 // titles hid budget/production entirely and buried cast in an edit tab - so it
 // all lives here now and both entry points mount the same components.
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function Stat({
+  icon,
+  label,
+  value,
+  progress,
+  progressColor,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  progress?: number;
+  progressColor?: string;
+}) {
   return (
     <View className="min-w-[45%] flex-1 gap-1 rounded-xl border border-border bg-secondary p-3">
       <Text className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</Text>
@@ -22,6 +38,7 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
         {icon}
         <Text className="font-medium text-foreground">{value}</Text>
       </View>
+      {progress != null && <ProgressBorder progress={progress} color={progressColor ?? SCORE_COLOR} />}
     </View>
   );
 }
@@ -47,7 +64,14 @@ export function DetailStats({
         <Stat icon={<Wallet size={16} color="#10b981" />} label="Budget" value={`$${(budget / 1_000_000).toFixed(1)}M`} />
       )}
       {voteAverage > 0 && (
-        <Stat icon={<Star size={16} color="#f59e0b" />} label="Public score" value={`${voteAverage.toFixed(1)} / 10`} />
+        // The card's own border doubles as the track; the stroke runs as far
+        // around it as the score goes, so 7.9/10 closes 79% of the loop.
+        <Stat
+          icon={<Star size={16} color={SCORE_COLOR} />}
+          label="Public score"
+          value={`${voteAverage.toFixed(1)} / 10`}
+          progress={scoreToProgress(voteAverage)}
+        />
       )}
     </View>
   );
