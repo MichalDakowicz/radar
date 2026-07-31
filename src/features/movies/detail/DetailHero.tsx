@@ -42,10 +42,9 @@ export function DetailHero({ title, tagline, coverUrl, releaseDate, director, ac
 
   return (
     <View className="relative">
-      {/* Backdrop is short enough that the poster starts near the top of the
-          hero - under the taller artwork, a deep band of blurred cover above it
-          just read as dead space. Phones leave ~64px of it showing; desktop
-          keeps more, since the poster there is half again as tall. */}
+      {/* Backdrop is sized so only ~64px of it clears the top of the poster -
+          the bigger artwork fills the hero, and an empty blurred band above it
+          read as dead space. */}
       <View className={isDesktop ? 'h-80 w-full overflow-hidden bg-neutral-900' : 'h-56 w-full overflow-hidden bg-neutral-900'}>
         {coverUrl && <Image source={{ uri: coverUrl }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={40} />}
         <LinearGradient colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.85)']} style={StyleSheet.absoluteFill} />
@@ -62,7 +61,7 @@ export function DetailHero({ title, tagline, coverUrl, releaseDate, director, ac
       {/* Poster sits on the right: the title/tagline/director block reads
           left-aligned with the rest of the page, which frees the whole right
           edge for a noticeably larger piece of artwork. */}
-      <View className={isDesktop ? '-mt-32 flex-row gap-6 px-8' : '-mt-40 flex-row gap-4 px-4'}>
+      <View className={isDesktop ? '-mt-64 flex-row gap-6 px-8' : '-mt-40 flex-row gap-4 px-4'}>
         <View className="flex-1 justify-end gap-1.5 pb-1">
           <Text className={isDesktop ? 'text-4xl font-bold leading-tight text-white' : 'text-2xl font-bold leading-tight text-white'}>{title}</Text>
           {!!tagline && (

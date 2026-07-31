@@ -102,7 +102,7 @@ phone" means for a finished change:
 
 ```sh
 npx expo prebuild -p android          # only when app.json / native config / deps changed
-cd android && ./gradlew assembleRelease
+cd android; ./gradlew assembleRelease
 mv app/build/outputs/apk/release/app-release.apk \
    app/build/outputs/apk/release/radar-v<version>.apk
 adb install -r app/build/outputs/apk/release/radar-v<version>.apk

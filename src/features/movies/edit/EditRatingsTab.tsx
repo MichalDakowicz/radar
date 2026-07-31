@@ -19,8 +19,9 @@ type EditRatingsTabProps = {
 };
 
 // Category breakdown (movie) / per-season ratings (tv) + notes (doc 03 Edit
-// `EditRatingsTab`) - the overall rating slider itself now lives in the
-// always-visible main section (doc 12 part 1 unify), not this tab.
+// `EditRatingsTab`) - the overall rating slider lives in the always-visible
+// main section (doc 12 part 1 unify), and the TMDB public score sits with the
+// other catalogue facts, so what is left here is purely the user's own.
 export function EditRatingsTab({
   form,
   onChange,
@@ -29,19 +30,6 @@ export function EditRatingsTab({
 }: EditRatingsTabProps) {
   return (
     <View className="gap-6">
-      <View className="gap-2">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Public score</Text>
-          <Text className="text-base font-bold text-foreground">{form.voteAverage > 0 ? `${form.voteAverage.toFixed(1)} / 10` : 'N/A'}</Text>
-        </View>
-        <View className="h-2 overflow-hidden rounded-full bg-secondary">
-          <View
-            className="h-full rounded-full bg-muted-foreground"
-            style={{ width: `${Math.max(0, Math.min(100, (form.voteAverage / 10) * 100))}%` }}
-          />
-        </View>
-      </View>
-
       <View className="gap-3">
         <Text className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Category breakdown</Text>
         {form.type === 'tv' ? (

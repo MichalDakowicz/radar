@@ -135,12 +135,13 @@ export function useEditMovieForm(movie: Movie | undefined) {
     }
   };
 
+  // No navigation here - the detail screen decides where the user lands after
+  // a removal (it keeps them on the title so they can add it straight back).
   const remove = async () => {
     if (!movie) return;
     setIsSaving(true);
     try {
       await removeMovie(movie.id);
-      goBackOrHome(router);
     } finally {
       setIsSaving(false);
     }
