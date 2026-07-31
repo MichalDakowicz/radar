@@ -2,6 +2,17 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
+## 2.2.0 — Unreleased
+
+### Added
+
+- Tap the poster on a movie or show to see it full size, then save or copy the artwork
+
+### Changed
+
+- Movie and show detail leads with a bigger poster on the right of the header
+- Title, cast, genres and overview are read-only on detail; rating and notes stay editable
+
 ## 2.1.0 — 31.07.2026
 
 ### Added

@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Check, RefreshCw, X } from 'lucide-react-native';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { RefreshCw } from 'lucide-react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
 import { AvailabilityBadges } from '@/features/movies/detail/AvailabilityBadges';
@@ -13,11 +12,6 @@ import type { EditForm } from './editForm';
 
 type EditDetailsTabProps = {
   form: EditForm;
-  onChange: (patch: Partial<EditForm>) => void;
-  onAddGenre: (name: string) => void;
-  onRemoveGenre: (index: number) => void;
-  onAddCast: (name: string) => void;
-  onRemoveCast: (index: number) => void;
   onSmartFill: () => void;
   isSmartFilling: boolean;
 };
@@ -31,21 +25,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function ChipList({
-  items,
-  editable,
-  onRemove,
-  linkTo,
-}: {
-  items: NamedRef[];
-  editable: boolean;
-  onRemove: (index: number) => void;
-  linkTo?: 'actor' | 'genre';
-}) {
+function ChipList({ items, linkTo }: { items: NamedRef[]; linkTo?: 'actor' | 'genre' }) {
   const router = useRouter();
-  if (items.length === 0 && !editable) return <Text className="text-sm text-muted-foreground">None</Text>;
-  // editable chips carry no TMDB id (manual entries) so tap-through is inert
-  // there; the remove X only renders when editable, so the two never nest.
+  if (items.length === 0) return <Text className="text-sm text-muted-foreground">None</Text>;
   const open = (item: NamedRef) => {
     if (!linkTo || !item.id) return;
     const id = String(item.id);
@@ -59,72 +41,30 @@ function ChipList({
           key={item.id ?? `${item.name}-${i}`}
           disabled={!linkTo || !item.id}
           onPress={() => open(item)}
-          className="flex-row items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1.5"
+          className="rounded-full border border-border bg-secondary px-3 py-1.5"
         >
           <Text className="text-sm text-foreground">{item.name}</Text>
-          {editable && (
-            <Pressable onPress={() => onRemove(i)}>
-              <X size={13} color="hsl(0 0% 63.9%)" />
-            </Pressable>
-          )}
         </Pressable>
       ))}
     </View>
   );
 }
 
-function AddChipRow({ placeholder, onAdd }: { placeholder: string; onAdd: (name: string) => void }) {
-  const [value, setValue] = useState('');
-  const submit = () => {
-    if (value.trim()) {
-      onAdd(value.trim());
-      setValue('');
-    }
-  };
-  return (
-    <View className="flex-row gap-2">
-      <TextInput
-        value={value}
-        onChangeText={setValue}
-        onSubmitEditing={submit}
-        placeholder={placeholder}
-        placeholderTextColor="hsl(0 0% 63.9%)"
-        className="flex-1 rounded-xl border border-border bg-secondary px-3 py-2 text-sm text-foreground"
-      />
-      <Pressable onPress={submit} className="items-center justify-center rounded-xl border border-border px-3">
-        <Check size={18} color="hsl(0 0% 98%)" />
-      </Pressable>
-    </View>
-  );
-}
-
-// Deep metadata (doc 03 Edit `EditDetailsTab`): type/release/runtime, cast &
-// genres (manually editable only when TMDB didn't supply them), availability
-// toggles across the full service list, overview.
-export function EditDetailsTab({
-  form,
-  onChange,
-  onAddGenre,
-  onRemoveGenre,
-  onAddCast,
-  onRemoveCast,
-  onSmartFill,
-  isSmartFilling,
-}: EditDetailsTabProps) {
-  const editableTaxonomy = !form.tmdbId;
+// Deep metadata (doc 03 Edit `EditDetailsTab`): title, release/runtime, cast &
+// genres, availability. All of it is TMDB catalogue fact rather than the
+// user's own data, so the whole tab reads read-only - Smart-fill is the one
+// control here, and it re-pulls from TMDB rather than letting anything be
+// typed over by hand. Only rating and notes stay editable, in their own tab.
+export function EditDetailsTab({ form, onSmartFill, isSmartFilling }: EditDetailsTabProps) {
   const quickAdd = useQuickAdd();
   const { data: similar = [] } = useSimilarMedia(form.tmdbId, form.type);
 
   return (
     <View className="gap-6">
       <Field label="Title">
-        <TextInput
-          value={form.title}
-          onChangeText={(title) => onChange({ title })}
-          placeholder="Title"
-          placeholderTextColor="hsl(0 0% 63.9%)"
-          className="rounded-xl border border-border bg-secondary px-3 py-2 text-sm text-foreground"
-        />
+        <Text className="rounded-xl border border-border bg-secondary px-3 py-2 text-sm text-foreground">
+          {form.title}
+        </Text>
       </Field>
 
       <Pressable
@@ -140,8 +80,6 @@ export function EditDetailsTab({
         <Text className="text-sm text-muted-foreground">Smart-fill from TMDB</Text>
       </Pressable>
 
-      {/* Release date/runtime are TMDB facts, not user opinion - read-only here,
-          Smart-fill above is the only thing that can change them. */}
       <View className="flex-row gap-4">
         <View className="flex-1">
           <Field label="Release date">
@@ -160,13 +98,11 @@ export function EditDetailsTab({
       </View>
 
       <Field label="Genres">
-        <ChipList items={form.genres} editable={editableTaxonomy} onRemove={onRemoveGenre} linkTo="genre" />
-        {editableTaxonomy && <AddChipRow placeholder="Add genre…" onAdd={onAddGenre} />}
+        <ChipList items={form.genres} linkTo="genre" />
       </Field>
 
       <Field label="Cast">
-        <ChipList items={form.cast} editable={editableTaxonomy} onRemove={onRemoveCast} linkTo="actor" />
-        {editableTaxonomy && <AddChipRow placeholder="Add actor…" onAdd={onAddCast} />}
+        <ChipList items={form.cast} linkTo="actor" />
       </Field>
 
       <Field label="Available on">

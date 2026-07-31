@@ -191,11 +191,7 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
         // (release/runtime/budget, genres, availability) stack in a rail.
         <View className="flex-row gap-8 px-6 pt-8">
           <View className="min-w-0 flex-1 gap-6">
-            <OverviewSection
-              overview={display.overview}
-              editable={false}
-              onChange={(overview) => editForm.update({ overview })}
-            />
+            <OverviewSection overview={display.overview} />
             {castBlock}
             {productionBlock}
           </View>
@@ -209,11 +205,7 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
       <View className="gap-6 px-4 pt-6">
         {statsBlock}
 
-        <OverviewSection
-          overview={display.overview}
-          editable={!!owned && !form?.tmdbId}
-          onChange={(overview) => editForm.update({ overview })}
-        />
+        <OverviewSection overview={display.overview} />
 
         {owned && form && (
           <View className="gap-3">
@@ -292,11 +284,6 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
             {tab === 'details' && (
               <EditDetailsTab
                 form={form}
-                onChange={editForm.update}
-                onAddGenre={editForm.addGenre}
-                onRemoveGenre={editForm.removeGenre}
-                onAddCast={editForm.addCast}
-                onRemoveCast={editForm.removeCast}
                 onSmartFill={editForm.handleSmartFill}
                 isSmartFilling={editForm.isSmartFilling}
               />

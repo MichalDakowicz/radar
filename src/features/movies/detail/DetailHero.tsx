@@ -2,10 +2,11 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Clapperboard, Quote } from 'lucide-react-native';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ImageViewer } from '@/components/media/ImageViewer';
 import { useIsDesktop } from '@/hooks/useResponsive';
 import { goBackOrHome } from '@/lib/utils';
 import type { NamedRef } from '@/types/movie';
@@ -36,6 +37,7 @@ export function DetailHero({ title, tagline, coverUrl, releaseDate, director, ac
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDesktop = useIsDesktop();
+  const [viewerOpen, setViewerOpen] = useState(false);
   const year = releaseDate ? releaseDate.slice(0, 4) : null;
 
   return (
@@ -53,23 +55,10 @@ export function DetailHero({ title, tagline, coverUrl, releaseDate, director, ac
         <ArrowLeft size={22} color="#fff" />
       </Pressable>
 
-      <View className={isDesktop ? '-mt-48 flex-row gap-6 px-8' : '-mt-32 flex-row gap-4 px-4'}>
-        <View
-          className={
-            isDesktop
-              ? 'aspect-[2/3] w-44 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-800 shadow-2xl'
-              : 'aspect-[2/3] w-28 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-800 shadow-2xl'
-          }
-        >
-          {coverUrl ? (
-            <Image source={{ uri: coverUrl }} style={{ flex: 1 }} contentFit="cover" />
-          ) : (
-            <View className="flex-1 items-center justify-center">
-              <Clapperboard size={28} color="#525252" />
-            </View>
-          )}
-        </View>
-
+      {/* Poster sits on the right: the title/tagline/director block reads
+          left-aligned with the rest of the page, which frees the whole right
+          edge for a noticeably larger piece of artwork. */}
+      <View className={isDesktop ? '-mt-72 flex-row gap-6 px-8' : '-mt-40 flex-row gap-4 px-4'}>
         <View className="flex-1 justify-end gap-1.5 pb-1">
           <Text className={isDesktop ? 'text-4xl font-bold leading-tight text-white' : 'text-2xl font-bold leading-tight text-white'}>{title}</Text>
           {!!tagline && (
@@ -101,6 +90,24 @@ export function DetailHero({ title, tagline, coverUrl, releaseDate, director, ac
             {!!year && <Text className="text-sm text-neutral-300">{year}</Text>}
           </View>
         </View>
+
+        <Pressable
+          onPress={() => coverUrl && setViewerOpen(true)}
+          disabled={!coverUrl}
+          className={
+            isDesktop
+              ? 'aspect-[2/3] w-64 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-800 shadow-2xl'
+              : 'aspect-[2/3] w-40 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-800 shadow-2xl'
+          }
+        >
+          {coverUrl ? (
+            <Image source={{ uri: coverUrl }} style={{ flex: 1 }} contentFit="cover" />
+          ) : (
+            <View className="flex-1 items-center justify-center">
+              <Clapperboard size={28} color="#525252" />
+            </View>
+          )}
+        </Pressable>
       </View>
 
       {!!action && (
@@ -110,6 +117,8 @@ export function DetailHero({ title, tagline, coverUrl, releaseDate, director, ac
           {action}
         </View>
       )}
+
+      <ImageViewer visible={viewerOpen} uri={coverUrl} title={title} onClose={() => setViewerOpen(false)} />
     </View>
   );
 }
