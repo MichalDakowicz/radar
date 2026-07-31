@@ -1,6 +1,7 @@
 import { LayoutGrid, List, Search, SlidersHorizontal } from 'lucide-react-native';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import { SearchInput } from '@/components/ui/SearchInput';
 import { SortDirectionToggle } from '@/features/library/SortDirectionToggle';
 import { useIsDesktop } from '@/hooks/useResponsive';
 import { useLibraryPrefs } from '@/store/libraryPrefs';
@@ -40,7 +41,7 @@ export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters }: L
         <View className="absolute bottom-0 left-3 top-0 z-10 justify-center">
           <Search size={18} color="hsl(0 0% 63.9%)" />
         </View>
-        <TextInput
+        <SearchInput
           ref={searchRef}
           value={searchQuery}
           onChangeText={onSearchChange}

@@ -19,6 +19,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 - Coming soon lists every unreleased title you are waiting for, not only the next 6 months
 - A title releasing today stays in Coming soon for the whole day
 - The random picker spins real posters and never lands on the title it just showed
+- Text sits centred in every search box instead of riding low in it
 
 ### Removed
 

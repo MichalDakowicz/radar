@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import { SearchInput } from '@/components/ui/SearchInput';
 import { filterFacets, type Facet } from '@/lib/libraryFacets';
 
 type FacetFilterRowProps = {
@@ -48,7 +49,7 @@ export function FacetFilterRow({
       </View>
 
       {searchable && (
-        <TextInput
+        <SearchInput
           value={query}
           onChangeText={setQuery}
           placeholder={searchPlaceholder}

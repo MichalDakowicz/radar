@@ -1,7 +1,8 @@
 import { AlertCircle, Check, Search, UserPlus } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Avatar } from '@/features/friends/Avatar';
 import { useUserSearch } from '@/hooks/useUserSearch';
 import type { Profile } from '@/types/movie';
@@ -95,7 +96,7 @@ export function UserSearchPanel({ friendIds, onSendRequest }: UserSearchPanelPro
     <View className="gap-3">
       <View className="flex-row items-center gap-2 rounded-full border border-border px-4">
         <Search size={18} color="hsl(0 0% 63.9%)" />
-        <TextInput
+        <SearchInput
           value={text}
           onChangeText={setText}
           placeholder="Search by username or name…"

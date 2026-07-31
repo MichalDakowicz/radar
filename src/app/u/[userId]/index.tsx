@@ -1,11 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Lock, Search } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ContentShell } from '@/components/layout/ContentShell';
 import { MediaGrid } from '@/components/media/MediaGrid';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { FavoritesRow } from '@/features/profile/FavoritesRow';
@@ -73,7 +74,7 @@ export default function PublicLibrary() {
     <View className="flex-1 bg-background">
       <View className="flex-row items-center gap-2 border-b border-border px-4 py-3">
         <Search size={18} color="hsl(0 0% 63.9%)" />
-        <TextInput
+        <SearchInput
           value={search}
           onChangeText={setSearch}
           placeholder="Search this collection…"
