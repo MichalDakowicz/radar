@@ -13,6 +13,8 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - Coming soon lists every unreleased title you are waiting for, not only the next 6 months
 - A title releasing today stays in Coming soon for the whole day
+- The random picker spins through real posters instead of blank cards
+- The random picker always lands on a different title than the frame before it
 
 ### Removed
 

@@ -27,6 +27,8 @@ export type MovieCardProps = {
   showFullDate?: boolean;
   highlighted?: boolean;
   readOnly?: boolean;
+  /** Poster crossfade length. 0 for rapid source swaps (the random-pick reel). */
+  posterTransitionMs?: number;
 };
 
 // Memoized: rendered in every FlashList cell (grid + carousels). Without this,
@@ -54,7 +56,7 @@ function isDimmed(movie: Movie) {
   return !movie.watched;
 }
 
-function PosterImage({ uri, dimmed }: { uri: string | null; dimmed?: boolean }) {
+function PosterImage({ uri, dimmed, transitionMs = 200 }: { uri: string | null; dimmed?: boolean; transitionMs?: number }) {
   if (!uri) {
     return (
       <View className="absolute inset-0 items-center justify-center bg-neutral-800">
@@ -67,7 +69,7 @@ function PosterImage({ uri, dimmed }: { uri: string | null; dimmed?: boolean }) 
       source={{ uri }}
       style={[StyleSheet.absoluteFill, { opacity: dimmed ? 0.7 : 1 }]}
       contentFit="cover"
-      transition={200}
+      transition={transitionMs}
       // Phase 10 perf: keep posters in the memory cache (not just disk) so
       // scrolling back up is instant, and key the image by uri so FlashList
       // cell recycling swaps the source cleanly instead of flashing the
@@ -87,6 +89,7 @@ function PosterCard({
   showRatings = true,
   highlighted = false,
   readOnly = false,
+  posterTransitionMs,
 }: MovieCardProps) {
   const director = directorToDisplayString(movie.director);
   const year = movie.releaseDate ? movie.releaseDate.slice(0, 4) : '';
@@ -109,7 +112,7 @@ function PosterCard({
           hovered ? { transform: [{ scale: 1.035 }] } : null,
         ]}
       >
-        <PosterImage uri={movie.coverUrl} dimmed={isDimmed(movie)} />
+        <PosterImage uri={movie.coverUrl} dimmed={isDimmed(movie)} transitionMs={posterTransitionMs} />
         <LinearGradient
           colors={['rgba(0,0,0,0.55)', 'rgba(0,0,0,0.2)', 'transparent']}
           locations={[0, 0.25, 0.55]}
