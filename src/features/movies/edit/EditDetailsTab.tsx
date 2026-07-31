@@ -50,7 +50,7 @@ function ChipList({ items, linkTo }: { items: NamedRef[]; linkTo?: 'actor' | 'ge
   );
 }
 
-// Deep metadata (doc 03 Edit `EditDetailsTab`): title, release/runtime, cast &
+// Deep metadata (doc 03 Edit `EditDetailsTab`): release/runtime, cast &
 // genres, availability. All of it is TMDB catalogue fact rather than the
 // user's own data, so the whole tab reads read-only - Smart-fill is the one
 // control here, and it re-pulls from TMDB rather than letting anything be
@@ -61,12 +61,8 @@ export function EditDetailsTab({ form, onSmartFill, isSmartFilling }: EditDetail
 
   return (
     <View className="gap-6">
-      <Field label="Title">
-        <Text className="rounded-xl border border-border bg-secondary px-3 py-2 text-sm text-foreground">
-          {form.title}
-        </Text>
-      </Field>
-
+      {/* No Title row - the hero above already states it, so repeating it here
+          was only ever useful while it was an input. */}
       <Pressable
         onPress={onSmartFill}
         disabled={isSmartFilling}
