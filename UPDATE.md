@@ -4,6 +4,11 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.2.1 — Unreleased
 
+### Fixed
+
+- Coming soon lists every unreleased title you are waiting for, not only the next 6 months
+- A title releasing today stays in Coming soon for the whole day
+
 ## 2.2.0 — 31.07.2026
 
 ### Added

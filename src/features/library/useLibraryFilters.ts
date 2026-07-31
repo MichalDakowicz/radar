@@ -3,11 +3,10 @@ import { useMemo } from 'react';
 import { movieMatchesSearchQuery } from '@/lib/librarySearch';
 import { isInProgress, isInWatchlist, isRewatch, isWatched } from '@/lib/movieStatus';
 import { normalizeAvailability, OTHER_SERVICE_KEY, isPopularService } from '@/lib/services';
+import { selectComingSoon } from '@/lib/upcoming';
 import { directorToDisplayString } from '@/lib/utils';
 import type { GroupBy, SortBy, StatusFilter } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
-
-const COMING_SOON_WINDOW_MONTHS = 6;
 
 function averageRating(movie: Movie): number {
   if (!movie.ratings) return 0;
@@ -126,17 +125,7 @@ export function useLibraryFilters(
   }, [movies, searchQuery, showRecentlyAdded, recentlyAddedDays]);
 
   const comingSoon = useMemo(() => {
-    const now = Date.now();
-    const windowEnd = new Date();
-    windowEnd.setMonth(windowEnd.getMonth() + COMING_SOON_WINDOW_MONTHS);
-    const upcoming = movies
-      .filter((m) => {
-        if (!m.releaseDate) return false;
-        if (!(isInWatchlist(m) || isInProgress(m))) return false;
-        const release = new Date(m.releaseDate).getTime();
-        return release > now && release <= windowEnd.getTime();
-      })
-      .sort((a, b) => new Date(a.releaseDate!).getTime() - new Date(b.releaseDate!).getTime());
+    const upcoming = selectComingSoon(movies, Date.now());
     return searchQuery.trim() ? upcoming.filter((m) => movieMatchesSearchQuery(m, searchQuery)) : upcoming;
   }, [movies, searchQuery]);
 
