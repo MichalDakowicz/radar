@@ -1,23 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/AuthProvider';
+import { normalizeFavorites, toFavoritesPayload } from '@/lib/favorites';
 import { supabase } from '@/lib/supabase';
-import type { Profile } from '@/types/movie';
+import type { FavoriteItem, Profile } from '@/types/movie';
 
-type ProfileRow = {
+export type ProfileRow = {
   id: string;
   username: string;
   display_name: string | null;
   pfp: string | null;
+  favorites: unknown;
   created_at: string;
 };
 
-function normalizeProfile(row: ProfileRow): Profile {
+// Single read boundary for public.profiles - every profile query normalizes
+// through here so a new column lands in one place (mirrors normalizeMovie).
+export function normalizeProfile(row: ProfileRow): Profile {
   return {
     id: row.id,
     username: row.username,
     displayName: row.display_name,
     pfp: row.pfp,
+    favorites: normalizeFavorites(row.favorites),
     createdAt: row.created_at,
   };
 }
@@ -88,6 +93,38 @@ export function useUpdateProfile() {
     },
     onSuccess: () => {
       if (user) queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
+    },
+  });
+}
+
+/**
+ * Writes the signed-in user's top 4 (profiles.favorites). Split from
+ * useUpdateProfile because the editor saves a list on its own — folding it into
+ * the username/pfp form would make either one able to clobber the other's field.
+ * The cap is enforced here *and* by a check constraint on the column.
+ */
+export function useUpdateFavorites() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (favorites: FavoriteItem[]) => {
+      if (!user) throw new Error('Not signed in');
+      const payload = toFavoritesPayload(favorites);
+
+      const { error } = await supabase.from('profiles').update({ favorites: payload }).eq('id', user.id);
+      if (error) throw error;
+      return payload;
+    },
+    // Paint the new row straight away: the profile query is cached for 5
+    // minutes, so an invalidate-only path leaves the old posters up until the
+    // refetch lands.
+    onSuccess: (payload) => {
+      if (!user) return;
+      queryClient.setQueryData<Profile | null>(['profile', user.id], (prev) =>
+        prev ? { ...prev, favorites: payload } : prev,
+      );
+      queryClient.invalidateQueries({ queryKey: ['profile', user.id] });
     },
   });
 }

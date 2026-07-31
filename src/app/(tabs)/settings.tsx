@@ -1,4 +1,4 @@
-import { BarChart3, Clock, Database, Globe, LogOut, Monitor, User } from 'lucide-react-native';
+import { BarChart3, Clock, Database, Globe, Info, LogOut, Monitor, User } from 'lucide-react-native';
 import { useRef } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -6,10 +6,13 @@ import { Header } from '@/components/layout/Header';
 import type { BottomSheetModal } from '@/components/ui/Sheet';
 import { signOut } from '@/features/auth/authActions';
 import { CardSizeControl } from '@/features/settings/AppearanceExtras';
+import { AppUpdateControl } from '@/features/settings/AppUpdateControl';
 import { DataTools } from '@/features/settings/DataTools';
 import { EditProfileSheet } from '@/features/settings/EditProfileSheet';
+import { FavoritesControl } from '@/features/settings/FavoritesControl';
 import { ImportExportSheet } from '@/features/settings/ImportExportSheet';
 import { PrivacyControl } from '@/features/settings/PrivacyControl';
+import { FavoritesEditorSheet } from '@/features/profile/FavoritesEditorSheet';
 import { ProfileHeader } from '@/features/settings/ProfileHeader';
 import { RecentlyAddedControl } from '@/features/settings/RecentlyAddedControl';
 import { RegionControl } from '@/features/settings/RegionControl';
@@ -29,6 +32,7 @@ export default withTabReload(Settings, 'settings');
 function Settings() {
   const contentStyle = useCenteredContentStyle(MAX_W.text);
   const editProfileRef = useRef<BottomSheetModal>(null);
+  const favoritesRef = useRef<BottomSheetModal>(null);
   const importExportRef = useRef<BottomSheetModal>(null);
 
   return (
@@ -37,6 +41,7 @@ function Settings() {
       <ScrollView className="flex-1" contentContainerClassName="gap-10 px-6 pb-16 pt-6" contentContainerStyle={contentStyle}>
         <SettingsSection icon={<User size={18} color={MUTED} />} title="Account">
           <ProfileHeader onEdit={() => editProfileRef.current?.present()} />
+          <FavoritesControl onEdit={() => favoritesRef.current?.present()} />
         </SettingsSection>
 
         <SettingsSection icon={<Globe size={18} color={MUTED} />} title="Privacy">
@@ -64,6 +69,10 @@ function Settings() {
           <DataTools onOpenImportExport={() => importExportRef.current?.present()} />
         </SettingsSection>
 
+        <SettingsSection icon={<Info size={18} color={MUTED} />} title="About">
+          <AppUpdateControl />
+        </SettingsSection>
+
         <Pressable
           onPress={signOut}
           className="flex-row items-center justify-center gap-2 rounded-full border border-border py-3 active:opacity-80"
@@ -74,6 +83,7 @@ function Settings() {
       </ScrollView>
 
       <EditProfileSheet ref={editProfileRef} />
+      <FavoritesEditorSheet ref={favoritesRef} />
       <ImportExportSheet ref={importExportRef} />
     </View>
   );
