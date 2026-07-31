@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 
+import { matchesDirectorFilter, matchesGenreFilter, matchesYearFilter } from '@/lib/libraryFacets';
 import { movieMatchesSearchQuery } from '@/lib/librarySearch';
 import { compareMovies } from '@/lib/librarySort';
 import { isInProgress, isInWatchlist, isRewatch, isWatched } from '@/lib/movieStatus';
 import { normalizeAvailability, OTHER_SERVICE_KEY, isPopularService } from '@/lib/services';
 import { selectComingSoon } from '@/lib/upcoming';
-import { directorToDisplayString } from '@/lib/utils';
-import type { GroupBy, SortBy, SortDir, StatusFilter } from '@/store/libraryPrefs';
+import type { SortBy, SortDir, StatusFilter } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
 
 function matchesStatusFilter(movie: Movie, filter: StatusFilter): boolean {
@@ -32,48 +32,44 @@ function matchesServiceFilter(movie: Movie, selected: string[]): boolean {
   return matchesPopular || matchesOther;
 }
 
-function groupKey(movie: Movie, groupBy: GroupBy): string {
-  switch (groupBy) {
-    case 'director':
-      return directorToDisplayString(movie.director).split(',')[0].trim() || 'Unknown Director';
-    case 'year':
-      return movie.releaseDate ? movie.releaseDate.slice(0, 4) : 'Unknown Year';
-    case 'genre':
-      return movie.genres[0]?.name ?? 'No Genre';
-    case 'availability':
-      return normalizeAvailability(movie.availability)[0] ?? 'Unknown';
-    case 'status':
-      return movie.status ?? 'Collection';
-    default:
-      return 'Other';
-  }
-}
-
-export type LibraryGroup = { title: string; movies: Movie[] };
-
 export type LibraryFilters = {
   continueWatching: Movie[];
   recentlyAdded: Movie[];
   comingSoon: Movie[];
   mainMovies: Movie[];
-  groups: LibraryGroup[] | null;
   validPickMovies: Movie[];
   totalCount: number;
 };
 
+export type LibraryFilterInput = {
+  movies: Movie[];
+  searchQuery: string;
+  statusFilter: StatusFilter;
+  selectedServices: string[];
+  selectedGenres: string[];
+  selectedDirectors: string[];
+  selectedYears: string[];
+  sortBy: SortBy;
+  sortDir: SortDir;
+  recentlyAddedDays?: number;
+  showRecentlyAdded?: boolean;
+};
+
 // The one derive/memo hook for Library (doc 10) - LibraryScreen only composes
 // this + presentational components, no filter logic in the screen file.
-export function useLibraryFilters(
-  movies: Movie[],
-  searchQuery: string,
-  statusFilter: StatusFilter,
-  selectedServices: string[],
-  sortBy: SortBy,
-  sortDir: SortDir,
-  groupBy: GroupBy,
+export function useLibraryFilters({
+  movies,
+  searchQuery,
+  statusFilter,
+  selectedServices,
+  selectedGenres,
+  selectedDirectors,
+  selectedYears,
+  sortBy,
+  sortDir,
   recentlyAddedDays = 30,
   showRecentlyAdded = false,
-): LibraryFilters {
+}: LibraryFilterInput): LibraryFilters {
   const continueWatching = useMemo(() => {
     const inProgress = movies.filter((m) => isInProgress(m)).slice(0, 30);
     return searchQuery.trim() ? inProgress.filter((m) => movieMatchesSearchQuery(m, searchQuery)) : inProgress;
@@ -102,8 +98,11 @@ export function useLibraryFilters(
     if (searchQuery.trim()) result = result.filter((m) => movieMatchesSearchQuery(m, searchQuery));
     result = result.filter((m) => matchesStatusFilter(m, statusFilter));
     result = result.filter((m) => matchesServiceFilter(m, selectedServices));
+    result = result.filter((m) => matchesGenreFilter(m, selectedGenres));
+    result = result.filter((m) => matchesDirectorFilter(m, selectedDirectors));
+    result = result.filter((m) => matchesYearFilter(m, selectedYears));
     return [...result].sort((a, b) => compareMovies(a, b, sortBy, sortDir));
-  }, [movies, searchQuery, statusFilter, selectedServices, sortBy, sortDir]);
+  }, [movies, searchQuery, statusFilter, selectedServices, selectedGenres, selectedDirectors, selectedYears, sortBy, sortDir]);
 
   const sectionIds = useMemo(() => {
     const ids = new Set<string>();
@@ -114,21 +113,9 @@ export function useLibraryFilters(
   }, [continueWatching, recentlyAdded, comingSoon]);
 
   const mainMovies = useMemo(
-    () => (groupBy !== 'none' ? filteredMovies : filteredMovies.filter((m) => !sectionIds.has(m.id))),
-    [filteredMovies, groupBy, sectionIds],
+    () => filteredMovies.filter((m) => !sectionIds.has(m.id)),
+    [filteredMovies, sectionIds],
   );
-
-  const groups = useMemo<LibraryGroup[] | null>(() => {
-    if (groupBy === 'none') return null;
-    const map = new Map<string, Movie[]>();
-    filteredMovies.forEach((movie) => {
-      const key = groupKey(movie, groupBy);
-      map.set(key, [...(map.get(key) ?? []), movie]);
-    });
-    let keys = Array.from(map.keys()).sort();
-    if (groupBy === 'year') keys = keys.reverse();
-    return keys.map((title) => ({ title, movies: map.get(title)! }));
-  }, [filteredMovies, groupBy]);
 
   const validPickMovies = useMemo(
     () => (statusFilter !== 'all' ? filteredMovies : filteredMovies.filter((m) => isInWatchlist(m))),
@@ -140,7 +127,6 @@ export function useLibraryFilters(
     recentlyAdded,
     comingSoon,
     mainMovies,
-    groups,
     validPickMovies,
     totalCount: movies.length,
   };

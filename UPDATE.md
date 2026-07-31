@@ -4,23 +4,26 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.2.1 — Unreleased
 
+### Added
+
+- Filter Library by genre, director or release year, alongside status and service
+- Each filter chip shows how many of your titles it covers
+
 ### Changed
 
-- The Library arrows button now flips the sort direction, with the live arrow drawn bold
-- Choosing a sort starts in its natural order — newest, highest or soonest first
-- Library sorts by date added, newest first, where it used to sort by custom order
+- The Library arrows button now flips sort direction, with the live arrow drawn bold
+- Each sort starts in its natural order, and Library now leads with date added
 
 ### Fixed
 
 - Coming soon lists every unreleased title you are waiting for, not only the next 6 months
 - A title releasing today stays in Coming soon for the whole day
-- The random picker spins through real posters instead of blank cards
-- The random picker always lands on a different title than the frame before it
+- The random picker spins real posters and never lands on the title it just showed
 
 ### Removed
 
 - Drag-to-reorder in Library, which the arrows button used to toggle
-- The Custom order sort, which nothing could set once reordering was gone
+- Custom order sort and Group by, whose views are covered by the new filters
 
 ## 2.2.0 — 31.07.2026
 

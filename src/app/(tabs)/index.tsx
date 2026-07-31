@@ -7,9 +7,7 @@ import { Header } from '@/components/layout/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import type { BottomSheetModal } from '@/components/ui/Sheet';
-import { GroupBySheet } from '@/features/library/GroupBySheet';
 import { LibraryFilterSheet } from '@/features/library/LibraryFilterSheet';
-import { LibraryGroupedList } from '@/features/library/LibraryGroupedList';
 import { LibraryMainList } from '@/features/library/LibraryMainList';
 import { LibrarySection } from '@/features/library/LibrarySection';
 import { LibraryToolbar } from '@/features/library/LibraryToolbar';
@@ -33,23 +31,35 @@ function LibraryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
-  const { viewMode, gridSize, statusFilter, selectedServices, sortBy, sortDir, groupBy, comingSoonCollapsed, toggleComingSoonCollapsed } =
-    useLibraryPrefs();
+  const {
+    viewMode,
+    gridSize,
+    statusFilter,
+    selectedServices,
+    selectedGenres,
+    selectedDirectors,
+    selectedYears,
+    sortBy,
+    sortDir,
+    comingSoonCollapsed,
+    toggleComingSoonCollapsed,
+  } = useLibraryPrefs();
   const { settings } = useUserSettings();
-  const filters = useLibraryFilters(
+  const filters = useLibraryFilters({
     movies,
     searchQuery,
     statusFilter,
     selectedServices,
+    selectedGenres,
+    selectedDirectors,
+    selectedYears,
     sortBy,
     sortDir,
-    groupBy,
-    settings.recentlyAddedDays,
-    settings.showRecentlyAdded,
-  );
+    recentlyAddedDays: settings.recentlyAddedDays,
+    showRecentlyAdded: settings.showRecentlyAdded,
+  });
 
   const filterSheetRef = useRef<BottomSheetModal>(null);
-  const groupSheetRef = useRef<BottomSheetModal>(null);
   const randomPickRef = useRef<BottomSheetModal>(null);
 
   const openMovie = (movie: Movie) => router.push({ pathname: '/edit/[movieId]', params: { movieId: movie.id } });
@@ -102,33 +112,21 @@ function LibraryScreen() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onOpenFilters={() => filterSheetRef.current?.present()}
-          onOpenGroup={() => groupSheetRef.current?.present()}
         />
       </ContentShell>
 
       <ContentShell fill maxWidth={MAX_W.grid}>
-        {filters.groups ? (
-          <LibraryGroupedList
-            groups={filters.groups}
-            viewMode={viewMode}
-            onPress={openMovie}
-            highlightedId={highlightedId}
-            header={sections}
-          />
-        ) : (
-          <LibraryMainList
-            movies={filters.mainMovies}
-            viewMode={viewMode}
-            gridSize={gridSize}
-            highlightedId={highlightedId}
-            onPress={openMovie}
-            ListHeaderComponent={sections}
-          />
-        )}
+        <LibraryMainList
+          movies={filters.mainMovies}
+          viewMode={viewMode}
+          gridSize={gridSize}
+          highlightedId={highlightedId}
+          onPress={openMovie}
+          ListHeaderComponent={sections}
+        />
       </ContentShell>
 
       <LibraryFilterSheet ref={filterSheetRef} />
-      <GroupBySheet ref={groupSheetRef} />
       <RandomPickSheet ref={randomPickRef} movies={filters.validPickMovies} onSelect={handleRandomSelect} />
     </View>
   );

@@ -11,7 +11,6 @@ import { mmkvStorage } from '@/lib/mmkvStorage';
 export type ViewMode = 'grid' | 'list';
 export type { GridSize };
 export type SortBy = 'title' | 'dateAdded' | 'releaseDate' | 'rating' | 'director' | 'runtime';
-export type GroupBy = 'none' | 'director' | 'year' | 'genre' | 'availability' | 'status';
 export type StatusFilter = 'all' | 'watchlist' | 'watching' | 'completed' | 'rewatch';
 export type { SortDir };
 
@@ -20,20 +19,28 @@ type LibraryPrefsState = {
   gridSize: GridSize;
   sortBy: SortBy;
   sortDir: SortDir;
-  groupBy: GroupBy;
   statusFilter: StatusFilter;
   selectedServices: string[];
+  selectedGenres: string[];
+  selectedDirectors: string[];
+  selectedYears: string[];
   comingSoonCollapsed: boolean;
   setViewMode: (viewMode: ViewMode) => void;
   setGridSize: (gridSize: GridSize) => void;
   toggleComingSoonCollapsed: () => void;
   setSortBy: (sortBy: SortBy) => void;
   toggleSortDir: () => void;
-  setGroupBy: (groupBy: GroupBy) => void;
   setStatusFilter: (statusFilter: StatusFilter) => void;
   toggleService: (service: string) => void;
+  toggleGenre: (genre: string) => void;
+  toggleDirector: (director: string) => void;
+  toggleYear: (year: string) => void;
   resetFilters: () => void;
 };
+
+function toggleIn(list: string[], value: string): string[] {
+  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+}
 
 export const useLibraryPrefs = create<LibraryPrefsState>()(
   persist(
@@ -42,9 +49,11 @@ export const useLibraryPrefs = create<LibraryPrefsState>()(
       gridSize: 'normal',
       sortBy: 'dateAdded',
       sortDir: SORT_DEFAULT_DIR.dateAdded,
-      groupBy: 'none',
       statusFilter: 'all',
       selectedServices: [],
+      selectedGenres: [],
+      selectedDirectors: [],
+      selectedYears: [],
       comingSoonCollapsed: false,
       setViewMode: (viewMode) => set({ viewMode }),
       setGridSize: (gridSize) => set({ gridSize }),
@@ -53,32 +62,31 @@ export const useLibraryPrefs = create<LibraryPrefsState>()(
       // highest, soonest first) - the arrow then flips it from there.
       setSortBy: (sortBy) => set({ sortBy, sortDir: SORT_DEFAULT_DIR[sortBy] }),
       toggleSortDir: () => set((state) => ({ sortDir: state.sortDir === 'asc' ? 'desc' : 'asc' })),
-      setGroupBy: (groupBy) => set({ groupBy }),
       setStatusFilter: (statusFilter) => set({ statusFilter }),
-      toggleService: (service) =>
-        set((state) => ({
-          selectedServices: state.selectedServices.includes(service)
-            ? state.selectedServices.filter((s) => s !== service)
-            : [...state.selectedServices, service],
-        })),
-      resetFilters: () => set({ statusFilter: 'all', selectedServices: [], groupBy: 'none' }),
+      toggleService: (service) => set((state) => ({ selectedServices: toggleIn(state.selectedServices, service) })),
+      toggleGenre: (genre) => set((state) => ({ selectedGenres: toggleIn(state.selectedGenres, genre) })),
+      toggleDirector: (director) => set((state) => ({ selectedDirectors: toggleIn(state.selectedDirectors, director) })),
+      toggleYear: (year) => set((state) => ({ selectedYears: toggleIn(state.selectedYears, year) })),
+      resetFilters: () =>
+        set({ statusFilter: 'all', selectedServices: [], selectedGenres: [], selectedDirectors: [], selectedYears: [] }),
     }),
     {
       name: 'library-prefs',
       storage: createJSONStorage(() => mmkvStorage),
-      version: 2,
-      // Older installs stored a reorderMode and a 'custom' sort that no longer
-      // exist, and no sortDir at all. 'custom' fell back to newest-added, so
-      // date added descending leaves the library in the order it was showing
-      // rather than silently reshuffling or inverting it.
+      version: 3,
+      // Older installs stored a reorderMode, a groupBy and a 'custom' sort that
+      // no longer exist, and no sortDir at all. 'custom' fell back to
+      // newest-added, so date added descending leaves the library in the order
+      // it was showing rather than silently reshuffling or inverting it.
       migrate: (persisted) => {
         // sortBy is widened, not intersected: an intersection with the current
         // Partial<LibraryPrefsState> would drop the retired 'custom' value.
         const stored = (persisted ?? {}) as Omit<Partial<LibraryPrefsState>, 'sortBy'> & {
           reorderMode?: boolean;
+          groupBy?: string;
           sortBy?: SortBy | 'custom';
         };
-        const { reorderMode: _reorderMode, ...rest } = stored;
+        const { reorderMode: _reorderMode, groupBy: _groupBy, ...rest } = stored;
         const sortBy: SortBy = !rest.sortBy || rest.sortBy === 'custom' ? 'dateAdded' : rest.sortBy;
         const sortDir = rest.sortBy === sortBy && rest.sortDir ? rest.sortDir : SORT_DEFAULT_DIR[sortBy];
         return { ...rest, sortBy, sortDir };

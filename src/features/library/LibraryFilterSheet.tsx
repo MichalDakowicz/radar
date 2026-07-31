@@ -1,8 +1,11 @@
-import { forwardRef, useState, type ReactNode } from 'react';
+import { forwardRef, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ServiceFilterChips } from '@/components/media/ServiceFilterChips';
 import { BottomSheetModal, Sheet } from '@/components/ui/Sheet';
+import { FacetFilterRow } from '@/features/library/FacetFilterRow';
+import { useMovies } from '@/hooks/useMovies';
+import { libraryFacets } from '@/lib/libraryFacets';
 import { type SortBy, type StatusFilter, useLibraryPrefs } from '@/store/libraryPrefs';
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
@@ -56,11 +59,28 @@ function FilterRow({ title, children }: { title: string; children: ReactNode }) 
   );
 }
 
-// Status + service + sort (doc 03 `LibraryFilterSheet`, doc 06 #2/#3). Group-by
-// is its own sheet (`GroupBySheet`), mirroring legacy Home.jsx's separate
-// Filters/Group popovers rather than one combined panel.
+// Every way to narrow the library, in one sheet (doc 03 `LibraryFilterSheet`,
+// doc 06 #2/#3): status, service, genre, director, year, then sort. Genre /
+// director / year used to be group-by dimensions in a second sheet; as filters
+// they narrow the one virtualized grid instead of re-bucketing it.
 export const LibraryFilterSheet = forwardRef<BottomSheetModal>(function LibraryFilterSheet(_props, ref) {
-  const { statusFilter, setStatusFilter, selectedServices, toggleService, sortBy, setSortBy, resetFilters } = useLibraryPrefs();
+  const {
+    statusFilter,
+    setStatusFilter,
+    selectedServices,
+    toggleService,
+    selectedGenres,
+    toggleGenre,
+    selectedDirectors,
+    toggleDirector,
+    selectedYears,
+    toggleYear,
+    sortBy,
+    setSortBy,
+    resetFilters,
+  } = useLibraryPrefs();
+  const { movies } = useMovies();
+  const facets = useMemo(() => libraryFacets(movies), [movies]);
   // Chips + three labels come to a fixed height, so the sheet is sized to what
   // it measures rather than to a fraction of the screen - at '70%' alone it
   // rendered with roughly half its height empty. The snap point stays as the
@@ -88,6 +108,18 @@ export const LibraryFilterSheet = forwardRef<BottomSheetModal>(function LibraryF
           <Text className="text-sm font-semibold text-foreground">Streaming service</Text>
           <ServiceFilterChips selected={selectedServices} onToggle={toggleService} />
         </View>
+
+        <FacetFilterRow title="Genre" facets={facets.genres} selected={selectedGenres} onToggle={toggleGenre} />
+
+        <FacetFilterRow
+          title="Director"
+          facets={facets.directors}
+          selected={selectedDirectors}
+          onToggle={toggleDirector}
+          searchPlaceholder="Search directors…"
+        />
+
+        <FacetFilterRow title="Release year" facets={facets.years} selected={selectedYears} onToggle={toggleYear} />
 
         <FilterRow title="Sort by">
           {SORT_OPTIONS.map((o) => (
