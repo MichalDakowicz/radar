@@ -2,10 +2,11 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Calendar, Check, Film, Search } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { isWatched } from '@/lib/movieStatus';
@@ -142,7 +143,7 @@ export default function ManageCompletions() {
           <Text className="text-lg font-bold text-foreground">Add Movies to This Date</Text>
           <View className="flex-row items-center gap-2 rounded-xl border border-border bg-secondary px-3">
             <Search size={18} color="hsl(0 0% 63.9%)" />
-            <TextInput
+            <SearchInput
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search your watched movies…"

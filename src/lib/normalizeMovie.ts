@@ -22,7 +22,6 @@ export type MovieRow = {
   status: string | null;
   completed_at: string | null;
   last_watched_position: string | null;
-  custom_order: number | null;
   notes: string | null;
   url: string | null;
   availability: string[] | null;
@@ -94,7 +93,6 @@ export function normalizeMovie(row: MovieRow): Movie {
     ratings: row.ratings ?? {},
     notes: row.notes ?? '',
     url: row.url ?? '',
-    customOrder: row.custom_order,
     addedAt: row.added_at,
     updatedAt: row.updated_at,
 
@@ -139,7 +137,6 @@ const FIELD_MAP: Record<string, string> = {
   ratings: 'ratings',
   notes: 'notes',
   url: 'url',
-  customOrder: 'custom_order',
   episodesWatched: 'episodes_watched',
   episodeWatchDates: 'episode_watch_dates',
   seasonEpisodeCounts: 'season_episode_counts',

@@ -43,7 +43,6 @@ export function toDiscoveryMovie(item: MediaSummary | CatalogItem | CreditItem):
     ratings: {},
     notes: '',
     url: '',
-    customOrder: null,
     addedAt: EPOCH,
     updatedAt: EPOCH,
     episodesWatched: {},

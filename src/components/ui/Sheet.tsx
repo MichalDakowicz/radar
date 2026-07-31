@@ -1,6 +1,7 @@
 import { forwardRef, type ReactNode } from 'react';
-import { FlatList, type FlatListProps, ScrollView, type ScrollViewProps, TextInput } from 'react-native';
+import { FlatList, type FlatListProps, ScrollView, type ScrollViewProps } from 'react-native';
 
+import { SearchInput } from '@/components/ui/SearchInput';
 import { SheetDialog } from '@/components/ui/SheetDialog';
 import { SheetPanel } from '@/components/ui/SheetPanel';
 import type { SheetHandle, SheetProps } from '@/components/ui/sheetTypes';
@@ -36,14 +37,14 @@ export const Sheet = forwardRef<BottomSheetModal, SheetProps>(function Sheet(pro
 /**
  * Text input for sheet content.
  *
- * Plain RN TextInput now. gorhom shipped its own to keep the soft keyboard from
- * covering the sheet; with the sheet being an ordinary Modal, the platform and
- * SheetPanel's KeyboardAvoidingView handle that, and gorhom's version broke on
- * web anyway (it calls `TextInput.State.currentlyFocusedInput()`, which
- * react-native-web does not implement). Kept as a named export so call sites
- * don't have to change.
+ * The shared SearchInput now — a plain RN TextInput with the Android font-metric
+ * fix. gorhom shipped its own to keep the soft keyboard from covering the sheet;
+ * with the sheet being an ordinary Modal, the platform and SheetPanel's
+ * KeyboardAvoidingView handle that, and gorhom's version broke on web anyway (it
+ * calls `TextInput.State.currentlyFocusedInput()`, which react-native-web does
+ * not implement). Kept as a named export so call sites don't have to change.
  */
-export const BottomSheetTextInput = TextInput;
+export const BottomSheetTextInput = SearchInput;
 
 /**
  * Scrollable body for sheet content. Plain ScrollView on both platforms — sheet

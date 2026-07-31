@@ -35,7 +35,6 @@ const BASE_MOVIE: Movie = {
   ratings: {},
   notes: '',
   url: '',
-  customOrder: null,
   addedAt: '2020-01-01T00:00:00.000Z',
   updatedAt: '2020-01-01T00:00:00.000Z',
   episodesWatched: {},

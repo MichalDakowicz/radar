@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { GridSize } from '@/components/media/MediaGrid';
+import { SORT_DEFAULT_DIR, type SortDir } from '@/lib/librarySort';
 import { mmkvStorage } from '@/lib/mmkvStorage';
 
 // Durable Library prefs (doc 05 "three tiers of state" - view mode, grid size,
@@ -9,60 +10,87 @@ import { mmkvStorage } from '@/lib/mmkvStorage';
 // stay as local/navigator state - never persisted here.
 export type ViewMode = 'grid' | 'list';
 export type { GridSize };
-export type SortBy = 'custom' | 'title' | 'dateAdded' | 'releaseDate' | 'rating' | 'director' | 'runtime';
-export type GroupBy = 'none' | 'director' | 'year' | 'genre' | 'availability' | 'status';
+export type SortBy = 'title' | 'dateAdded' | 'releaseDate' | 'rating' | 'director' | 'runtime';
 export type StatusFilter = 'all' | 'watchlist' | 'watching' | 'completed' | 'rewatch';
+export type { SortDir };
 
 type LibraryPrefsState = {
   viewMode: ViewMode;
   gridSize: GridSize;
   sortBy: SortBy;
-  groupBy: GroupBy;
+  sortDir: SortDir;
   statusFilter: StatusFilter;
   selectedServices: string[];
+  selectedGenres: string[];
+  selectedDirectors: string[];
+  selectedYears: string[];
   comingSoonCollapsed: boolean;
-  reorderMode: boolean;
   setViewMode: (viewMode: ViewMode) => void;
   setGridSize: (gridSize: GridSize) => void;
   toggleComingSoonCollapsed: () => void;
-  toggleReorderMode: () => void;
   setSortBy: (sortBy: SortBy) => void;
-  setGroupBy: (groupBy: GroupBy) => void;
+  toggleSortDir: () => void;
   setStatusFilter: (statusFilter: StatusFilter) => void;
   toggleService: (service: string) => void;
+  toggleGenre: (genre: string) => void;
+  toggleDirector: (director: string) => void;
+  toggleYear: (year: string) => void;
   resetFilters: () => void;
 };
+
+function toggleIn(list: string[], value: string): string[] {
+  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+}
 
 export const useLibraryPrefs = create<LibraryPrefsState>()(
   persist(
     (set) => ({
       viewMode: 'grid',
       gridSize: 'normal',
-      sortBy: 'custom',
-      groupBy: 'none',
+      sortBy: 'dateAdded',
+      sortDir: SORT_DEFAULT_DIR.dateAdded,
       statusFilter: 'all',
       selectedServices: [],
+      selectedGenres: [],
+      selectedDirectors: [],
+      selectedYears: [],
       comingSoonCollapsed: false,
-      // Drag-to-reorder is opt-in: while on, the whole list is a
-      // DraggableFlatList whose long-press pan wrapper swallows the header
-      // carousels' horizontal swipe. Default off so Continue watching / Coming
-      // soon scroll; user flips it on only to rearrange (custom sort).
-      reorderMode: false,
       setViewMode: (viewMode) => set({ viewMode }),
       setGridSize: (gridSize) => set({ gridSize }),
       toggleComingSoonCollapsed: () => set((state) => ({ comingSoonCollapsed: !state.comingSoonCollapsed })),
-      toggleReorderMode: () => set((state) => ({ reorderMode: !state.reorderMode })),
-      setSortBy: (sortBy) => set({ sortBy }),
-      setGroupBy: (groupBy) => set({ groupBy }),
+      // Picking a sort resets direction to that sort's natural one (newest,
+      // highest, soonest first) - the arrow then flips it from there.
+      setSortBy: (sortBy) => set({ sortBy, sortDir: SORT_DEFAULT_DIR[sortBy] }),
+      toggleSortDir: () => set((state) => ({ sortDir: state.sortDir === 'asc' ? 'desc' : 'asc' })),
       setStatusFilter: (statusFilter) => set({ statusFilter }),
-      toggleService: (service) =>
-        set((state) => ({
-          selectedServices: state.selectedServices.includes(service)
-            ? state.selectedServices.filter((s) => s !== service)
-            : [...state.selectedServices, service],
-        })),
-      resetFilters: () => set({ statusFilter: 'all', selectedServices: [], groupBy: 'none' }),
+      toggleService: (service) => set((state) => ({ selectedServices: toggleIn(state.selectedServices, service) })),
+      toggleGenre: (genre) => set((state) => ({ selectedGenres: toggleIn(state.selectedGenres, genre) })),
+      toggleDirector: (director) => set((state) => ({ selectedDirectors: toggleIn(state.selectedDirectors, director) })),
+      toggleYear: (year) => set((state) => ({ selectedYears: toggleIn(state.selectedYears, year) })),
+      resetFilters: () =>
+        set({ statusFilter: 'all', selectedServices: [], selectedGenres: [], selectedDirectors: [], selectedYears: [] }),
     }),
-    { name: 'library-prefs', storage: createJSONStorage(() => mmkvStorage) },
+    {
+      name: 'library-prefs',
+      storage: createJSONStorage(() => mmkvStorage),
+      version: 3,
+      // Older installs stored a reorderMode, a groupBy and a 'custom' sort that
+      // no longer exist, and no sortDir at all. 'custom' fell back to
+      // newest-added, so date added descending leaves the library in the order
+      // it was showing rather than silently reshuffling or inverting it.
+      migrate: (persisted) => {
+        // sortBy is widened, not intersected: an intersection with the current
+        // Partial<LibraryPrefsState> would drop the retired 'custom' value.
+        const stored = (persisted ?? {}) as Omit<Partial<LibraryPrefsState>, 'sortBy'> & {
+          reorderMode?: boolean;
+          groupBy?: string;
+          sortBy?: SortBy | 'custom';
+        };
+        const { reorderMode: _reorderMode, groupBy: _groupBy, ...rest } = stored;
+        const sortBy: SortBy = !rest.sortBy || rest.sortBy === 'custom' ? 'dateAdded' : rest.sortBy;
+        const sortDir = rest.sortBy === sortBy && rest.sortDir ? rest.sortDir : SORT_DEFAULT_DIR[sortBy];
+        return { ...rest, sortBy, sortDir };
+      },
+    },
   ),
 );

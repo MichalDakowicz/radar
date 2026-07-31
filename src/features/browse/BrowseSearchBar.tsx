@@ -1,6 +1,7 @@
 import { Search, SlidersHorizontal } from 'lucide-react-native';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
+import { SearchInput } from '@/components/ui/SearchInput';
 import { useIsDesktop } from '@/hooks/useResponsive';
 import { useSearchFocusRegistration } from '@/hooks/useSearchFocusRegistration';
 
@@ -24,7 +25,7 @@ export function BrowseSearchBar({ value, onChange, loading, activeFilterCount, o
         style={isDesktop ? { maxWidth: 520 } : undefined}
       >
         <Search size={16} color="hsl(0 0% 63.9%)" />
-        <TextInput
+        <SearchInput
           ref={searchRef}
           value={value}
           onChangeText={onChange}

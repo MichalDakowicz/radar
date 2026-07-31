@@ -1,6 +1,8 @@
-import { ArrowUpDown, LayoutGrid, Layers, List, Search, SlidersHorizontal } from 'lucide-react-native';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { LayoutGrid, List, Search, SlidersHorizontal } from 'lucide-react-native';
+import { Pressable, Text, View } from 'react-native';
 
+import { SearchInput } from '@/components/ui/SearchInput';
+import { SortDirectionToggle } from '@/features/library/SortDirectionToggle';
 import { useIsDesktop } from '@/hooks/useResponsive';
 import { useLibraryPrefs } from '@/store/libraryPrefs';
 import { useSearchFocusRegistration } from '@/hooks/useSearchFocusRegistration';
@@ -9,7 +11,6 @@ type LibraryToolbarProps = {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenFilters: () => void;
-  onOpenGroup: () => void;
 };
 
 function ToolbarGroup({ children }: { children: React.ReactNode }) {
@@ -19,18 +20,20 @@ function ToolbarGroup({ children }: { children: React.ReactNode }) {
 // Single-row toolbar (matches the requested html): search input flex-1, then
 // the Filters / Group / Grid-List pill-groups on the right. Random pick moved
 // to the global Header. Icon-only pill buttons so the row fits phone widths.
-export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters, onOpenGroup }: LibraryToolbarProps) {
-  const { viewMode, groupBy, statusFilter, selectedServices, sortBy, reorderMode, setViewMode, toggleReorderMode } = useLibraryPrefs();
+export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters }: LibraryToolbarProps) {
+  const { statusFilter, selectedServices, selectedGenres, selectedDirectors, selectedYears, viewMode, sortDir, setViewMode, toggleSortDir } =
+    useLibraryPrefs();
   const isDesktop = useIsDesktop();
   const searchRef = useSearchFocusRegistration();
 
-  const activeFilterCount = (statusFilter !== 'all' ? 1 : 0) + (selectedServices.length > 0 ? 1 : 0);
-
-  // Reorder needs custom sort + an unfiltered, unsearched, ungrouped list (the
-  // same gate as useLibraryFilters.isReorderEnabled) - otherwise the on-screen
-  // order isn't the stored custom order and a drag would be meaningless.
-  const canReorder =
-    sortBy === 'custom' && groupBy === 'none' && statusFilter === 'all' && selectedServices.length === 0 && !searchQuery.trim();
+  // One per narrowed dimension, not per chip - the badge says how many kinds of
+  // filter are on, which is what the user has to undo.
+  const activeFilterCount =
+    (statusFilter !== 'all' ? 1 : 0) +
+    (selectedServices.length > 0 ? 1 : 0) +
+    (selectedGenres.length > 0 ? 1 : 0) +
+    (selectedDirectors.length > 0 ? 1 : 0) +
+    (selectedYears.length > 0 ? 1 : 0);
 
   return (
     <View className={isDesktop ? 'flex-row items-center gap-2 px-8 pb-4 pt-4' : 'flex-row items-center gap-2 px-4 pb-3 pt-2'}>
@@ -38,7 +41,7 @@ export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters, onO
         <View className="absolute bottom-0 left-3 top-0 z-10 justify-center">
           <Search size={18} color="hsl(0 0% 63.9%)" />
         </View>
-        <TextInput
+        <SearchInput
           ref={searchRef}
           value={searchQuery}
           onChangeText={onSearchChange}
@@ -66,20 +69,7 @@ export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters, onO
         </ToolbarGroup>
 
         <ToolbarGroup>
-          <Pressable onPress={onOpenGroup} className="rounded px-2 py-1">
-            <Layers size={16} color={groupBy !== 'none' ? 'hsl(0 0% 98%)' : 'hsl(0 0% 63.9%)'} />
-          </Pressable>
-        </ToolbarGroup>
-
-        <ToolbarGroup>
-          <Pressable
-            onPress={toggleReorderMode}
-            disabled={!canReorder}
-            className="rounded px-2 py-1"
-            style={{ backgroundColor: reorderMode && canReorder ? 'hsl(0 0% 20%)' : 'transparent', opacity: canReorder ? 1 : 0.35 }}
-          >
-            <ArrowUpDown size={16} color={reorderMode && canReorder ? 'hsl(217 91% 60%)' : 'hsl(0 0% 63.9%)'} />
-          </Pressable>
+          <SortDirectionToggle dir={sortDir} onToggle={toggleSortDir} />
         </ToolbarGroup>
 
         <ToolbarGroup>
