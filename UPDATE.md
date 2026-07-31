@@ -8,6 +8,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - The Library arrows button now flips the sort direction, with the live arrow drawn bold
 - Choosing a sort starts in its natural order — newest, highest or soonest first
+- Library sorts by date added, newest first, where it used to sort by custom order
 
 ### Fixed
 
@@ -19,6 +20,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Removed
 
 - Drag-to-reorder in Library, which the arrows button used to toggle
+- The Custom order sort, which nothing could set once reordering was gone
 
 ## 2.2.0 — 31.07.2026
 

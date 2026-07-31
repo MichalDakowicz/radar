@@ -9,7 +9,6 @@ const movie = (id: string, overrides: Partial<Movie> = {}): Movie =>
     addedAt: '2026-01-01T00:00:00.000Z',
     releaseDate: '2020-01-01',
     runtime: 100,
-    customOrder: null,
     director: [],
     ratings: null,
     ...overrides,
@@ -39,7 +38,6 @@ describe('SORT_DEFAULT_DIR', () => {
     expect(SORT_DEFAULT_DIR.title).toBe('asc');
     expect(SORT_DEFAULT_DIR.director).toBe('asc');
     expect(SORT_DEFAULT_DIR.runtime).toBe('asc');
-    expect(SORT_DEFAULT_DIR.custom).toBe('asc');
   });
 });
 
@@ -87,17 +85,8 @@ describe('compareMovies', () => {
     expect(sorted(movies, 'director', 'desc')).toEqual(['v', 'a']);
   });
 
-  it('falls back to newest-added for a custom order that was never set', () => {
-    const movies = [
-      movie('old', { addedAt: '2026-01-01T00:00:00.000Z' }),
-      movie('new', { addedAt: '2026-07-01T00:00:00.000Z' }),
-    ];
-    expect(sorted(movies, 'custom', 'asc')).toEqual(['new', 'old']);
-  });
-
-  it('honours a stored custom order ahead of the fallback', () => {
-    const movies = [movie('second', { customOrder: 1 }), movie('first', { customOrder: 0 })];
-    expect(sorted(movies, 'custom', 'asc')).toEqual(['first', 'second']);
-    expect(sorted(movies, 'custom', 'desc')).toEqual(['second', 'first']);
+  it('falls back to title order for an unrecognised sort', () => {
+    const movies = [movie('b', { title: 'Brazil' }), movie('a', { title: 'Alien' })];
+    expect(sorted(movies, 'nope' as never, 'asc')).toEqual(['a', 'b']);
   });
 });

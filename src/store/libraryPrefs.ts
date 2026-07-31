@@ -10,7 +10,7 @@ import { mmkvStorage } from '@/lib/mmkvStorage';
 // stay as local/navigator state - never persisted here.
 export type ViewMode = 'grid' | 'list';
 export type { GridSize };
-export type SortBy = 'custom' | 'title' | 'dateAdded' | 'releaseDate' | 'rating' | 'director' | 'runtime';
+export type SortBy = 'title' | 'dateAdded' | 'releaseDate' | 'rating' | 'director' | 'runtime';
 export type GroupBy = 'none' | 'director' | 'year' | 'genre' | 'availability' | 'status';
 export type StatusFilter = 'all' | 'watchlist' | 'watching' | 'completed' | 'rewatch';
 export type { SortDir };
@@ -40,8 +40,8 @@ export const useLibraryPrefs = create<LibraryPrefsState>()(
     (set) => ({
       viewMode: 'grid',
       gridSize: 'normal',
-      sortBy: 'custom',
-      sortDir: SORT_DEFAULT_DIR.custom,
+      sortBy: 'dateAdded',
+      sortDir: SORT_DEFAULT_DIR.dateAdded,
       groupBy: 'none',
       statusFilter: 'all',
       selectedServices: [],
@@ -66,15 +66,22 @@ export const useLibraryPrefs = create<LibraryPrefsState>()(
     {
       name: 'library-prefs',
       storage: createJSONStorage(() => mmkvStorage),
-      version: 1,
-      // v0 had no sortDir (and a reorderMode that no longer exists). Seeding the
-      // stored sort's natural direction keeps an upgrading library in the order
-      // it was already showing instead of silently inverting it.
-      migrate: (persisted, version) => {
-        const state = (persisted ?? {}) as Partial<LibraryPrefsState> & { reorderMode?: boolean };
-        if (version >= 1) return state;
-        const { reorderMode: _reorderMode, ...rest } = state;
-        return { ...rest, sortDir: SORT_DEFAULT_DIR[rest.sortBy ?? 'custom'] };
+      version: 2,
+      // Older installs stored a reorderMode and a 'custom' sort that no longer
+      // exist, and no sortDir at all. 'custom' fell back to newest-added, so
+      // date added descending leaves the library in the order it was showing
+      // rather than silently reshuffling or inverting it.
+      migrate: (persisted) => {
+        // sortBy is widened, not intersected: an intersection with the current
+        // Partial<LibraryPrefsState> would drop the retired 'custom' value.
+        const stored = (persisted ?? {}) as Omit<Partial<LibraryPrefsState>, 'sortBy'> & {
+          reorderMode?: boolean;
+          sortBy?: SortBy | 'custom';
+        };
+        const { reorderMode: _reorderMode, ...rest } = stored;
+        const sortBy: SortBy = !rest.sortBy || rest.sortBy === 'custom' ? 'dateAdded' : rest.sortBy;
+        const sortDir = rest.sortBy === sortBy && rest.sortDir ? rest.sortDir : SORT_DEFAULT_DIR[sortBy];
+        return { ...rest, sortBy, sortDir };
       },
     },
   ),

@@ -11,7 +11,6 @@ import type { Movie } from '@/types/movie';
 export type SortDir = 'asc' | 'desc';
 
 export const SORT_DEFAULT_DIR: Record<SortBy, SortDir> = {
-  custom: 'asc',
   title: 'asc',
   director: 'asc',
   runtime: 'asc',
@@ -32,13 +31,6 @@ function firstDirector(movie: Movie): string {
 
 function compareAscending(a: Movie, b: Movie, sortBy: SortBy): number {
   switch (sortBy) {
-    case 'custom': {
-      // No stored order falls back to newest-added, which is what the library
-      // looked like before a manual order existed.
-      const orderA = a.customOrder ?? -new Date(a.addedAt).getTime();
-      const orderB = b.customOrder ?? -new Date(b.addedAt).getTime();
-      return orderA - orderB;
-    }
     case 'dateAdded':
       return new Date(a.addedAt).getTime() - new Date(b.addedAt).getTime();
     case 'rating':

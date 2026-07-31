@@ -14,7 +14,6 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
 ];
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: 'custom', label: 'Custom order' },
   { value: 'dateAdded', label: 'Date added' },
   { value: 'title', label: 'Title' },
   { value: 'releaseDate', label: 'Release date' },

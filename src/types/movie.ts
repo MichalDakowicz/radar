@@ -52,7 +52,6 @@ export type Movie = {
   ratings: Ratings;
   notes: string;
   url: string;
-  customOrder: number | null;
   addedAt: string;
   updatedAt: string;
 
