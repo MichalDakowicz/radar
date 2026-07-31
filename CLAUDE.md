@@ -86,7 +86,7 @@ Read `UPDATE-schema.md` and obey it. Summary of the binding parts:
   testable rather than reaching for a renderer.
 - Also clean before committing: `npm run lint` and `npx tsc --noEmit`.
 
-## 7. Build and push to the phone after every change
+## 7. Build and push to the phone after every change, then deploy web
 
 A device is always connected over ADB (`adb devices` to confirm). Never call a change
 done without it running on the phone.
@@ -115,6 +115,27 @@ above and is what gets attached to the GitHub release.
 Report the actual result — if the build fails or the install rejects, say so with the
 error, do not describe the change as shipped.
 
+### Then the web build, same pass
+
+Once the mobile install succeeds, ship web too — the user has standing authorization for
+this, so do it without asking:
+
+```sh
+npm run deploy:web        # = expo export -p web --output-dir dist --clear && firebase deploy --only hosting
+```
+
+- Firebase project is `radar-watchlist` (`.firebaserc`, gitignored); hosting serves `dist/`
+  with an SPA rewrite to `/index.html` (`firebase.json`). `dist/` is gitignored — never
+  commit build output.
+- Requires an authenticated Firebase CLI. If it fails on auth, stop and tell the user to
+  run `! firebase login` — do not try to work around it.
+- Deploy **after** the phone build passes, not before. A broken build must not reach
+  hosting.
+- Report the hosting URL the CLI prints. If the export or deploy fails, say so with the
+  error and treat the change as not shipped, even though the phone install worked.
+- Web-only skip: if the change is Android-native only (prebuild config, native module,
+  APK packaging), say the web deploy was skipped and why instead of running it.
+
 ## Release checklist (when the user asks to release)
 
 1. `UPDATE.md`: top heading `— Unreleased` → `— YYYY-MM-DD`.
@@ -122,7 +143,8 @@ error, do not describe the change as shipped.
 3. Build the release APK, name it `radar-v<version>.apk`.
 4. `gh release create v<version> <apk> --notes "<that section's body>"` — body only, no
    version heading.
-5. Add a fresh `## <next version> — Unreleased` section at the top of `UPDATE.md`.
+5. `npm run deploy:web` so hosting matches the released version.
+6. Add a fresh `## <next version> — Unreleased` section at the top of `UPDATE.md`.
 
 ## Commands
 
