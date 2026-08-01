@@ -2,23 +2,39 @@ import { ChevronRight } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { personalScore } from '@/components/media/RatingStars';
+import { FavoritesRow } from '@/features/profile/FavoritesRow';
 import { PosterThumb } from '@/features/social/PosterThumb';
 import { StarRow } from '@/features/social/StarRow';
 import type { TasteTag } from '@/lib/tasteTags';
-import type { Movie } from '@/types/movie';
+import type { FavoriteItem, Movie } from '@/types/movie';
 
 type ShelfSectionsProps = {
+  /** Their pinned top 4. Read-only here — the row hides itself when empty. */
+  favorites: FavoriteItem[];
   inProgress: Movie[];
   recent: Movie[];
   tags: TasteTag[];
   onOpenTitle: (movie: Movie) => void;
+  onOpenFavorite: (item: FavoriteItem) => void;
   onOpenCollection: () => void;
 };
 
 /** Everything under a friend's shelf header: what they're on, what they finished, what you share. */
-export function ShelfSections({ inProgress, recent, tags, onOpenTitle, onOpenCollection }: ShelfSectionsProps) {
+export function ShelfSections({
+  favorites,
+  inProgress,
+  recent,
+  tags,
+  onOpenTitle,
+  onOpenFavorite,
+  onOpenCollection,
+}: ShelfSectionsProps) {
   return (
     <View className="gap-6 px-4 pb-10 pt-5">
+      {/* Leads the shelf: a pinned top 4 is what someone chose to say about
+          themselves, where everything below is just what they happened to log. */}
+      <FavoritesRow favorites={favorites} onPressItem={onOpenFavorite} />
+
       {inProgress.length > 0 && (
         <View className="gap-2.5">
           <SectionLabel>In progress</SectionLabel>

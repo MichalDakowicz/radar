@@ -19,7 +19,7 @@ import { useFriends } from '@/hooks/useFriends';
 import { MAX_W } from '@/hooks/useResponsive';
 import { inProgressTitles, recentlyLogged, shelfStats } from '@/lib/shelfSummary';
 import { sharedTasteTags } from '@/lib/tasteTags';
-import type { Movie } from '@/types/movie';
+import type { MediaType, Movie } from '@/types/movie';
 
 /** A friend's shelf: who they are, what they are on, and what you have in common. */
 export default function FriendShelfScreen() {
@@ -38,12 +38,15 @@ export default function FriendShelfScreen() {
 
   const name = profile?.displayName || profile?.username || 'Shelf';
 
+  const openTmdb = (tmdbId: number, type: MediaType) =>
+    router.push({ pathname: '/movie/[tmdbId]/[type]', params: { tmdbId: String(tmdbId), type } });
+
   const openTitle = (movie: Movie) => {
     if (movie.tmdbId == null) {
       show(`${movie.title} is not on TMDB, so it has no detail page`);
       return;
     }
-    router.push({ pathname: '/movie/[tmdbId]/[type]', params: { tmdbId: String(movie.tmdbId), type: movie.type } });
+    openTmdb(movie.tmdbId, movie.type);
   };
 
   const handleRemove = async () => {
@@ -84,10 +87,15 @@ export default function FriendShelfScreen() {
               onWatchTogether={() => router.push(`/friend/${friendId}/watch-together`)}
             />
             <ShelfSections
+              favorites={profile.favorites}
               inProgress={inProgress}
               recent={recent}
               tags={tags}
               onOpenTitle={openTitle}
+              // profiles.favorites is a snapshot, not an FK — a pinned title
+              // routes by its own tmdbId whether or not it is still in their
+              // library, which is the point of storing it that way.
+              onOpenFavorite={(item) => openTmdb(item.tmdbId, item.type)}
               onOpenCollection={() => router.push(`/u/${friendId}`)}
             />
           </ScrollView>

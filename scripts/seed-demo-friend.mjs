@@ -35,6 +35,9 @@ const DEMO_DISPLAY_NAME = 'Jess Varga';
 
 const DAY = 86_400_000;
 
+/** Pinned top 4 (profiles.favorites), by tmdb id — must all be in LIBRARY below. */
+const DEMO_FAVORITES = [152601, 496243, 693134, 872585];
+
 // tmdbId, media type, and how the demo account has filed it. `daysAgo` drives
 // both completed_at and the activity row, so the feed reads chronologically.
 const LIBRARY = [
@@ -365,12 +368,22 @@ async function main() {
   console.log('demo account:');
   const demoId = await ensureDemoUser(supabase, { email, password, reset: Boolean(args.reset) });
 
-  // The signup trigger already made a profile; give it a recognisable identity.
+  // The signup trigger already made a profile; give it a recognisable identity
+  // and a pinned top 4, which is what the friend shelf leads with. Snapshotted
+  // from the TMDB metadata rather than referenced, matching what the app writes.
+  const favorites = DEMO_FAVORITES.map((tmdbId) => {
+    const hit = titles.find((t) => t.entry.tmdbId === tmdbId);
+    return hit
+      ? { tmdbId, type: hit.meta.type, title: hit.meta.title, coverUrl: hit.meta.cover_url }
+      : null;
+  }).filter(Boolean);
+
   const { error: profileError } = await supabase
     .from('profiles')
-    .update({ username: DEMO_USERNAME, display_name: DEMO_DISPLAY_NAME })
+    .update({ username: DEMO_USERNAME, display_name: DEMO_DISPLAY_NAME, favorites })
     .eq('id', demoId);
   if (profileError) throw profileError;
+  console.log(`  top 4: ${favorites.map((f) => f.title).join(', ')}`);
 
   // 'friends' is the default and is what we want: the shelf opens up once the
   // request is accepted, which is the flow being tested.
