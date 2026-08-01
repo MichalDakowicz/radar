@@ -30,6 +30,16 @@ export const POPULAR_SERVICES = [
   'Hulu',
 ] as const;
 
+// Everything the app has a colour and a short code for - what Settings offers
+// as "my services". Popular seven first so the picker opens on the likely
+// picks, then the long tail.
+export const ALL_SERVICES = [
+  ...POPULAR_SERVICES,
+  'Peacock',
+  'Fubo',
+  'Criterion Channel',
+] as const;
+
 export function normalizeServiceName(name: string | null | undefined): string | null {
   if (!name) return null;
   const n = name.toLowerCase();

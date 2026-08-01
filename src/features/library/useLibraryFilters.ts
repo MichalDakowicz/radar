@@ -4,7 +4,7 @@ import { matchesDirectorFilter, matchesGenreFilter, matchesYearFilter } from '@/
 import { movieMatchesSearchQuery } from '@/lib/librarySearch';
 import { compareMovies } from '@/lib/librarySort';
 import { isInProgress, isInWatchlist, isRewatch, isWatched } from '@/lib/movieStatus';
-import { normalizeAvailability, OTHER_SERVICE_KEY, isPopularService } from '@/lib/services';
+import { effectiveServiceSelection, matchesServiceFilter } from '@/lib/serviceFilter';
 import { selectComingSoon } from '@/lib/upcoming';
 import type { SortBy, SortDir, StatusFilter } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
@@ -22,14 +22,6 @@ function matchesStatusFilter(movie: Movie, filter: StatusFilter): boolean {
     default:
       return true;
   }
-}
-
-function matchesServiceFilter(movie: Movie, selected: string[]): boolean {
-  if (selected.length === 0) return true;
-  const services = normalizeAvailability(movie.availability);
-  const matchesPopular = selected.some((s) => s !== OTHER_SERVICE_KEY && services.includes(s));
-  const matchesOther = selected.includes(OTHER_SERVICE_KEY) && services.some((s) => !isPopularService(s));
-  return matchesPopular || matchesOther;
 }
 
 export type LibraryFilters = {
@@ -53,7 +45,11 @@ export type LibraryFilterInput = {
   sortDir: SortDir;
   recentlyAddedDays?: number;
   showRecentlyAdded?: boolean;
+  /** Settings' "my services" list, backing the "My services" filter chip. */
+  ownedServices?: string[];
 };
+
+const NO_SERVICES: string[] = [];
 
 // The one derive/memo hook for Library (doc 10) - LibraryScreen only composes
 // this + presentational components, no filter logic in the screen file.
@@ -69,7 +65,13 @@ export function useLibraryFilters({
   sortDir,
   recentlyAddedDays = 30,
   showRecentlyAdded = false,
+  ownedServices = NO_SERVICES,
 }: LibraryFilterInput): LibraryFilters {
+  const serviceSelection = useMemo(
+    () => effectiveServiceSelection(selectedServices, ownedServices),
+    [selectedServices, ownedServices],
+  );
+
   const continueWatching = useMemo(() => {
     const inProgress = movies.filter((m) => isInProgress(m)).slice(0, 30);
     return searchQuery.trim() ? inProgress.filter((m) => movieMatchesSearchQuery(m, searchQuery)) : inProgress;
@@ -97,12 +99,12 @@ export function useLibraryFilters({
     let result = movies;
     if (searchQuery.trim()) result = result.filter((m) => movieMatchesSearchQuery(m, searchQuery));
     result = result.filter((m) => matchesStatusFilter(m, statusFilter));
-    result = result.filter((m) => matchesServiceFilter(m, selectedServices));
+    result = result.filter((m) => matchesServiceFilter(m, serviceSelection, ownedServices));
     result = result.filter((m) => matchesGenreFilter(m, selectedGenres));
     result = result.filter((m) => matchesDirectorFilter(m, selectedDirectors));
     result = result.filter((m) => matchesYearFilter(m, selectedYears));
     return [...result].sort((a, b) => compareMovies(a, b, sortBy, sortDir));
-  }, [movies, searchQuery, statusFilter, selectedServices, selectedGenres, selectedDirectors, selectedYears, sortBy, sortDir]);
+  }, [movies, searchQuery, statusFilter, serviceSelection, ownedServices, selectedGenres, selectedDirectors, selectedYears, sortBy, sortDir]);
 
   const sectionIds = useMemo(() => {
     const ids = new Set<string>();
