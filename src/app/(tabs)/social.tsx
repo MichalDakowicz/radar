@@ -42,13 +42,14 @@ function SocialScreen() {
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const since = useFeedWatermark();
 
-  // Your own activity rides along with your friends' — one query either way,
-  // and it gives the rail's "You" entry something to filter to.
+  // Your own activity is fetched alongside your friends' — one query either way
+  // — but the feed keeps it out of the default view. It is only ever shown when
+  // you tap yourself in the rail.
   const authorIds = useMemo(
     () => [user?.id, ...friends.map((f) => f.id)].filter((id): id is string => !!id),
     [user?.id, friends],
   );
-  const activity = useFriendActivity(authorIds);
+  const activity = useFriendActivity(authorIds, user?.id);
 
   const freshIds = useMemo(() => {
     const counts = freshCountsSince(activity.events, since);

@@ -99,13 +99,14 @@ async function fetchFriendActivity(friendIds: string[]): Promise<FeedEvent[]> {
 }
 
 /**
- * Your friends' activity, poster-hydrated.
+ * Your friends' activity, poster-hydrated. `friendIds` includes your own id so
+ * the rail can scope to you; the feed decides what to show from there.
  *
  * New rows are counted, not merged: re-sorting the list under someone mid-read
  * is the thing every feed gets wrong. `pending` drives the "N new updates" pill,
  * and `loadPending` is what actually refetches.
  */
-export function useFriendActivity(friendIds: string[]) {
+export function useFriendActivity(friendIds: string[], viewerId?: string) {
   const queryClient = useQueryClient();
   const [pending, setPending] = useState(0);
   // Sorted so a reordered friend list is not a new cache key.
@@ -127,6 +128,9 @@ export function useFriendActivity(friendIds: string[]) {
       .channel(`social-feed:${key}:${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity' }, (payload) => {
         const row = payload.new as ActivityRow;
+        // Your own writes are never "new to you" — announcing the row you just
+        // created would put a pill over the feed every time you rate something.
+        if (row.user_id === viewerId) return;
         if (!friends.has(row.user_id) || !isFeedWorthy({ type: row.type, details: row.details ?? {} })) return;
         setPending((n) => n + 1);
       })
@@ -134,7 +138,7 @@ export function useFriendActivity(friendIds: string[]) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [key, friendIds]);
+  }, [key, friendIds, viewerId]);
 
   const loadPending = useCallback(() => {
     setPending(0);

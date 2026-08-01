@@ -28,9 +28,12 @@ type FeedViewProps = {
 };
 
 /**
- * The activity feed. Your own logs are in it alongside your friends' — it is
- * the same read either way, and it means the rail's "You" chip filters to
- * something instead of sitting there decorative.
+ * The activity feed — your friends' logs, not yours.
+ *
+ * Your own rows are fetched (the tab asks for them in the same query) but never
+ * mixed into the default feed or the weekly digest: this is a place to see what
+ * other people are watching, and your own library is three other tabs. Tapping
+ * yourself in the rail is the one way to scope the feed to your own activity.
  */
 export function FeedView({ me, friends, events, loading, pending, loadPending, since }: FeedViewProps) {
   const router = useRouter();
@@ -45,8 +48,12 @@ export function FeedView({ me, friends, events, loading, pending, loadPending, s
     return map;
   }, [me, friends]);
 
+  const friendEvents = useMemo(() => events.filter((e) => e.userId !== me?.id), [events, me?.id]);
+
   const fresh = useMemo(() => freshCountsSince(events, since), [events, since]);
-  const digest = useMemo(() => weekDigest(events), [events]);
+  // Friends only: "This week" ranks other people, and its button offers to
+  // compare taste with the leader — which has to be someone who is not you.
+  const digest = useMemo(() => weekDigest(friendEvents), [friendEvents]);
 
   const railEntries = useMemo(
     () =>
@@ -58,10 +65,13 @@ export function FeedView({ me, friends, events, loading, pending, loadPending, s
     [me, friends, fresh],
   );
 
-  const visible = useMemo(
-    () => events.filter((e) => (!railId || e.userId === railId) && matchesFeedFilter(e.kind, filter)),
-    [events, railId, filter],
+  // Unfiltered means "all my friends", never "everyone including me". Picking
+  // someone in the rail — yourself included — narrows to just them.
+  const scoped = useMemo(
+    () => (railId ? events.filter((e) => e.userId === railId) : friendEvents),
+    [events, friendEvents, railId],
   );
+  const visible = useMemo(() => scoped.filter((e) => matchesFeedFilter(e.kind, filter)), [scoped, filter]);
 
   const { social, available, toggleReaction, postComment } = useActivitySocial(visible.map((e) => e.id));
 
@@ -75,7 +85,11 @@ export function FeedView({ me, friends, events, loading, pending, loadPending, s
 
   if (loading) return <LoadingState label="Loading activity…" />;
 
-  const railFiltered = railId && railId !== me?.id ? profiles.get(railId) : null;
+  // The banner names whoever the rail is scoped to, yourself included — with
+  // your rows out of the default feed, "Only you" is the cue that explains why
+  // the list just changed under you.
+  const railFiltered = railId ? profiles.get(railId) : null;
+  const scopedToSelf = !!railId && railId === me?.id;
 
   return (
     <View className="flex-1">
@@ -87,13 +101,13 @@ export function FeedView({ me, friends, events, loading, pending, loadPending, s
         {!!railFiltered && (
           <View className="mx-4 mt-3 flex-row items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-2">
             <Text className="flex-1 text-[12.5px] text-foreground">
-              Only <Text className="font-bold">{railFiltered.displayName || railFiltered.username}</Text> ·{' '}
-              {filterCountLabel(visible.length)}
+              Only <Text className="font-bold">{scopedToSelf ? 'you' : railFiltered.displayName || railFiltered.username}</Text>{' '}
+              · {filterCountLabel(visible.length)}
             </Text>
             <Pressable
               onPress={() => setRailId(null)}
               accessibilityRole="button"
-              accessibilityLabel="Clear friend filter"
+              accessibilityLabel="Clear filter"
               className="h-9 w-9 items-center justify-center rounded-full active:opacity-60"
             >
               <Text className="text-base text-muted-foreground">✕</Text>
@@ -107,12 +121,7 @@ export function FeedView({ me, friends, events, loading, pending, loadPending, s
             total={digest.total}
             leader={digest.leaderId ? (profiles.get(digest.leaderId) ?? null) : null}
             profiles={profiles}
-            onCompareLeader={() =>
-              digest.leaderId &&
-              (digest.leaderId === me?.id
-                ? show('That one is you — pick a friend to compare with')
-                : router.push(`/friend/${digest.leaderId}/compare`))
-            }
+            onCompareLeader={() => digest.leaderId && router.push(`/friend/${digest.leaderId}/compare`)}
           />
         )}
 
@@ -138,17 +147,29 @@ export function FeedView({ me, friends, events, loading, pending, loadPending, s
             />
           ))}
 
+          {/* Keyed off `scoped`, not the raw event list: with your own rows out
+              of the default feed, "no friends have logged anything" and "this
+              filter matches nothing" are different situations with different
+              ways out. */}
           {visible.length === 0 && (
             <EmptyState
               icon={<BarChart3 size={38} color="hsl(0 0% 35%)" />}
-              title={events.length === 0 ? 'Nothing logged yet' : 'Nothing here yet'}
+              title={
+                scoped.length > 0
+                  ? 'Nothing here yet'
+                  : scopedToSelf
+                    ? 'You have not logged anything yet'
+                    : 'No friend activity yet'
+              }
               description={
-                events.length === 0
-                  ? 'Rate or finish something, or add a friend, and it shows up here.'
-                  : 'No activity matches this filter.'
+                scoped.length > 0
+                  ? 'No activity matches this filter.'
+                  : scopedToSelf
+                    ? 'Rate or finish something and it shows up here.'
+                    : 'Add a friend, or tap yourself in the rail to see your own activity.'
               }
               action={
-                events.length > 0 ? (
+                scoped.length > 0 ? (
                   <Pressable
                     onPress={() => {
                       setRailId(null);
