@@ -15,6 +15,12 @@ type HeaderProps = {
   onShare?: () => void;
   /** Profile only: the gear that pushes /settings, which has no tab of its own. */
   onSettings?: () => void;
+  /**
+   * Screen-specific controls, rendered left of the global buttons. Screens with
+   * their own chrome (Social's inbox and Find) hang it here instead of building
+   * a bar of their own, which would cost them the logo and the desktop nav.
+   */
+  actions?: ReactNode;
   refreshingLabel?: string;
   /** Desktop only: align the bar with the screen's content column (MAX_W.*). */
   maxWidth?: number;
@@ -27,7 +33,14 @@ type HeaderProps = {
 // On desktop web this bar also carries the destination links, exactly like
 // legacy's navbar: one row of chrome at the top instead of a side rail eating
 // horizontal space. The bottom tabs cover the same routes on phones.
-export function Header({ onRandomPick, onShare, onSettings, refreshingLabel, maxWidth = MAX_W.grid }: HeaderProps) {
+export function Header({
+  onRandomPick,
+  onShare,
+  onSettings,
+  actions,
+  refreshingLabel,
+  maxWidth = MAX_W.grid,
+}: HeaderProps) {
   const insets = useSafeAreaInsets();
   const isDesktop = useIsDesktop();
   const router = useRouter();
@@ -53,6 +66,7 @@ export function Header({ onRandomPick, onShare, onSettings, refreshingLabel, max
             </Pressable>
 
             <View className="flex-row items-center gap-2">
+              {actions}
               {!!onRandomPick && (
                 <BarButton onPress={onRandomPick} label="Pick Random" icon={<Shuffle size={15} color="hsl(0 0% 98%)" />} />
               )}
@@ -85,6 +99,7 @@ export function Header({ onRandomPick, onShare, onSettings, refreshingLabel, max
       </View>
 
       <View className="flex-row items-center gap-2">
+        {actions}
         {!!onRandomPick && (
           <Pressable onPress={onRandomPick} className="flex-row items-center gap-1.5 rounded-full border border-border px-3 py-2">
             <Shuffle size={16} color="hsl(0 0% 98%)" />

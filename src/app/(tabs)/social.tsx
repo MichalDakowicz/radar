@@ -1,10 +1,9 @@
 import { useRouter } from 'expo-router';
-import { Inbox, UserPlus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ContentShell } from '@/components/layout/ContentShell';
+import { Header } from '@/components/layout/Header';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { useToast } from '@/components/ui/Toast';
@@ -12,6 +11,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { FeedView } from '@/features/social/FeedView';
 import { FindView } from '@/features/social/FindView';
 import { FriendsView } from '@/features/social/FriendsView';
+import { SocialHeaderActions } from '@/features/social/SocialHeaderActions';
 import { useFeedWatermark } from '@/features/social/useFeedWatermark';
 import { useFriendActivity } from '@/features/social/useFriendActivity';
 import { useFriends } from '@/hooks/useFriends';
@@ -32,7 +32,6 @@ export default withTabReload(SocialScreen, 'social');
  * a real back stack and its own URL on web.
  */
 function SocialScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { show } = useToast();
   const { user } = useAuth();
@@ -82,6 +81,7 @@ function SocialScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-background">
+        <Header maxWidth={MAX_W.text} />
         <LoadingState label="Loading social…" />
       </View>
     );
@@ -89,6 +89,7 @@ function SocialScreen() {
   if (error) {
     return (
       <View className="flex-1 bg-background">
+        <Header maxWidth={MAX_W.text} />
         <ErrorState message={error instanceof Error ? error.message : 'Failed to load your friends'} />
       </View>
     );
@@ -96,38 +97,16 @@ function SocialScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="border-b border-border bg-background px-4 pb-2" style={{ paddingTop: insets.top + 10 }}>
-        <ContentShell maxWidth={MAX_W.text}>
-          <View className="flex-row items-center justify-between gap-2.5">
-            <Text className="text-2xl font-bold tracking-tight text-foreground">Social</Text>
-            <View className="flex-row gap-1">
-              <Pressable
-                onPress={() => router.push('/friend-requests')}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  requests.length ? `Friend requests, ${requests.length} pending` : 'Friend requests, none pending'
-                }
-                className="h-11 w-11 items-center justify-center rounded-full active:opacity-60"
-              >
-                <Inbox size={21} color="hsl(0 0% 90%)" />
-                {requests.length > 0 && (
-                  <View className="absolute right-1 top-1 min-w-[18px] items-center justify-center rounded-full border-2 border-background bg-primary px-1">
-                    <Text className="text-[10px] font-bold text-white">{requests.length}</Text>
-                  </View>
-                )}
-              </Pressable>
-              <Pressable
-                onPress={() => setSegment('find')}
-                accessibilityRole="button"
-                accessibilityLabel="Find friends"
-                className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-80"
-              >
-                <UserPlus size={18} color="#fff" />
-              </Pressable>
-            </View>
-          </View>
-        </ContentShell>
-      </View>
+      <Header
+        maxWidth={MAX_W.text}
+        actions={
+          <SocialHeaderActions
+            requestCount={requests.length}
+            onOpenRequests={() => router.push('/friend-requests')}
+            onFind={() => setSegment('find')}
+          />
+        }
+      />
 
       <View className="px-4 pt-3">
         <ContentShell maxWidth={MAX_W.text}>
