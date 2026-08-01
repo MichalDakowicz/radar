@@ -9,6 +9,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 - Settings has My services, where you pick the streaming services you subscribe to
 - Library filters gain a My services chip that narrows the grid to what you already pay for
 
+### Fixed
+
+- Double-pressing the Library tab clears its filters too, not just search and scroll
+
 ## 2.3.0 — 2026-08-01
 
 ### Added

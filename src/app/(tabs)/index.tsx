@@ -23,7 +23,12 @@ import type { Movie } from '@/types/movie';
 // Thin composition layer only (doc 10) - all derive logic lives in
 // useLibraryFilters, all durable prefs in the zustand+MMKV store, all
 // rendering in the Library* components.
-export default withTabReload(LibraryScreen, 'index');
+//
+// Double-pressing the tab is "give me my library back", so it clears the
+// persisted filters as well as the remount-scoped state (search, scroll). View
+// mode, grid size and sort are deliberately left alone: those are how you like
+// to look at the library, not a narrowing you need undone.
+export default withTabReload(LibraryScreen, 'index', () => useLibraryPrefs.getState().resetFilters());
 
 function LibraryScreen() {
   const router = useRouter();
@@ -57,6 +62,7 @@ function LibraryScreen() {
     sortDir,
     recentlyAddedDays: settings.recentlyAddedDays,
     showRecentlyAdded: settings.showRecentlyAdded,
+    ownedServices: settings.ownedServices,
   });
 
   const filterSheetRef = useRef<BottomSheetModal>(null);
