@@ -74,7 +74,8 @@
     "lint": "expo lint",
     "test": "jest",
     "icons": "node ./scripts/generate-icons.mjs",
-    "migrate:data": "node --env-file=.env --import tsx ./scripts/migrate-data.ts"
+    "migrate:data": "node --env-file=.env --import tsx ./scripts/migrate-data.ts",
+    "seed:demo": "node --env-file=.env ./scripts/seed-demo-friend.mjs"
   },
   "jest": {
     "preset": "jest-expo",

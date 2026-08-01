@@ -2,6 +2,26 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
+## 2.3.0 — 2026-08-01
+
+### Added
+
+- Social opens on a feed of what your friends have rated, finished and queued up
+- A rail of friends tops the feed, ringed when they log something while you are away
+- Filter the feed to one friend, or to ratings, watches, in progress and watchlist adds
+- This week shows who logged the most, and leads into comparing taste with them
+- React with an emoji or leave a comment on anything in the feed
+- A friend's shelf leads with their totals, what they are watching and what you both like
+- Compare taste scores your overlap and can add their picks to your watchlist
+- Watch together lists what is on both your watchlists and picks one for tonight
+- Friend requests now have their own inbox, reached from the bell on Social
+- Profile is a tab of its own, showing your totals, top 4, in progress and recent logs
+
+### Changed
+
+- Settings moved behind the gear on Profile instead of taking up a tab
+- The Friends tab is now Social, with a per-friend menu and a confirm before removing one
+
 ## 2.2.2 — 2026-08-01
 
 ### Fixed

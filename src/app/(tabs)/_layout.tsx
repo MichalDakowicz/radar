@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
-import { BarChart3, Compass, LibraryBig, Settings as SettingsIcon, Users } from 'lucide-react-native';
+import { BarChart3, Compass, CircleUserRound, LibraryBig, Users } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 
 import type { BottomSheetModal } from '@/components/ui/Sheet';
@@ -18,7 +18,7 @@ const DOUBLE_PRESS_MS = 400;
 
 // Bottom tab shell (doc 05 proposed route tree). Swipe-between-main-tabs was
 // confirmed as wanted but is deferred - standard bottom tabs first, revisit
-// with material-top-tabs once Browse/Stats/Friends/Settings have real content
+// with material-top-tabs once Browse/Stats/Social/Profile have real content
 // (switching the nav primitive later, once four more screens exist, is a
 // bigger refactor than doing it now for one real tab).
 //
@@ -87,14 +87,14 @@ export default function TabsLayout() {
           listeners={{ tabPress: () => handleTabPress('stats') }}
         />
         <Tabs.Screen
-          name="friends"
-          options={{ title: 'Friends', tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
-          listeners={{ tabPress: () => handleTabPress('friends') }}
+          name="social"
+          options={{ title: 'Social', tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
+          listeners={{ tabPress: () => handleTabPress('social') }}
         />
         <Tabs.Screen
-          name="settings"
-          options={{ title: 'Settings', tabBarIcon: ({ color, size }) => <SettingsIcon color={color} size={size} /> }}
-          listeners={{ tabPress: () => handleTabPress('settings') }}
+          name="profile"
+          options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <CircleUserRound color={color} size={size} /> }}
+          listeners={{ tabPress: () => handleTabPress('profile') }}
         />
       </Tabs>
       <QuickAddSheet ref={quickAddRef} />

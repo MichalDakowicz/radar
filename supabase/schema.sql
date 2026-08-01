@@ -132,6 +132,34 @@ create table if not exists public.friend_requests (
   primary key (sender_id, recipient_id)
 );
 
+-- Reactions and comments on an activity row — the two social objects the Social
+-- tab adds on top of the existing activity log. Both cascade off public.activity,
+-- so a reaction can never outlive the event it points at.
+--
+-- `kind` stores a short code, not the emoji itself: the glyphs the UI renders
+-- carry variation selectors ('❤️'), and a code keeps the CHECK constraint
+-- from turning into a unicode-normalisation puzzle. The client maps code -> glyph
+-- (src/lib/socialFeed.ts REACTIONS).
+create table if not exists public.activity_reactions (
+  activity_id uuid not null references public.activity(id) on delete cascade,
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  kind        text not null check (kind in ('fire','eyes','heart')),
+  created_at  timestamptz not null default now(),
+  -- One row per person per emoji: re-reacting is an upsert, un-reacting a delete.
+  primary key (activity_id, user_id, kind)
+);
+create index if not exists activity_reactions_activity_id_idx on public.activity_reactions (activity_id);
+
+create table if not exists public.activity_comments (
+  id          uuid primary key default gen_random_uuid(),
+  activity_id uuid not null references public.activity(id) on delete cascade,
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  body        text not null check (length(btrim(body)) between 1 and 500),
+  created_at  timestamptz not null default now()
+);
+create index if not exists activity_comments_activity_id_created_at_idx
+  on public.activity_comments (activity_id, created_at);
+
 -- ============================================================================
 -- COLUMN MIGRATIONS — for tables that predate a column. The CREATE TABLEs above
 -- are skipped entirely on a live database, so anything added after the initial
@@ -184,12 +212,33 @@ $$;
 revoke all on function private.can_view(uuid) from public;
 grant execute on function private.can_view(uuid) to authenticated, anon;
 
+-- Reactions and comments inherit the visibility of the activity row they hang
+-- off, so their policies need can_view() applied to that row's *owner*, not to
+-- the reactor. Security definer: the lookup has to see the activity row even
+-- when the caller's own RLS would filter it, or the policy could never say yes.
+create or replace function private.can_view_activity(target uuid)
+returns boolean
+language sql
+security definer
+set search_path = ''
+stable
+as $$
+  select exists (
+    select 1 from public.activity a
+    where a.id = target and private.can_view(a.user_id)
+  );
+$$;
+revoke all on function private.can_view_activity(uuid) from public;
+grant execute on function private.can_view_activity(uuid) to authenticated, anon;
+
 alter table public.profiles       enable row level security;
 alter table public.movies         enable row level security;
 alter table public.activity       enable row level security;
 alter table public.user_settings  enable row level security;
 alter table public.friendships    enable row level security;
 alter table public.friend_requests enable row level security;
+alter table public.activity_reactions enable row level security;
+alter table public.activity_comments  enable row level security;
 
 -- CREATE POLICY has no `if not exists` and no `or replace`, so each one is
 -- dropped and re-created. The drop/create pair runs inside the SQL Editor's
@@ -243,6 +292,34 @@ drop policy if exists fr_update on public.friend_requests;
 create policy fr_update on public.friend_requests for update
   to authenticated using ((select auth.uid()) = recipient_id)
   with check ((select auth.uid()) = recipient_id);
+
+-- You may react/comment on anything you are allowed to see, and take back only
+-- your own. No update policy on either: a reaction toggles by delete, and a
+-- comment is post-or-delete — editing one after friends have read it is not a
+-- thing the UI offers.
+drop policy if exists reactions_visible_read on public.activity_reactions;
+create policy reactions_visible_read on public.activity_reactions for select
+  to authenticated using (private.can_view_activity(activity_id));
+drop policy if exists reactions_owner_write on public.activity_reactions;
+create policy reactions_owner_write on public.activity_reactions for insert
+  to authenticated with check (
+    (select auth.uid()) = user_id and private.can_view_activity(activity_id)
+  );
+drop policy if exists reactions_owner_delete on public.activity_reactions;
+create policy reactions_owner_delete on public.activity_reactions for delete
+  to authenticated using ((select auth.uid()) = user_id);
+
+drop policy if exists comments_visible_read on public.activity_comments;
+create policy comments_visible_read on public.activity_comments for select
+  to authenticated using (private.can_view_activity(activity_id));
+drop policy if exists comments_owner_write on public.activity_comments;
+create policy comments_owner_write on public.activity_comments for insert
+  to authenticated with check (
+    (select auth.uid()) = user_id and private.can_view_activity(activity_id)
+  );
+drop policy if exists comments_owner_delete on public.activity_comments;
+create policy comments_owner_delete on public.activity_comments for delete
+  to authenticated using ((select auth.uid()) = user_id);
 
 -- ============================================================================
 -- AUTH TRIGGER — auto-create profile + settings row on signup
@@ -371,7 +448,8 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['movies','friend_requests','friendships','activity'] loop
+  foreach t in array array['movies','friend_requests','friendships','activity',
+                           'activity_reactions','activity_comments'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
