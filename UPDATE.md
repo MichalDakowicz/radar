@@ -12,6 +12,8 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Fixed
 
 - Double-pressing the Library tab clears its filters too, not just search and scroll
+- Library jumps back to the top when you search, filter or re-sort instead of landing mid-list
+- Browse search results start at the top on a new query or result-type filter
 
 ## 2.3.0 — 2026-08-01
 

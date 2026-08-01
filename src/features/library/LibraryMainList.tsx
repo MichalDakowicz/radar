@@ -1,5 +1,5 @@
-import { FlashList } from '@shopify/flash-list';
-import type { ReactElement } from 'react';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import type { ReactElement, RefObject } from 'react';
 import { View } from 'react-native';
 
 import { columnsFor, gapForSize } from '@/components/media/MediaGrid';
@@ -18,9 +18,11 @@ type LibraryMainListProps = {
   highlightedId?: string | null;
   onPress: (movie: Movie) => void;
   ListHeaderComponent?: ReactElement;
+  /** Lets the screen scroll the list back to the top when filters change. */
+  listRef?: RefObject<FlashListRef<Movie> | null>;
 };
 
-export function LibraryMainList({ movies, viewMode, gridSize, highlightedId, onPress, ListHeaderComponent }: LibraryMainListProps) {
+export function LibraryMainList({ movies, viewMode, gridSize, highlightedId, onPress, ListHeaderComponent, listRef }: LibraryMainListProps) {
   // Measured, not window width: on desktop the sidebar + centred content column
   // make the window hundreds of pixels wider than this list actually gets.
   const { width, onLayout } = useMeasuredWidth();
@@ -35,6 +37,7 @@ export function LibraryMainList({ movies, viewMode, gridSize, highlightedId, onP
   return (
     <View className="flex-1" onLayout={onLayout}>
       <FlashList
+        ref={listRef}
         key={`main-${viewMode}-${columns}-${gridSize}`}
         data={movies}
         numColumns={columns}

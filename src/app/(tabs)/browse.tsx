@@ -1,3 +1,4 @@
+import type { FlashListRef } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
@@ -21,7 +22,9 @@ import { useBrowseSearch } from '@/features/browse/useBrowseSearch';
 import { type BrowseTabId, useDiscoveryFeed } from '@/features/browse/useDiscoveryFeed';
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
 import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
+import { useScrollToTopOnChange } from '@/hooks/useScrollToTopOnChange';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import type { BrowseSearchResult } from '@/lib/tmdb';
 import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
 
@@ -37,6 +40,10 @@ function Browse() {
   const search = useBrowseSearch();
   const filterSheetRef = useRef<BottomSheetModal>(null);
   const region = useUserSettings().settings.watchProviderCountry;
+
+  // A new query or result-type filter replaces the grid's contents, so it
+  // starts at the top rather than keeping the previous search's offset.
+  const searchListRef = useScrollToTopOnChange<FlashListRef<BrowseSearchResult>>(`${search.query}|${search.resultFilter}`);
 
   const quickAdd = useQuickAdd();
   // Feed stays edge-to-edge on phones; on desktop it's a centred column so the
@@ -112,6 +119,7 @@ function Browse() {
       {search.isSearching ? (
         <ContentShell fill maxWidth={MAX_W.grid}>
           <SearchResultsGrid
+            listRef={searchListRef}
             results={search.results}
             onSelectMedia={openMedia}
             onSelectPerson={openPerson}

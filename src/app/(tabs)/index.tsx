@@ -1,3 +1,4 @@
+import type { FlashListRef } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -15,6 +16,7 @@ import { RandomPickSheet } from '@/features/library/RandomPickSheet';
 import { useLibraryFilters } from '@/features/library/useLibraryFilters';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W } from '@/hooks/useResponsive';
+import { useScrollToTopOnChange } from '@/hooks/useScrollToTopOnChange';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { useLibraryPrefs } from '@/store/libraryPrefs';
 import { withTabReload } from '@/store/tabReload';
@@ -64,6 +66,15 @@ function LibraryScreen() {
     showRecentlyAdded: settings.showRecentlyAdded,
     ownedServices: settings.ownedServices,
   });
+
+  // Searching, filtering or re-sorting replaces what the list is showing, so it
+  // goes back to the top instead of leaving the user parked at an offset that
+  // now points into the middle of a different result set.
+  const listRef = useScrollToTopOnChange<FlashListRef<Movie>>(
+    [searchQuery, statusFilter, sortBy, sortDir, selectedServices, selectedGenres, selectedDirectors, selectedYears]
+      .map((part) => (Array.isArray(part) ? part.join(',') : part))
+      .join('|'),
+  );
 
   const filterSheetRef = useRef<BottomSheetModal>(null);
   const randomPickRef = useRef<BottomSheetModal>(null);
@@ -123,6 +134,7 @@ function LibraryScreen() {
 
       <ContentShell fill maxWidth={MAX_W.grid}>
         <LibraryMainList
+          listRef={listRef}
           movies={filters.mainMovies}
           viewMode={viewMode}
           gridSize={gridSize}
