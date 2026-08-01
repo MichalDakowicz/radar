@@ -2,7 +2,7 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.2.2 — Unreleased
+## 2.2.2 — 2026-08-01
 
 ### Fixed
 
