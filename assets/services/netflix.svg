@@ -1,10 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" fill="#e50914">
   <title>Netflix</title>
-  <!-- The N as three solid strokes: two uprights and the band descending from
-       the head of the left one to the foot of the right one. Vector on
-       purpose - the file this replaced wrapped a base64 PNG in an image tag,
-       which react-native-svg does not render. -->
-  <path d="M5 2h4v20H5z" />
-  <path d="M15 2h4v20h-4z" />
-  <path d="M9 2h4l6 20h-4z" />
+  <!-- Two full-height uprights plus a band that spans only the gap between
+       them, meeting the head of the left one and the foot of the right one.
+       The band deliberately stops at the uprights' inner edges: overlapping
+       them fattens the mark on one side and it reads as crooked at badge size.
+       Vector on purpose - this replaced a base64 PNG in an image tag, which
+       react-native-svg does not render. -->
+  <path d="M5 2h4.5v20H5z" />
+  <path d="M14.5 2H19v20h-4.5z" />
+  <path d="M9.5 2l5 13.6V22l-5-13.6z" />
 </svg>
