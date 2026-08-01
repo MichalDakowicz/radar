@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Plus, Share2, Shuffle } from 'lucide-react-native';
+import { Plus, Settings as SettingsIcon, Share2, Shuffle } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,8 @@ import { useQuickAddSheetStore } from '@/store/quickAddSheet';
 type HeaderProps = {
   onRandomPick?: () => void;
   onShare?: () => void;
+  /** Profile only: the gear that pushes /settings, which has no tab of its own. */
+  onSettings?: () => void;
   refreshingLabel?: string;
   /** Desktop only: align the bar with the screen's content column (MAX_W.*). */
   maxWidth?: number;
@@ -25,7 +27,7 @@ type HeaderProps = {
 // On desktop web this bar also carries the destination links, exactly like
 // legacy's navbar: one row of chrome at the top instead of a side rail eating
 // horizontal space. The bottom tabs cover the same routes on phones.
-export function Header({ onRandomPick, onShare, refreshingLabel, maxWidth = MAX_W.grid }: HeaderProps) {
+export function Header({ onRandomPick, onShare, onSettings, refreshingLabel, maxWidth = MAX_W.grid }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const isDesktop = useIsDesktop();
   const router = useRouter();
@@ -56,6 +58,9 @@ export function Header({ onRandomPick, onShare, refreshingLabel, maxWidth = MAX_
               )}
               <BarButton onPress={() => presentQuickAdd?.()} label="Add Movie" icon={<Plus size={15} color="#fff" />} primary />
               {!!onShare && <BarButton onPress={onShare} label="Share shelf" icon={<Share2 size={15} color="hsl(0 0% 98%)" />} />}
+              {!!onSettings && (
+                <BarButton onPress={onSettings} label="Settings" icon={<SettingsIcon size={15} color="hsl(0 0% 98%)" />} />
+              )}
               <NavLinks />
             </View>
           </View>
@@ -91,6 +96,16 @@ export function Header({ onRandomPick, onShare, refreshingLabel, maxWidth = MAX_
         {!!onShare && (
           <Pressable onPress={onShare} className="rounded-full p-2">
             <Share2 size={18} color="hsl(0 0% 63.9%)" />
+          </Pressable>
+        )}
+        {!!onSettings && (
+          <Pressable
+            onPress={onSettings}
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
+            className="h-11 w-11 items-center justify-center rounded-full active:opacity-60"
+          >
+            <SettingsIcon size={20} color="hsl(0 0% 98%)" />
           </Pressable>
         )}
       </View>

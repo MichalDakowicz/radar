@@ -15,9 +15,11 @@ Written per `UPDATE-schema.md`. Newest version first.
 - Compare taste scores your overlap and can add their picks to your watchlist
 - Watch together lists what is on both your watchlists and picks one for tonight
 - Friend requests now have their own inbox, reached from the bell on Social
+- Profile is a tab of its own, showing your totals, top 4, in progress and recent logs
 
 ### Changed
 
+- Settings moved behind the gear on Profile instead of taking up a tab
 - The Friends tab is now Social, and each friend row carries its own menu
 - Removing a friend asks first and says what you both lose
 

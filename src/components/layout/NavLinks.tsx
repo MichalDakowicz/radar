@@ -1,5 +1,5 @@
 import { usePathname, useRouter, type Href } from 'expo-router';
-import { BarChart3, Compass, LibraryBig, Settings as SettingsIcon, Users } from 'lucide-react-native';
+import { BarChart3, CircleUserRound, Compass, LibraryBig, Users } from 'lucide-react-native';
 import { useCallback, useRef, type ReactNode } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -53,11 +53,12 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     isActive: (pathname) => pathname.startsWith('/social') || pathname.startsWith('/friend'),
   },
   {
-    href: '/settings',
-    label: 'Settings',
-    tabName: 'settings',
-    icon: (color) => <SettingsIcon color={color} size={18} />,
-    isActive: (pathname) => pathname.startsWith('/settings'),
+    href: '/profile',
+    label: 'Profile',
+    tabName: 'profile',
+    icon: (color) => <CircleUserRound color={color} size={18} />,
+    // /settings is pushed from the gear up here, so the link stays lit there.
+    isActive: (pathname) => pathname.startsWith('/profile') || pathname.startsWith('/settings'),
   },
 ];
 
@@ -95,8 +96,8 @@ export function NavLinks() {
     <View className="flex-row items-center gap-1">
       {NAV_DESTINATIONS.map((destination, index) => {
         const active = destination.isActive(pathname);
-        // Settings sits after a divider in legacy's bar - it's app chrome, not a
-        // content destination.
+        // Profile sits after a divider, where Settings used to - it's you, not
+        // one of the content destinations.
         const isLast = index === NAV_DESTINATIONS.length - 1;
         return (
           <View key={destination.label} className="flex-row items-center">

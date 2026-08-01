@@ -9,31 +9,41 @@ import type { TasteTag } from '@/lib/tasteTags';
 import type { FavoriteItem, Movie } from '@/types/movie';
 
 type ShelfSectionsProps = {
-  /** Their pinned top 4. Read-only here — the row hides itself when empty. */
+  /** Their pinned top 4. Read-only unless `onEditFavorites` is passed. */
   favorites: FavoriteItem[];
   inProgress: Movie[];
   recent: Movie[];
-  tags: TasteTag[];
+  /** Shared taste, which only exists when two libraries are being compared. */
+  tags?: TasteTag[];
   onOpenTitle: (movie: Movie) => void;
   onOpenFavorite: (item: FavoriteItem) => void;
   onOpenCollection: () => void;
+  /** Owner-only: turns the top 4 into an editable row on your own profile. */
+  onEditFavorites?: () => void;
+  collectionLabel?: string;
 };
 
-/** Everything under a friend's shelf header: what they're on, what they finished, what you share. */
+/**
+ * Everything under a shelf header: what they're on, what they finished, what
+ * you share. Also drives your own Profile tab — a shelf is a shelf, and the
+ * owner-only bits (editing the top 4) arrive as optional props.
+ */
 export function ShelfSections({
   favorites,
   inProgress,
   recent,
-  tags,
+  tags = [],
   onOpenTitle,
   onOpenFavorite,
   onOpenCollection,
+  onEditFavorites,
+  collectionLabel = 'See full collection',
 }: ShelfSectionsProps) {
   return (
     <View className="gap-6 px-4 pb-10 pt-5">
       {/* Leads the shelf: a pinned top 4 is what someone chose to say about
           themselves, where everything below is just what they happened to log. */}
-      <FavoritesRow favorites={favorites} onPressItem={onOpenFavorite} />
+      <FavoritesRow favorites={favorites} onPressItem={onOpenFavorite} onEdit={onEditFavorites} />
 
       {inProgress.length > 0 && (
         <View className="gap-2.5">
@@ -111,7 +121,7 @@ export function ShelfSections({
         accessibilityRole="button"
         className="h-11 flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-border active:opacity-70"
       >
-        <Text className="text-[13px] font-semibold text-foreground/80">See full collection</Text>
+        <Text className="text-[13px] font-semibold text-foreground/80">{collectionLabel}</Text>
         <ChevronRight size={16} color="hsl(0 0% 70%)" />
       </Pressable>
     </View>
