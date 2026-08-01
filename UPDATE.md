@@ -2,7 +2,7 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.3.0 — Unreleased
+## 2.3.0 — 2026-08-01
 
 ### Added
 
@@ -20,8 +20,9 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Changed
 
 - Settings moved behind the gear on Profile instead of taking up a tab
-- The Friends tab is now Social, and each friend row carries its own menu
-- Removing a friend asks first and says what you both lose
+- The Friends tab is now Social, with a per-friend menu and a confirm before removing one
+
+## 2.2.2 — 2026-08-01
 
 ### Fixed
 
