@@ -39,6 +39,11 @@ export function LibraryMainList({ movies, viewMode, gridSize, highlightedId, onP
       <FlashList
         ref={listRef}
         key={`main-${viewMode}-${columns}-${gridSize}`}
+        // Off by default in FlashList v2 terms: anchoring the visible item is
+        // for chat, where new rows arrive above what you are reading. Here the
+        // data changes because the user re-filtered, and holding their old
+        // offset is precisely what strands them mid-list.
+        maintainVisibleContentPosition={{ disabled: true }}
         data={movies}
         numColumns={columns}
         keyExtractor={(item) => item.id}

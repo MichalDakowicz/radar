@@ -50,6 +50,9 @@ export function SearchResultsGrid({
       <FlashList
         ref={listRef}
         key={`search-${columns}`}
+        // A new query replaces the results outright, so keeping the previous
+        // scroll anchor (FlashList's default) is never what is wanted here.
+        maintainVisibleContentPosition={{ disabled: true }}
         data={results}
         numColumns={columns}
         keyExtractor={(item) => item.resultKey}
