@@ -87,9 +87,9 @@ export default function TabsLayout() {
           listeners={{ tabPress: () => handleTabPress('stats') }}
         />
         <Tabs.Screen
-          name="friends"
-          options={{ title: 'Friends', tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
-          listeners={{ tabPress: () => handleTabPress('friends') }}
+          name="social"
+          options={{ title: 'Social', tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
+          listeners={{ tabPress: () => handleTabPress('social') }}
         />
         <Tabs.Screen
           name="settings"

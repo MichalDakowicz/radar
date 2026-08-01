@@ -44,11 +44,13 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     isActive: (pathname) => pathname.startsWith('/stats'),
   },
   {
-    href: '/friends',
-    label: 'Friends',
-    tabName: 'friends',
+    href: '/social',
+    label: 'Social',
+    tabName: 'social',
     icon: (color) => <Users color={color} size={18} />,
-    isActive: (pathname) => pathname.startsWith('/friends'),
+    // /friend/* (a friend's shelf, compare, watch together) and /friend-requests
+    // are pushed from this tab, so the link stays lit while you are down there.
+    isActive: (pathname) => pathname.startsWith('/social') || pathname.startsWith('/friend'),
   },
   {
     href: '/settings',
