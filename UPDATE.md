@@ -2,7 +2,18 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.4.0 — Unreleased
+## 2.4.0 — 2026-08-01
+
+### Added
+
+- Settings has My services, where you pick the streaming services you subscribe to
+- Library filters gain a My services chip that narrows the grid to what you already pay for
+
+### Fixed
+
+- Double-pressing the Library tab clears its filters too, not just search and scroll
+- Library jumps back to the top when you search, filter or re-sort instead of landing mid-list
+- Browse search results start at the top on a new query or result-type filter
 
 ## 2.3.0 — 2026-08-01
 

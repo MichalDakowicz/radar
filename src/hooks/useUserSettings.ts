@@ -21,6 +21,7 @@ export type UserSettings = {
   streakThreshold: number;
   tvStreakThreshold: number;
   theme: ThemePref;
+  ownedServices: string[];
 };
 
 type UserSettingsRow = {
@@ -31,6 +32,7 @@ type UserSettingsRow = {
   streak_threshold: number;
   tv_streak_threshold: number;
   theme: string | null;
+  owned_services: string[] | null;
 };
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -41,6 +43,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   streakThreshold: 2,
   tvStreakThreshold: 5,
   theme: 'dark',
+  ownedServices: [],
 };
 
 function normalize(row: UserSettingsRow): UserSettings {
@@ -52,6 +55,9 @@ function normalize(row: UserSettingsRow): UserSettings {
     streakThreshold: row.streak_threshold,
     tvStreakThreshold: row.tv_streak_threshold,
     theme: row.theme === 'light' || row.theme === 'system' ? row.theme : 'dark',
+    // Null until the owned_services column migration has been applied, so the
+    // client tolerates a row that predates it rather than crashing the filter.
+    ownedServices: Array.isArray(row.owned_services) ? row.owned_services : [],
   };
 }
 
@@ -63,6 +69,7 @@ const TO_COLUMN: Record<keyof UserSettings, keyof UserSettingsRow> = {
   streakThreshold: 'streak_threshold',
   tvStreakThreshold: 'tv_streak_threshold',
   theme: 'theme',
+  ownedServices: 'owned_services',
 };
 
 function toRow(patch: Partial<UserSettings>): Record<string, unknown> {

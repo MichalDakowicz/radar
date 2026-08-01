@@ -114,7 +114,12 @@ create table if not exists public.user_settings (
   friends_visibility        friends_visibility not null default 'friends',
   streak_threshold          int not null default 2,
   tv_streak_threshold       int not null default 5,
-  theme                     text default 'dark'
+  theme                     text default 'dark',
+  -- Services the user actually subscribes to, as normalized display names
+  -- (lib/services.ts SERVICE_CONFIG keys). Drives the Library "My services"
+  -- filter chip. Free text, not an enum: the service list lives in the client
+  -- and gains entries faster than a Postgres type should be altered.
+  owned_services            text[] not null default '{}'
 );
 
 create table if not exists public.friendships (
@@ -180,6 +185,10 @@ begin
                   else false end);
   end if;
 end $$;
+
+-- user_settings.owned_services (Library "My services" filter).
+alter table public.user_settings
+  add column if not exists owned_services text[] not null default '{}';
 
 -- ============================================================================
 -- RLS

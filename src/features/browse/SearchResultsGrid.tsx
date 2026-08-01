@@ -1,4 +1,5 @@
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import type { RefObject } from 'react';
 import { View } from 'react-native';
 
 import { columnsFor, gapForSize } from '@/components/media/MediaGrid';
@@ -19,6 +20,8 @@ type SearchResultsGridProps = {
   onAdd: (movie: Movie) => void;
   onRemove: (movie: Movie) => void;
   isAdded: (movie: Movie) => boolean;
+  /** Lets Browse scroll results back to the top on a new query or filter. */
+  listRef?: RefObject<FlashListRef<BrowseSearchResult> | null>;
 };
 
 // Browse's own grid (doc 03 `SearchResultsGrid`) - mixes movie/tv results
@@ -32,6 +35,7 @@ export function SearchResultsGrid({
   onAdd,
   onRemove,
   isAdded,
+  listRef,
 }: SearchResultsGridProps) {
   const { width, onLayout } = useMeasuredWidth();
   const columns = columnsFor('normal', width);
@@ -44,7 +48,11 @@ export function SearchResultsGrid({
   return (
     <View className="flex-1" onLayout={onLayout}>
       <FlashList
+        ref={listRef}
         key={`search-${columns}`}
+        // A new query replaces the results outright, so keeping the previous
+        // scroll anchor (FlashList's default) is never what is wanted here.
+        maintainVisibleContentPosition={{ disabled: true }}
         data={results}
         numColumns={columns}
         keyExtractor={(item) => item.resultKey}

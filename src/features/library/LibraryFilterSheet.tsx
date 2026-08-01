@@ -5,6 +5,7 @@ import { ServiceFilterChips } from '@/components/media/ServiceFilterChips';
 import { BottomSheetModal, Sheet } from '@/components/ui/Sheet';
 import { FacetFilterRow } from '@/features/library/FacetFilterRow';
 import { useMovies } from '@/hooks/useMovies';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { libraryFacets } from '@/lib/libraryFacets';
 import { type SortBy, type StatusFilter, useLibraryPrefs } from '@/store/libraryPrefs';
 
@@ -80,6 +81,7 @@ export const LibraryFilterSheet = forwardRef<BottomSheetModal>(function LibraryF
     resetFilters,
   } = useLibraryPrefs();
   const { movies } = useMovies();
+  const { settings } = useUserSettings();
   const facets = useMemo(() => libraryFacets(movies), [movies]);
   // Chips + three labels come to a fixed height, so the sheet is sized to what
   // it measures rather than to a fraction of the screen - at '70%' alone it
@@ -106,7 +108,7 @@ export const LibraryFilterSheet = forwardRef<BottomSheetModal>(function LibraryF
 
         <View className="gap-2">
           <Text className="text-sm font-semibold text-foreground">Streaming service</Text>
-          <ServiceFilterChips selected={selectedServices} onToggle={toggleService} />
+          <ServiceFilterChips selected={selectedServices} onToggle={toggleService} ownedServices={settings.ownedServices} />
         </View>
 
         <FacetFilterRow title="Genre" facets={facets.genres} selected={selectedGenres} onToggle={toggleGenre} />

@@ -9,11 +9,13 @@ import Hulu from '@/assets/services/hulu.svg';
 import Max from '@/assets/services/max.svg';
 import Netflix from '@/assets/services/netflix.svg';
 import Paramountplus from '@/assets/services/paramountplus.svg';
+import Peacock from '@/assets/services/peacock.svg';
 import Primevideo from '@/assets/services/primevideo.svg';
 
 // Normalized service name (lib/services SERVICE_CONFIG keys) -> brand logo.
-// Only the services that ship an icon in legacy/public/icons are mapped;
-// unmapped ones (e.g. Peacock, Other) fall back to the letter badge.
+// Every service in SERVICE_CONFIG now ships a mark; anything outside it (a
+// provider TMDB reports that we do not style, "Other") falls back to the
+// lettered badge.
 const SERVICE_LOGOS: Record<string, FC<SvgProps>> = {
   Netflix,
   'Prime Video': Primevideo,
@@ -22,6 +24,7 @@ const SERVICE_LOGOS: Record<string, FC<SvgProps>> = {
   Max,
   'Apple TV+': Appletv,
   'Paramount+': Paramountplus,
+  Peacock,
   Fubo,
   'Criterion Channel': Criterion,
 };

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" fill="none" stroke-width="3.6" stroke-linecap="round">
+  <title>Peacock</title>
+  <!-- Hand-drawn stand-in, not the shipped brand asset: six feathers fanning
+       from a point in the NBC peacock's colour order (gold, orange, red,
+       purple, blue, green). Drop an official peacock.svg in over this file and
+       nothing else has to change. -->
+  <path d="M12 20.5 2.3 17.9" stroke="#ffb800" />
+  <path d="M12 20.5 4.9 13.4" stroke="#ff7a00" />
+  <path d="M12 20.5 9.4 10.8" stroke="#f42c2c" />
+  <path d="M12 20.5 14.6 10.8" stroke="#9b2fae" />
+  <path d="M12 20.5 19.1 13.4" stroke="#1a73e8" />
+  <path d="M12 20.5 21.7 17.9" stroke="#16a34a" />
+</svg>
