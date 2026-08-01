@@ -2,6 +2,8 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
+## 2.4.0 — Unreleased
+
 ## 2.3.0 — 2026-08-01
 
 ### Added
