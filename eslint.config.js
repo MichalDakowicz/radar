@@ -5,6 +5,8 @@ const expoConfig = require("eslint-config-expo/flat");
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*"],
+    // supabase/functions is Deno, not React Native — different globals, its own
+    // toolchain, and `supabase functions deploy` type-checks it on the way out.
+    ignores: ["dist/*", "supabase/functions/*"],
   }
 ]);
