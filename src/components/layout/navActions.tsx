@@ -3,6 +3,7 @@ import { ArrowLeft, CalendarRange, Inbox, Plus, Search, Settings, type LucideIco
 import { useCallback } from 'react';
 
 import { useIncomingRequestCount } from '@/hooks/useFriends';
+import { useUnreadInboxCount } from '@/hooks/useNotifications';
 import { periodShortLabel } from '@/lib/statsPeriod';
 import { useQuickAddSheetStore } from '@/store/quickAddSheet';
 import { useSearchFocus } from '@/store/searchFocus';
@@ -27,7 +28,7 @@ const ICONS: Record<string, LucideIcon> = {
 // Routes pushed out of the tabs that still render the bar. Their destination
 // stays lit, but the left island becomes Back: a tab's usual action here would
 // be the screen you are already standing on.
-const NESTED_ROUTES = ['/settings', '/friend-requests'];
+const NESTED_ROUTES = ['/settings', '/inbox'];
 
 export function isNestedNavRoute(pathname: string): boolean {
   return NESTED_ROUTES.includes(pathname);
@@ -48,7 +49,10 @@ export function useNavAction(pathname: string, activeTab: string | null): NavAct
   const presentQuickAdd = useQuickAddSheetStore((s) => s.present);
   const presentPeriod = useStatsPeriodSheet((s) => s.present);
   const period = useStatsPeriod((s) => s.period);
-  const requestCount = useIncomingRequestCount();
+  // Two independent piles land in the same place: requests you have not answered
+  // and notifications you have not read. The badge is what is waiting for you,
+  // so it is their sum rather than either one on its own.
+  const inboxCount = useIncomingRequestCount() + useUnreadInboxCount();
   const nested = isNestedNavRoute(pathname);
 
   const onPress = useCallback(() => {
@@ -61,7 +65,7 @@ export function useNavAction(pathname: string, activeTab: string | null): NavAct
       case 'stats':
         return presentPeriod?.();
       case 'social':
-        return router.push('/friend-requests');
+        return router.push('/inbox');
       case 'profile':
         return router.push('/settings');
     }
@@ -75,7 +79,7 @@ export function useNavAction(pathname: string, activeTab: string | null): NavAct
     index: 'Add a title',
     browse: 'Search',
     stats: `Time period: ${periodShortLabel(period)}`,
-    social: requestCount ? `Friend requests, ${requestCount} pending` : 'Friend requests',
+    social: inboxCount ? `Inbox, ${inboxCount} waiting` : 'Inbox',
     profile: 'Settings',
   };
   const key = activeTab ?? 'index';
@@ -83,12 +87,12 @@ export function useNavAction(pathname: string, activeTab: string | null): NavAct
   return {
     label: labels[key] ?? 'Add a title',
     Icon: ICONS[key] ?? Plus,
-    badge: key === 'social' ? requestCount : 0,
+    badge: key === 'social' ? inboxCount : 0,
     onPress,
   };
 }
 
-/** Pending friend requests — the dot the Social destination wears from any tab. */
+/** Anything waiting in the inbox — the dot the Social destination wears from any tab. */
 export function useSocialAlert(): boolean {
-  return useIncomingRequestCount() > 0;
+  return useIncomingRequestCount() + useUnreadInboxCount() > 0;
 }

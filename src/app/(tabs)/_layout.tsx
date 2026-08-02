@@ -20,7 +20,7 @@ import { useStatsPeriodSheet } from '@/store/statsPeriod';
 // The bar is the floating nav islands on every viewport, phone and desktop web
 // alike - it is the app's only navigation chrome now that the top bar is gone.
 // It drives itself off the route rather than off this navigator (so it can also
-// render on /settings and /friend-requests), which is why there are no tabPress
+// render on /settings and /inbox), which is why there are no tabPress
 // listeners here any more: NavIslands owns the double-press-to-reload window.
 // Keep the screen order below in sync with NAV_DESTINATIONS all the same - the
 // web digit shortcuts index into it.

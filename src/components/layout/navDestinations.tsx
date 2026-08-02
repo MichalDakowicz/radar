@@ -14,7 +14,7 @@ export type NavDestination = {
   icon: (color: string, size: number) => ReactNode;
   /**
    * Route-driven rather than read off the tab navigator, because the bar also
-   * renders on routes pushed *out* of the tabs (/settings, /friend-requests).
+   * renders on routes pushed *out* of the tabs (/settings, /inbox).
    * Those keep their parent destination lit — you have not left Profile just
    * because you opened its settings.
    */
@@ -48,9 +48,10 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     label: 'Social',
     tabName: 'social',
     icon: (color, size) => <Users color={color} size={size} />,
-    // /friend-requests and a friend's shelf are pushed from this tab, so it
-    // stays lit while you are down there.
-    isActive: (pathname) => pathname.startsWith('/social') || pathname.startsWith('/friend'),
+    // /inbox and a friend's shelf are pushed from this tab, so it stays lit
+    // while you are down there.
+    isActive: (pathname) =>
+      pathname.startsWith('/social') || pathname.startsWith('/friend') || pathname.startsWith('/inbox'),
   },
   {
     href: '/profile',

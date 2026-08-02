@@ -46,7 +46,7 @@ const DOUBLE_PRESS_MS = 400;
  * to, which is why screens no longer render chrome of their own.
  *
  * Route-driven rather than wired into the tab navigator, because it also mounts
- * on routes pushed out of the tabs (/settings, /friend-requests) so the bar
+ * on routes pushed out of the tabs (/settings, /inbox) so the bar
  * never disappears mid-journey. Absolutely positioned on purpose: the glass is
  * only glass if posters scroll under it. Bodies pad for it with `useNavBarSpace`.
  */
