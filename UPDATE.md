@@ -14,6 +14,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 - The occasional suggestion to pick something back up after a few quiet days
 - Quiet hours hold banners overnight without keeping anything out of the inbox
 - Tapping a notification opens the title, friend or screen it is about and marks it read
+- Friend activity, reactions and comments open that event's own page, with its comments
 - The inbox badge lights up as a notification arrives and on app open, not on inbox open
 
 ### Changed

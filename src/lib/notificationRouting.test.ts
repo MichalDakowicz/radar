@@ -7,6 +7,17 @@ describe('notificationHref', () => {
     expect(notificationHref({ kind: 'release', data: { tmdbId: 1396, mediaType: 'tv' } })).toBe('/movie/1396/tv');
   });
 
+  // The event beats the title for the three social kinds: reactions and comments
+  // hang off the activity row, not off the film.
+  it('opens the activity page for a social row that names one', () => {
+    const data = { activityId: 'act-1', tmdbId: 949, mediaType: 'movie' } as const;
+    expect(notificationHref({ kind: 'friend_activity', data })).toBe('/activity/act-1');
+    expect(notificationHref({ kind: 'reaction', data })).toBe('/activity/act-1');
+    expect(notificationHref({ kind: 'comment', data })).toBe('/activity/act-1');
+    // A release alert is about the title, so it ignores an activity id entirely.
+    expect(notificationHref({ kind: 'release', data })).toBe('/movie/949/movie');
+  });
+
   // A poster row the viewer can no longer read leaves tmdbId null; the feed is
   // still a better landing than nowhere.
   it('falls back per kind when there is no title to open', () => {
@@ -21,8 +32,10 @@ describe('notificationHref', () => {
     expect(notificationHref({ kind: 'friend_accepted', data: {} })).toBe('/social');
   });
 
-  it('sends a friend request to the inbox and a streak warning to Stats', () => {
-    expect(notificationHref({ kind: 'friend_request', data: { senderId: 'abc' } })).toBe('/inbox');
+  it('sends a friend request to whoever sent it, and a streak warning to Stats', () => {
+    expect(notificationHref({ kind: 'friend_request', data: { senderId: 'abc' } })).toBe('/friend/abc');
+    // Rows written before the payload carried a sender still have somewhere to go.
+    expect(notificationHref({ kind: 'friend_request', data: {} })).toBe('/inbox');
     expect(notificationHref({ kind: 'streak_risk', data: { streak: 9 } })).toBe('/stats');
   });
 

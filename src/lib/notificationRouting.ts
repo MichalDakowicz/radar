@@ -13,6 +13,15 @@ function titleHref(data: NotificationData): string | null {
 }
 
 /**
+ * The event itself, when the row carries one. Preferred over the title page for
+ * anything social: "Ana finished Dune" is about what Ana did, and the reactions
+ * and comments that answer it live on the event, not on Dune.
+ */
+function activityHref(data: NotificationData): string | null {
+  return data.activityId ? `/activity/${data.activityId}` : null;
+}
+
+/**
  * The route a tap should open, or null when there is nowhere better than where
  * the user already is. Falls back deliberately rather than to the title page:
  * a friend-activity row whose poster row has since gone private still knows the
@@ -23,14 +32,18 @@ export function notificationHref(notification: Routable): string | null {
 
   switch (notification.kind) {
     case 'friend_request':
-      // Actionable in the inbox itself, so this only matters from a banner.
-      return '/inbox';
+      // Whoever is asking, rather than the inbox: the question is "who is this
+      // person", and the accept/decline cards are one back-tap away. Older rows
+      // predating the senderId payload still land on the inbox.
+      return data.senderId ? `/friend/${data.senderId}` : '/inbox';
     case 'friend_accepted':
       return data.friendId ? `/friend/${data.friendId}` : '/social';
     case 'friend_activity':
     case 'reaction':
     case 'comment':
-      return titleHref(data) ?? '/social';
+      // Event page first, then the title, then the feed — each fallback is a
+      // step further from what the notification actually said.
+      return activityHref(data) ?? titleHref(data) ?? '/social';
     case 'release':
     case 'release_soon':
     case 'nudge':

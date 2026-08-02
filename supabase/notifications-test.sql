@@ -108,6 +108,7 @@ declare
   me     uuid;
   actor  uuid;
   pick   record;
+  event  uuid;
   stamp  text := to_char(now(), 'HH24MISS');   -- unique per run, so re-seeding works
 begin
   select user_id into me from public.zz_test_user;
@@ -126,10 +127,21 @@ begin
    order by m.in_progress desc, m.added_at desc
    limit 1;
 
+  -- A real activity row of the actor's: the three social kinds route to
+  -- /activity/<id>, and a null here makes them fall back to the title page,
+  -- which is a different thing to be testing.
+  select a.id into event
+    from public.activity a
+   where a.user_id = actor
+   order by a.created_at desc
+   limit 1;
+
+  -- senderId, matching private.on_friend_request — the tap opens that person's
+  -- profile, so a payload with the wrong key would land on the inbox instead.
   perform private.enqueue_notification(me, 'friend_request',
     private.actor_name(actor), 'wants to be friends',
     'test:friend_request:' || stamp,
-    jsonb_build_object('requestId', actor), actor);
+    jsonb_build_object('senderId', actor), actor);
 
   perform private.enqueue_notification(me, 'friend_accepted',
     private.actor_name(actor), 'accepted your friend request',
@@ -140,21 +152,23 @@ begin
     private.actor_name(actor),
     'finished ' || coalesce(pick.title, 'something'),
     'test:friend_activity:' || stamp,
-    jsonb_build_object('movieTitle', pick.title, 'tmdbId', pick.tmdb_id,
-                       'mediaType', pick.type, 'coverUrl', pick.cover_url),
+    jsonb_build_object('activityId', event, 'movieTitle', pick.title,
+                       'tmdbId', pick.tmdb_id, 'mediaType', pick.type,
+                       'coverUrl', pick.cover_url),
     actor);
 
   perform private.enqueue_notification(me, 'reaction',
     private.actor_name(actor),
     'reacted 🔥 to ' || coalesce(pick.title, 'your activity'),
     'test:reaction:' || stamp,
-    jsonb_build_object('movieTitle', pick.title, 'reaction', 'fire'), actor);
+    jsonb_build_object('activityId', event, 'movieTitle', pick.title,
+                       'reaction', 'fire'), actor);
 
   perform private.enqueue_notification(me, 'comment',
     private.actor_name(actor),
     'commented: this one is genuinely great',
     'test:comment:' || stamp,
-    jsonb_build_object('movieTitle', pick.title), actor);
+    jsonb_build_object('activityId', event, 'movieTitle', pick.title), actor);
 
   perform private.enqueue_notification(me, 'release',
     coalesce(pick.title, 'Something'),
