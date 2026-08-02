@@ -97,9 +97,9 @@ create index if not exists movies_user_id_tmdb_id_idx      on public.movies (use
 create index if not exists movies_user_id_watched_idx      on public.movies (user_id, watched);
 create index if not exists movies_user_id_in_watchlist_idx on public.movies (user_id, in_watchlist);
 create index if not exists movies_user_id_expr_idx         on public.movies (user_id, ((ratings->>'overall')::numeric));
--- Refresh queue reads oldest-synced-first, never-synced ahead of everything.
-create index if not exists movies_user_id_metadata_synced_at_idx
-  on public.movies (user_id, metadata_synced_at nulls first);
+-- movies_user_id_metadata_synced_at_idx is created down in COLUMN MIGRATIONS:
+-- on a live database this CREATE TABLE is skipped, so the column it indexes
+-- only exists after the `alter table ... add column if not exists` below.
 
 create table if not exists public.activity (
   id          uuid primary key default gen_random_uuid(),
@@ -200,6 +200,10 @@ alter table public.user_settings
 -- movies.metadata_synced_at (background metadata refresh queue cursor).
 alter table public.movies
   add column if not exists metadata_synced_at timestamptz;
+
+-- The refresh queue reads oldest-synced-first, never-synced ahead of everything.
+create index if not exists movies_user_id_metadata_synced_at_idx
+  on public.movies (user_id, metadata_synced_at nulls first);
 
 -- ============================================================================
 -- RLS
