@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { useBrowsePreload } from '@/features/browse/useBrowsePreload';
 import { FriendRequestListener } from '@/features/friends/FriendRequestListener';
 import { QuickAddSheet } from '@/features/movies/add/QuickAddSheet';
+import { StreakSnapshot } from '@/features/notifications/StreakSnapshot';
 import { StatsPeriodSheet } from '@/features/stats/StatsPeriodSheet';
 import { useQuickAddSheetStore } from '@/store/quickAddSheet';
 import { useStatsPeriodSheet } from '@/store/statsPeriod';
@@ -71,6 +72,7 @@ export default function TabsLayout() {
       <QuickAddSheet ref={quickAddRef} />
       <StatsPeriodSheet ref={periodRef} onPicked={() => periodRef.current?.dismiss()} />
       <FriendRequestListener />
+      <StreakSnapshot />
     </>
   );
 }

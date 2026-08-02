@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { createMMKV } from 'react-native-mmkv';
 
 import { useAuth } from '@/features/auth/AuthProvider';
+import { useNotificationTaps } from '@/features/notifications/useNotificationTaps';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { ensureNotificationChannels } from '@/lib/notificationChannels';
 import { ensureNotificationPermission, supportsNotifications } from '@/lib/notificationSetup';
@@ -27,6 +28,10 @@ export function NotificationSync() {
   const { user } = useAuth();
   const { settings, loading, updateSettings } = useUserSettings();
   const syncedFor = useRef<string | null>(null);
+
+  // Only route a tapped banner once there is somebody to route: a cold start
+  // from a notification resolves auth and the tap at roughly the same moment.
+  useNotificationTaps(!!user?.id);
 
   // Channels first and unconditionally: Android shows their names in the system
   // permission sheet, so creating them after the prompt describes nothing.
