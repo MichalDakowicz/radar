@@ -8,6 +8,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - The public score ring on a movie or show fills out of the bottom centre instead of a corner
 
+### Fixed
+
+- In progress on a shelf no longer lists titles you have already finished
+
 ## 2.5.0 — 2026-08-02
 
 ### Added
