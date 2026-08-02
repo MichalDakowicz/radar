@@ -50,6 +50,14 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+
+# Service account keys. google-services.json is client config and is committed
+# (it ships inside every APK); a *service account* key is an admin credential
+# and must never land in the repo — it goes straight to Expo's credential store.
+*service-account*.json
+*serviceAccount*.json
+*-adminsdk-*.json
+firebase-adminsdk*.json
 .metro-health-check*
 *.tsbuildinfo
 /ios
