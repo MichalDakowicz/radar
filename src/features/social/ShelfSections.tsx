@@ -1,4 +1,5 @@
 import { ChevronRight } from 'lucide-react-native';
+import type { ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { personalScore } from '@/components/media/RatingStars';
@@ -24,6 +25,12 @@ type ShelfSectionsProps = {
   onOpenCollection?: () => void;
   /** Owner-only: turns the top 4 into an editable row on your own profile. */
   onEditFavorites?: () => void;
+  /**
+   * Owner-only slot directly under the top 4 — where your own Profile hangs the
+   * random picker. It sits below the favourites because the pinned four are the
+   * statement; a prompt above them would talk over it.
+   */
+  belowFavorites?: ReactNode;
   collectionLabel?: string;
 };
 
@@ -41,6 +48,7 @@ export function ShelfSections({
   onOpenFavorite,
   onOpenCollection,
   onEditFavorites,
+  belowFavorites,
   collectionLabel = 'See full collection',
 }: ShelfSectionsProps) {
   return (
@@ -48,6 +56,8 @@ export function ShelfSections({
       {/* Leads the shelf: a pinned top 4 is what someone chose to say about
           themselves, where everything below is just what they happened to log. */}
       <FavoritesRow favorites={favorites} onPressItem={onOpenFavorite} onEdit={onEditFavorites} />
+
+      {belowFavorites}
 
       {inProgress.length > 0 && (
         <View className="gap-2.5">

@@ -1,7 +1,7 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Island height, and the gap it keeps from the screen edge and from content. */
-export const NAV_ISLAND_HEIGHT = 46;
+export const NAV_ISLAND_HEIGHT = 52;
 export const NAV_ISLAND_GAP = 10;
 
 /**

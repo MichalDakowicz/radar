@@ -6,6 +6,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { NavDestinationButton } from '@/components/layout/NavDestinationButton';
 import { useNavAction, useSocialAlert } from '@/components/layout/navActions';
 import { NAV_DESTINATIONS } from '@/components/layout/navDestinations';
 import type { BottomSheetModal } from '@/components/ui/Sheet';
@@ -19,9 +20,7 @@ import { useStatsPeriodSheet } from '@/store/statsPeriod';
 const ACCENT = 'hsl(217 91% 60%)';
 const FILL = 'rgba(22,22,22,0.72)';
 const HAIRLINE = 'rgba(255,255,255,0.09)';
-const ACTIVE_PLATE = 'rgba(255,255,255,0.12)';
 const ICON_ON = '#fafafa';
-const ICON_OFF = '#a3a3a3';
 
 // Real backdrop blur on Android needs the Dimezis backend; without it BlurView
 // falls back to a flat tint, which would leave the islands looking painted on.
@@ -84,7 +83,7 @@ export function NavIslands({ state, navigation }: BottomTabBarProps) {
             accessibilityLabel={action.label}
             style={styles.roundPress}
           >
-            <action.Icon size={19} color={ICON_ON} strokeWidth={2.2} />
+            <action.Icon size={21} color={ICON_ON} strokeWidth={2.2} />
             {action.badge > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{action.badge > 9 ? '9+' : action.badge}</Text>
@@ -94,22 +93,15 @@ export function NavIslands({ state, navigation }: BottomTabBarProps) {
         </Island>
 
         <Island style={styles.pill}>
-          {DESTINATIONS.map((destination) => {
-            const active = destination.tabName === activeName;
-            return (
-              <Pressable
-                key={destination.tabName}
-                onPress={() => go(destination.tabName)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                accessibilityLabel={destination.label}
-                style={[styles.dest, { backgroundColor: active ? ACTIVE_PLATE : 'transparent' }]}
-              >
-                {destination.icon(active ? ICON_ON : ICON_OFF, 18)}
-                {destination.tabName === 'social' && socialAlert && <View style={styles.dot} />}
-              </Pressable>
-            );
-          })}
+          {DESTINATIONS.map((destination) => (
+            <NavDestinationButton
+              key={destination.tabName}
+              destination={destination}
+              active={destination.tabName === activeName}
+              alert={destination.tabName === 'social' && socialAlert}
+              onPress={() => go(destination.tabName)}
+            />
+          ))}
         </Island>
 
         <Island style={[styles.round, { borderColor: profileActive ? ACCENT : HAIRLINE }]}>
@@ -120,7 +112,7 @@ export function NavIslands({ state, navigation }: BottomTabBarProps) {
             accessibilityLabel={PROFILE.label}
             style={styles.roundPress}
           >
-            <Avatar profile={profile} size={38} />
+            <Avatar profile={profile} size={44} />
           </Pressable>
         </Island>
       </View>
@@ -156,7 +148,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 9,
   },
   island: {
     height: NAV_ISLAND_HEIGHT,
@@ -169,24 +161,12 @@ const styles = StyleSheet.create({
   round: { width: NAV_ISLAND_HEIGHT },
   roundPress: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4 },
-  dest: { width: 44, height: 38, borderRadius: 99, alignItems: 'center', justifyContent: 'center' },
-  dot: {
-    position: 'absolute',
-    top: 5,
-    right: 8,
-    width: 7,
-    height: 7,
-    borderRadius: 99,
-    backgroundColor: ACCENT,
-    borderWidth: 1.5,
-    borderColor: '#161616',
-  },
   badge: {
     position: 'absolute',
-    top: 3,
-    right: 2,
-    minWidth: 17,
-    height: 17,
+    top: 4,
+    right: 3,
+    minWidth: 18,
+    height: 18,
     paddingHorizontal: 3,
     borderRadius: 99,
     alignItems: 'center',

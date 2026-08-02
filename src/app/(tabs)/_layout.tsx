@@ -58,7 +58,13 @@ export default function TabsLayout() {
 
   return (
     <>
-      <Tabs tabBar={(props) => <NavIslands {...props} />} screenOptions={{ headerShown: false }}>
+      <Tabs
+        tabBar={(props) => <NavIslands {...props} />}
+        // Tabs used to cut between screens with no transition at all. `shift`
+        // cross-fades and slides the outgoing screen a little in the direction
+        // you moved, which reads as one surface changing rather than five.
+        screenOptions={{ headerShown: false, animation: 'shift' }}
+      >
         <Tabs.Screen name="index" options={{ title: 'Library' }} listeners={{ tabPress: () => handleTabPress('index') }} />
         <Tabs.Screen name="browse" options={{ title: 'Browse' }} listeners={{ tabPress: () => handleTabPress('browse') }} />
         <Tabs.Screen name="stats" options={{ title: 'Stats' }} listeners={{ tabPress: () => handleTabPress('stats') }} />

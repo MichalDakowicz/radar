@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { CalendarRange, Inbox, Plus, Search, Settings, type LucideIcon } from 'lucide-react-native';
 import { useCallback } from 'react';
 
-import { useFriends } from '@/hooks/useFriends';
+import { useIncomingRequestCount } from '@/hooks/useFriends';
 import { periodShortLabel } from '@/lib/statsPeriod';
 import { useQuickAddSheetStore } from '@/store/quickAddSheet';
 import { useSearchFocus } from '@/store/searchFocus';
@@ -39,8 +39,7 @@ export function useNavAction(tabName: string): NavAction {
   const presentQuickAdd = useQuickAddSheetStore((s) => s.present);
   const presentPeriod = useStatsPeriodSheet((s) => s.present);
   const period = useStatsPeriod((s) => s.period);
-  // Already fetched app-wide by FriendRequestListener, so this is a cache read.
-  const { requests } = useFriends();
+  const requestCount = useIncomingRequestCount();
 
   const onPress = useCallback(() => {
     switch (tabName) {
@@ -61,20 +60,19 @@ export function useNavAction(tabName: string): NavAction {
     index: 'Add a title',
     browse: 'Search',
     stats: `Time period: ${periodShortLabel(period)}`,
-    social: requests.length ? `Friend requests, ${requests.length} pending` : 'Friend requests',
+    social: requestCount ? `Friend requests, ${requestCount} pending` : 'Friend requests',
     profile: 'Settings',
   };
 
   return {
     label: labels[tabName] ?? 'Add a title',
     Icon: ICONS[tabName] ?? Plus,
-    badge: tabName === 'social' ? requests.length : 0,
+    badge: tabName === 'social' ? requestCount : 0,
     onPress,
   };
 }
 
 /** Pending friend requests — the dot the Social destination wears from any tab. */
 export function useSocialAlert(): boolean {
-  const { requests } = useFriends();
-  return requests.length > 0;
+  return useIncomingRequestCount() > 0;
 }

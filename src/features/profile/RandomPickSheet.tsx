@@ -42,6 +42,10 @@ export const RandomPickSheet = forwardRef<BottomSheetModal, RandomPickSheetProps
     clearTimeout(timeoutRef.current);
     setIsSpinning(false);
     setIsWarming(false);
+    // Drop the previous winner too, so the next open always spins. Profile can
+    // open this sheet against two different pools, and re-showing a title the
+    // other scope picked would be a lie about which pool you asked for.
+    setWinner(null);
   }, []);
 
   const startSpin = useCallback(() => {

@@ -1,6 +1,6 @@
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { ContentShell } from '@/components/layout/ContentShell';
@@ -14,14 +14,16 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { EditProfileSheet } from '@/features/profile/EditProfileSheet';
 import { FavoritesEditorSheet } from '@/features/profile/FavoritesEditorSheet';
 import { MyShelfHeader } from '@/features/profile/MyShelfHeader';
-import { RandomPickCard } from '@/features/profile/RandomPickCard';
+import { RandomPickCard, type RandomPickScope } from '@/features/profile/RandomPickCard';
 import { RandomPickSheet } from '@/features/profile/RandomPickSheet';
 import { ShelfSections } from '@/features/social/ShelfSections';
 import { useMovies } from '@/hooks/useMovies';
 import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { useProfile } from '@/hooks/useProfile';
 import { MAX_W } from '@/hooks/useResponsive';
+import { useUserSettings } from '@/hooks/useUserSettings';
 import { isInWatchlist } from '@/lib/movieStatus';
+import { MY_SERVICES_KEY, matchesServiceFilter } from '@/lib/serviceFilter';
 import { publicShelfUrl } from '@/lib/shelfLink';
 import { inProgressTitles, recentlyLogged, shelfStats } from '@/lib/shelfSummary';
 import { withTabReload } from '@/store/tabReload';
@@ -40,10 +42,14 @@ function ProfileScreen() {
   const { show } = useToast();
   const { profile } = useProfile(user?.id);
   const { movies, loading, error } = useMovies();
+  const { settings } = useUserSettings();
   const navBarSpace = useNavBarSpace();
   const editProfileRef = useRef<BottomSheetModal>(null);
   const favoritesRef = useRef<BottomSheetModal>(null);
   const randomPickRef = useRef<BottomSheetModal>(null);
+  // Bumped rather than set: pressing the same scope twice has to re-open the
+  // sheet, and the counter is what makes the second press a new value.
+  const [pickRequest, setPickRequest] = useState<{ scope: RandomPickScope; nonce: number } | null>(null);
 
   const stats = useMemo(() => shelfStats(movies, (m) => personalScore(m.ratings)), [movies]);
   const recent = useMemo(() => recentlyLogged(movies), [movies]);
@@ -51,6 +57,20 @@ function ProfileScreen() {
   // Same eligibility the Library used with no filters applied: the picker is
   // there to answer "what next", so it only draws from the watchlist.
   const pickable = useMemo(() => movies.filter((m) => isInWatchlist(m)), [movies]);
+  // Narrowed to what you can actually start tonight, using the same owned-service
+  // matching as the Library's "My services" chip.
+  const onMyServices = useMemo(
+    () => pickable.filter((m) => matchesServiceFilter(m, [MY_SERVICES_KEY], settings.ownedServices)),
+    [pickable, settings.ownedServices],
+  );
+  const pickPool = pickRequest?.scope === 'library' ? pickable : onMyServices;
+
+  // Presented from an effect, not from the press handler: the sheet starts its
+  // spin the moment it opens, so the new pool has to be committed as a prop
+  // first or the reel is built from whichever scope was picked last.
+  useEffect(() => {
+    if (pickRequest) randomPickRef.current?.present();
+  }, [pickRequest]);
 
   const openTmdb = (tmdbId: number, type: MediaType) =>
     router.push({ pathname: '/movie/[tmdbId]/[type]', params: { tmdbId: String(tmdbId), type } });
@@ -62,6 +82,9 @@ function ProfileScreen() {
     }
     openTmdb(movie.tmdbId, movie.type);
   };
+
+  const openPicker = (scope: RandomPickScope) =>
+    setPickRequest((previous) => ({ scope, nonce: (previous?.nonce ?? 0) + 1 }));
 
   const handleRandomSelect = (movie: Movie) => {
     randomPickRef.current?.dismiss();
@@ -97,11 +120,18 @@ function ProfileScreen() {
               onEdit={() => editProfileRef.current?.present()}
               onShare={share}
             />
-            <RandomPickCard count={pickable.length} onPress={() => randomPickRef.current?.present()} />
             <ShelfSections
               favorites={profile?.favorites ?? []}
               inProgress={inProgress}
               recent={recent}
+              belowFavorites={
+                <RandomPickCard
+                  serviceCount={onMyServices.length}
+                  libraryCount={pickable.length}
+                  hasServices={settings.ownedServices.length > 0}
+                  onPick={openPicker}
+                />
+              }
               onOpenTitle={openTitle}
               // profiles.favorites is a snapshot, not an FK - a pinned title
               // routes by its own tmdbId whether or not it is still in the
@@ -118,7 +148,7 @@ function ProfileScreen() {
           because the surrounding ScrollView wins the pan gesture. */}
       <EditProfileSheet ref={editProfileRef} />
       <FavoritesEditorSheet ref={favoritesRef} />
-      <RandomPickSheet ref={randomPickRef} movies={pickable} onSelect={handleRandomSelect} />
+      <RandomPickSheet ref={randomPickRef} movies={pickPool} onSelect={handleRandomSelect} />
     </View>
   );
 }

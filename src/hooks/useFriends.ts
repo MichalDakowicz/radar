@@ -134,6 +134,24 @@ export function useFriends() {
   };
 }
 
+/**
+ * Just how many requests are waiting on you — no realtime channel, no
+ * mutations. Always-mounted chrome (the nav bar's inbox badge and the dot on
+ * the Social destination) wants the number, not a second subscription:
+ * FriendRequestListener's `useFriends` already keeps this query key fresh
+ * app-wide, and react-query dedupes the fetch.
+ */
+export function useIncomingRequestCount(): number {
+  const { user } = useAuth();
+  const uid = user?.id;
+  const query = useQuery({
+    queryKey: requestsKey(uid),
+    queryFn: () => fetchIncomingRequests(uid!),
+    enabled: !!uid,
+  });
+  return query.data?.length ?? 0;
+}
+
 // Read-only friend list for another user's public shelf. RLS (friendships_read
 // → private.can_view) silently returns 0 rows when not permitted; the shelf
 // screen uses can_view_user to tell "private" apart from "no friends".
