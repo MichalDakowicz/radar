@@ -790,13 +790,17 @@ end $$;
 -- SCHEDULES — guarded, so this file runs with or without pg_cron installed
 -- ============================================================================
 
+-- `raise warning`, not `raise notice`: the Supabase SQL editor does not surface
+-- notices, so a guard that bailed out looked exactly like a clean success — the
+-- one failure mode this block must not have.
 do $$
 declare
-  base   text;
-  key    text;
+  base    text;
+  key     text;
+  post_fn text;
 begin
   if to_regproc('cron.schedule') is null then
-    raise notice 'pg_cron not installed — skipping schedules. See MANUAL SETUP at the bottom of this file.';
+    raise warning 'pg_cron not installed - no schedules created. Run: create extension if not exists pg_cron;';
     return;
   end if;
 
@@ -812,32 +816,118 @@ begin
     $job$ select private.prune_notifications(); $job$);
 
   -- The push drain needs pg_net plus two Vault secrets; without them the inbox
-  -- still fills and only the banner is missing, so this half is skipped quietly.
-  if to_regproc('net.http_post') is null then
-    raise notice 'pg_net not installed — inbox will fill but nothing will be pushed.';
+  -- still fills and only the banner is missing, so this half is skipped.
+  --
+  -- pg_net lands in `net` when installed bare and in `extensions` when installed
+  -- the way the Supabase dashboard does it, and the function name is the only
+  -- part that is stable. Resolve it rather than assuming one of the two.
+  post_fn := case
+    when to_regproc('net.http_post') is not null        then 'net.http_post'
+    when to_regproc('extensions.http_post') is not null then 'extensions.http_post'
+  end;
+
+  if post_fn is null then
+    raise warning 'pg_net not installed - inbox will fill but nothing will be pushed. Run: create extension if not exists pg_net;';
     return;
   end if;
 
   if to_regclass('vault.decrypted_secrets') is null then
-    raise notice 'Supabase Vault unavailable — push drain not scheduled.';
+    raise warning 'Supabase Vault unavailable - push drain not scheduled.';
     return;
   end if;
 
   execute $q$ select decrypted_secret from vault.decrypted_secrets where name = 'radar_functions_url' $q$ into base;
   execute $q$ select decrypted_secret from vault.decrypted_secrets where name = 'radar_service_role_key' $q$ into key;
   if base is null or key is null then
-    raise notice 'Vault secrets radar_functions_url / radar_service_role_key missing — push drain not scheduled.';
+    raise warning 'Vault secrets radar_functions_url / radar_service_role_key missing - push drain not scheduled.';
     return;
   end if;
 
   perform cron.schedule('radar-push-drain', '* * * * *', format(
-    $job$ select net.http_post(
+    $job$ select %s(
       url     := %L,
       headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer ' || %L),
       body    := '{}'::jsonb,
       timeout_milliseconds := 20000
-    ); $job$, base || '/send-push', key));
+    ); $job$, post_fn, base || '/send-push', key));
+
+  raise notice 'Radar notification schedules installed.';
 end $$;
+
+-- ============================================================================
+-- SETUP CHECK — one query that says what is still missing
+-- ============================================================================
+
+/**
+ * Every precondition push delivery has, as a readable table. Written because the
+ * failure mode of the block above is silence: a missing extension skips a
+ * schedule, and `select ... from cron.job` then returns no rows without saying
+ * why. Run this instead of guessing.
+ */
+create or replace function public.notification_setup_status()
+returns table (item text, ok boolean, detail text)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  job_name  text;
+  found     boolean;
+  secret_ok boolean;
+  pending   int;
+  total     int;
+  devices   int;
+begin
+  -- Everything here is probed dynamically. A `language sql` body would be parsed
+  -- at CREATE time and fail outright on a database where cron.job does not yet
+  -- exist — which is precisely the database this function has to diagnose.
+  item := 'pg_cron extension';
+  ok := to_regproc('cron.schedule') is not null;
+  detail := coalesce(to_regproc('cron.schedule')::text, 'run: create extension if not exists pg_cron;');
+  return next;
+
+  item := 'pg_net extension';
+  ok := to_regproc('net.http_post') is not null or to_regproc('extensions.http_post') is not null;
+  detail := coalesce(to_regproc('net.http_post')::text, to_regproc('extensions.http_post')::text,
+                     'run: create extension if not exists pg_net;');
+  return next;
+
+  foreach job_name in array array['radar_functions_url','radar_service_role_key'] loop
+    secret_ok := false;
+    if to_regclass('vault.secrets') is not null then
+      execute format('select exists (select 1 from vault.secrets where name = %L)', job_name) into secret_ok;
+    end if;
+    item := 'vault secret ' || job_name;
+    ok := secret_ok;
+    detail := case when secret_ok then 'present' else 'run vault.create_secret(...) - see MANUAL SETUP' end;
+    return next;
+  end loop;
+
+  foreach job_name in array array['radar-generate-notifications','radar-prune-notifications','radar-push-drain'] loop
+    found := false;
+    if to_regclass('cron.job') is not null then
+      execute format('select exists (select 1 from cron.job where jobname = %L)', job_name) into found;
+    end if;
+    item := 'cron job ' || job_name;
+    ok := found;
+    detail := case when found then 'scheduled' else 're-run notifications.sql once the rows above are true' end;
+    return next;
+  end loop;
+
+  select count(*) into devices from public.device_tokens;
+  item := 'registered devices';
+  ok := devices > 0;
+  detail := devices::text || ' row(s) in device_tokens';
+  return next;
+
+  select count(*), count(*) filter (where pushed_at is null) into total, pending
+    from public.notifications;
+  item := 'notifications';
+  ok := true;
+  detail := total::text || ' total, ' || pending::text || ' awaiting push';
+  return next;
+end $$;
+grant execute on function public.notification_setup_status() to authenticated, service_role;
 
 -- ============================================================================
 -- MANUAL SETUP — the four steps this file cannot do for you
@@ -867,7 +957,15 @@ end $$;
 -- 4. Deploy the function:
 --      npx supabase functions deploy send-push --no-verify-jwt --project-ref <ref>
 --
--- Check it is alive:
---   select jobname, schedule, active from cron.job where jobname like 'radar-%';
+-- Check it is alive — one query, says what is still missing:
+--   select * from public.notification_setup_status();
+--
+-- Then:
 --   select * from public.notifications order by created_at desc limit 20;
---   select private.generate_scheduled_notifications();   -- force a run
+--   select private.generate_scheduled_notifications();   -- force a generator run
+--   select * from net._http_response order by created desc limit 5;  -- drain results
+--
+-- Note that steps 2 and 3 have to happen BEFORE the schedules can be created, so
+-- this file needs running twice on a fresh project: once to create the tables,
+-- and again after the extensions and secrets exist. The second run is what
+-- registers the cron jobs.
