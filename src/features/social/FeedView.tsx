@@ -144,6 +144,7 @@ export function FeedView({ me, friends, events, loading, pending, loadPending, s
                 event.userId === me?.id ? show('That one is you') : router.push(`/friend/${event.userId}`)
               }
               onOpenTitle={() => openTitle(event.tmdbId, event.mediaType, event.movieTitle)}
+              onOpenEvent={() => router.push(`/activity/${event.id}`)}
               onToggleReaction={(kind) => toggleReaction.mutate({ activityId: event.id, kind })}
               onToggleComposer={() => setComposingId((id) => (id === event.id ? null : event.id))}
               onPostComment={(body) => {
