@@ -16,8 +16,9 @@ type StatsPeriodSheetProps = {
 };
 
 /**
- * Which window the Stats screen reads. Mounted once by the nav bar, opened from
- * the nav's left action on Stats and from the period pill on the screen itself.
+ * Which window the Stats screen reads. Mounted once by the nav bar and opened
+ * from the nav's left action on Stats — the only way in, so the page itself
+ * stays all stats.
  */
 export const StatsPeriodSheet = forwardRef<BottomSheetModal, StatsPeriodSheetProps>(function StatsPeriodSheet(
   { onPicked },

@@ -10,7 +10,7 @@ import { useActivity } from '@/hooks/useActivity';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { useStatsPeriod, useStatsPeriodSheet } from '@/store/statsPeriod';
+import { useStatsPeriod } from '@/store/statsPeriod';
 import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
 
@@ -25,9 +25,6 @@ function StatsScreen() {
   const { activities } = useActivity(20);
   const { settings } = useUserSettings();
   const period = useStatsPeriod((s) => s.period);
-  // The sheet itself is mounted by the nav bar, so its left action can open it
-  // from here; the pill on the screen opens the same instance.
-  const presentPeriod = useStatsPeriodSheet((s) => s.present);
 
   const openMovie = (movie: Movie) => router.push({ pathname: '/edit/[movieId]', params: { movieId: movie.id } });
 
@@ -58,7 +55,6 @@ function StatsScreen() {
           streakThreshold={settings.streakThreshold}
           tvStreakThreshold={settings.tvStreakThreshold}
           period={period}
-          onEditPeriod={() => presentPeriod?.()}
           onOpenMovie={openMovie}
           onManageMovies={(date) => router.push({ pathname: '/manage-completions', params: { date } })}
           onManageTV={(date) => router.push({ pathname: '/manage-tv-completions', params: { date } })}

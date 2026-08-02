@@ -13,7 +13,6 @@ import { QuickStat } from '@/components/stats/QuickStat';
 import { StreakCalendar } from '@/components/stats/StreakCalendar';
 import { ThinProgressBar } from '@/components/stats/ThinProgressBar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { StatsPeriodPill } from '@/features/stats/StatsPeriodPill';
 import { useStats } from '@/features/stats/useStats';
 import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { periodShortLabel, periodStart, scopeMoviesToPeriod, type StatsPeriodId } from '@/lib/statsPeriod';
@@ -41,10 +40,10 @@ type StatsViewProps = {
   // the defaults.
   streakThreshold?: number;
   tvStreakThreshold?: number;
-  // Own screen only: which window the numbers cover, plus the way back into the
-  // picker. The public shelf omits both and always reads all-time.
+  // Own screen only: which window the numbers cover. The picker itself lives in
+  // the nav bar's left action, not on the page. The public shelf omits this and
+  // always reads all-time.
   period?: StatsPeriodId;
-  onEditPeriod?: () => void;
 };
 
 // The shared Stats body (own screen + public shelf render the same component,
@@ -59,7 +58,6 @@ export function StatsView({
   streakThreshold,
   tvStreakThreshold,
   period = 'all',
-  onEditPeriod,
 }: StatsViewProps) {
   const router = useRouter();
   const navBarSpace = useNavBarSpace();
@@ -68,12 +66,10 @@ export function StatsView({
   const scoped = useMemo(() => scopeMoviesToPeriod(movies, periodStart(period)), [movies, period]);
   const stats = useStats(scoped, { streakThreshold, tvStreakThreshold });
   const [calendarView, setCalendarView] = useState<'movies' | 'tv'>('movies');
-  const pill = onEditPeriod ? <StatsPeriodPill period={period} onPress={onEditPeriod} /> : null;
 
   if (!stats) {
     return (
       <View className="flex-1">
-        {pill}
         <EmptyState
           icon={<BarChart3 size={40} color={MUTED} />}
           title="No data yet"
@@ -94,8 +90,6 @@ export function StatsView({
 
   return (
     <ScrollView contentContainerStyle={{ paddingBottom: navBarSpace + 24 }} showsVerticalScrollIndicator={false}>
-      {pill}
-
       {/* Recent activity rail */}
       {activities.length > 0 && (
         <View className="pt-6">
