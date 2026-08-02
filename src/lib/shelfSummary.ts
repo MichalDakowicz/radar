@@ -3,7 +3,7 @@
 // The scoring rule arrives as a callback so this stays free of the stars
 // component (see useFriendLibraries, which passes personalScore).
 
-import { watchProgressPercent } from '@/lib/movieStatus';
+import { isActivelyWatching } from '@/lib/movieStatus';
 import type { Movie } from '@/types/movie';
 
 export type ShelfStats = {
@@ -61,15 +61,10 @@ export function recentlyLogged(movies: Movie[], limit = 12): Movie[] {
     .slice(0, limit);
 }
 
-/**
- * What they are partway through. The honest version of "watching now", which
- * means a finished title has to drop out even while its row still says
- * in-progress: legacy imports carry watched + inProgress together, and a series
- * whose last episode is ticked is done whether or not the flag was cleared.
- */
+/** What they are partway through. The honest version of "watching now". */
 export function inProgressTitles(movies: Movie[], limit = 4): Movie[] {
   return movies
-    .filter((movie) => movie.inProgress && !movie.watched && watchProgressPercent(movie) < 100)
+    .filter(isActivelyWatching)
     .sort((a, b) => loggedAt(b) - loggedAt(a))
     .slice(0, limit);
 }

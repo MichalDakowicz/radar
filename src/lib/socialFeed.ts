@@ -84,6 +84,19 @@ export function isFeedWorthy(event: MinimalEvent): boolean {
   return event.type !== 'removed' && event.type !== 'updated';
 }
 
+/**
+ * "Started watching" is the one row the feed states in the present tense, so it
+ * has to stay true: once the title is finished (or dropped) the row is a claim
+ * about now that is no longer so, and the finish has a row of its own anyway.
+ * Every other kind is a dated fact and stands whatever happened since.
+ *
+ * `stillInProgress` defaults to true for a title whose row cannot be read — a
+ * shelf gone private should cost a card its poster, not its place in the feed.
+ */
+export function isLiveProgress(event: { kind: FeedKind; stillInProgress: boolean }): boolean {
+  return event.kind !== 'progress' || event.stillInProgress;
+}
+
 /** The grey line after the name: "finished", "rated it 4.5", "added to watchlist". */
 export function activityVerb(event: MinimalEvent): string {
   const details = event.details ?? {};

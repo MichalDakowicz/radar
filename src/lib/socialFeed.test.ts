@@ -5,6 +5,7 @@ import {
   formatScore,
   freshCountsSince,
   isFeedWorthy,
+  isLiveProgress,
   matchesFeedFilter,
   relativeTime,
   weekDigest,
@@ -77,6 +78,19 @@ describe('isFeedWorthy', () => {
   it('keeps everything a friend would care about', () => {
     expect(isFeedWorthy(event('completed'))).toBe(true);
     expect(isFeedWorthy(event('rating_changed'))).toBe(true);
+  });
+});
+
+describe('isLiveProgress', () => {
+  it('drops a started-watching row once the title is finished', () => {
+    expect(isLiveProgress({ kind: 'progress', stillInProgress: false })).toBe(false);
+    expect(isLiveProgress({ kind: 'progress', stillInProgress: true })).toBe(true);
+  });
+
+  it('leaves dated facts alone whatever the title is doing now', () => {
+    expect(isLiveProgress({ kind: 'watched', stillInProgress: false })).toBe(true);
+    expect(isLiveProgress({ kind: 'rating', stillInProgress: false })).toBe(true);
+    expect(isLiveProgress({ kind: 'watchlist', stillInProgress: false })).toBe(true);
   });
 });
 

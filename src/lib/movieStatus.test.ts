@@ -1,6 +1,7 @@
 import {
   getDisplayStatus,
   getStatusIcon,
+  isActivelyWatching,
   isInProgress,
   isInWatchlist,
   isWatched,
@@ -9,6 +10,25 @@ import {
   setToWatched,
   setToWatchlist,
 } from './movieStatus';
+
+describe('isActivelyWatching', () => {
+  it('is true only while a title is genuinely underway', () => {
+    expect(isActivelyWatching({ inProgress: true, watched: false })).toBe(true);
+    expect(isActivelyWatching({ inProgress: false, watched: false })).toBe(false);
+  });
+
+  it('is false once the title is finished, flag or no flag', () => {
+    expect(isActivelyWatching({ inProgress: true, watched: true })).toBe(false);
+    // Legacy shape: no boolean flags, so a rewatch count is what says "finished".
+    expect(isActivelyWatching({ inProgress: true, timesWatched: 2 })).toBe(false);
+  });
+
+  it('is false for a series with every episode ticked', () => {
+    const show = { type: 'tv', inProgress: true, watched: false, number_of_episodes: 2 };
+    expect(isActivelyWatching({ ...show, episodesWatched: { s1e1: true, s1e2: true } })).toBe(false);
+    expect(isActivelyWatching({ ...show, episodesWatched: { s1e1: true } })).toBe(true);
+  });
+});
 
 describe('migrateStatus', () => {
   it('defaults a bare movie to watchlist', () => {
