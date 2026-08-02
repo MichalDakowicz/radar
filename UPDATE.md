@@ -4,6 +4,15 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.5.0 — Unreleased
 
+### Added
+
+- Radar re-fetches stale posters, cast and streaming availability on its own in the background
+- A progress notification tracks a metadata refresh, so you can close Radar while it runs
+
+### Changed
+
+- Refresh all metadata resumes where it stopped instead of restarting, and shows when it last ran
+
 ## 2.4.0 — 2026-08-01
 
 ### Added

@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.michaldakowicz.radar",
-      "versionCode": 8
+      "versionCode": 9
     },
     "web": {
       "output": "single",
@@ -42,6 +42,14 @@
           "savePhotosPermission": "Allow Radar to save posters to your photos.",
           "photosPermission": "Allow Radar to access your photos.",
           "isAccessMediaLocationEnabled": false
+        }
+      ],
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#3b82f6"
         }
       ]
     ],

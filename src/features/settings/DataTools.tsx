@@ -4,8 +4,23 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useRefreshMetadata } from '@/features/settings/RefreshMetadataProvider';
+import { relativeTime } from '@/lib/socialFeed';
 
 const MUTED = 'hsl(0 0% 63.9%)';
+
+function refreshSubtitle(
+  refreshing: boolean,
+  progress: { current: number; total: number },
+  pending: boolean,
+  lastRunAt: number | null,
+): string {
+  if (refreshing) {
+    return progress.total > 0 ? `${progress.current} of ${progress.total}…` : 'Starting…';
+  }
+  if (pending) return 'Paused — Radar will finish this in the background';
+  if (lastRunAt) return `Last refreshed ${relativeTime(new Date(lastRunAt).toISOString())}`;
+  return 'Re-fetch posters, cast, and availability from TMDB';
+}
 
 function ToolRow({
   icon,
@@ -37,7 +52,7 @@ function ToolRow({
 }
 
 export function DataTools({ onOpenImportExport }: { onOpenImportExport: () => void }) {
-  const { refreshing, progress, refresh } = useRefreshMetadata();
+  const { refreshing, progress, pending, lastRunAt, refresh } = useRefreshMetadata();
   const [confirm, setConfirm] = useState(false);
 
   return (
@@ -45,7 +60,7 @@ export function DataTools({ onOpenImportExport }: { onOpenImportExport: () => vo
       <ToolRow
         icon={refreshing ? <ActivityIndicator size="small" color={MUTED} /> : <RefreshCw size={20} color={MUTED} />}
         title="Refresh all metadata"
-        subtitle={refreshing ? `${progress.current} of ${progress.total}…` : 'Re-fetch posters, cast, and availability from TMDB'}
+        subtitle={refreshSubtitle(refreshing, progress, pending, lastRunAt)}
         onPress={() => setConfirm(true)}
         disabled={refreshing}
       />
@@ -59,7 +74,7 @@ export function DataTools({ onOpenImportExport }: { onOpenImportExport: () => vo
       <ConfirmDialog
         visible={confirm}
         title="Refresh all metadata?"
-        description="This re-fetches every title from TMDB and may take a few minutes. Your ratings and watch progress are kept. You can leave this screen while it runs."
+        description="This re-fetches every title from TMDB and may take a few minutes. Your ratings and watch progress are kept. It keeps going in the background with a progress notification, so you can close Radar — anything left over finishes on its own."
         confirmLabel="Refresh"
         onCancel={() => setConfirm(false)}
         onConfirm={() => {
