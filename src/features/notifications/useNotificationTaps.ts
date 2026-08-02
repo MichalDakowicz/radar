@@ -1,7 +1,9 @@
+import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { useRootNavigationState, useRouter, type Href } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
+import { invalidateInbox } from '@/hooks/useNotifications';
 import { notificationHref } from '@/lib/notificationRouting';
 import { supabase } from '@/lib/supabase';
 import type { NotificationData } from '@/types/notification';
@@ -17,6 +19,7 @@ import type { NotificationData } from '@/types/notification';
  */
 export function useNotificationTaps(enabled: boolean) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const response = Notifications.useLastNotificationResponse();
   // The root navigator has no key until it has mounted; pushing before then is
   // dropped, which on a cold start is exactly when the tap arrives.
@@ -35,18 +38,20 @@ export function useNotificationTaps(enabled: boolean) {
     if (!data?.kind) return;
     handled.current = request.identifier;
 
-    // A tapped banner has been seen, whatever happens next. Fire-and-forget:
-    // the realtime subscription on notifications repaints the badge, and a
-    // failure here should not swallow the navigation.
+    // A tapped banner has been seen, whatever happens next. Refetch off the back
+    // of the write rather than waiting for the realtime event: a cold start or a
+    // resume taps before the socket is up, so the badge would keep its dot.
+    // Fire-and-forget — a failure here must not swallow the navigation.
     if (data.notificationId) {
       void supabase
         .from('notifications')
         .update({ read_at: new Date().toISOString() })
         .eq('id', data.notificationId)
-        .is('read_at', null);
+        .is('read_at', null)
+        .then(() => invalidateInbox(queryClient));
     }
 
     const href = notificationHref({ kind: data.kind, data });
     if (href) router.push(href as Href);
-  }, [enabled, navigationReady, response, router]);
+  }, [enabled, navigationReady, response, router, queryClient]);
 }

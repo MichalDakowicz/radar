@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { useAuth } from '@/features/auth/AuthProvider';
@@ -25,6 +25,46 @@ type NotificationRow = {
 };
 
 const inboxKey = (uid?: string) => ['notifications', uid] as const;
+
+/**
+ * Refetch the inbox for whoever is signed in. Prefix match on purpose: callers
+ * outside the hook (a tapped banner) know a row changed but have no reason to
+ * look up the account id to say whose.
+ */
+export function invalidateInbox(queryClient: QueryClient) {
+  return queryClient.invalidateQueries({ queryKey: ['notifications'] });
+}
+
+/**
+ * Keeps the inbox cache honest app-wide: one subscription, mounted from
+ * NotificationSync in the root layout.
+ *
+ * This cannot live in useNotifications — that only mounts on the inbox screen,
+ * and the badge is exactly the thing that has to move while the user is
+ * somewhere else. Without it a notification arriving mid-session sat unseen
+ * until the inbox was opened, which is the one place the dot no longer matters.
+ */
+export function useInboxRealtime() {
+  const { user } = useAuth();
+  const uid = user?.id;
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!uid) return;
+    // Random suffix per the useMovies channel-reuse note (dev-mode double mount).
+    const channel = supabase
+      .channel(`notifications:${uid}:${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
+        () => queryClient.invalidateQueries({ queryKey: inboxKey(uid) }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [uid, queryClient]);
+}
 
 /** Snapshot handed from onMutate to onError so a failed write can be undone. */
 type InboxContext = { previous?: AppNotification[] };
@@ -54,9 +94,9 @@ async function fetchNotifications(userId: string): Promise<AppNotification[]> {
 }
 
 /**
- * The inbox with its mutations. Realtime rather than polled: a friend request
- * arriving has to light the nav badge while the user is on another screen, and
- * that is the same INSERT the banner came from.
+ * The inbox with its mutations. No channel of its own — useInboxRealtime above
+ * is mounted app-wide and keeps this key fresh, so the screen inherits live
+ * rows for free and there is only ever one subscription.
  */
 export function useNotifications() {
   const { user } = useAuth();
@@ -69,22 +109,6 @@ export function useNotifications() {
     queryFn: () => fetchNotifications(uid!),
     enabled: !!uid,
   });
-
-  useEffect(() => {
-    if (!uid) return;
-    // Random suffix per the useMovies channel-reuse note (dev-mode double mount).
-    const channel = supabase
-      .channel(`notifications:${uid}:${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` },
-        () => queryClient.invalidateQueries({ queryKey: inboxKey(uid) }),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [uid, queryClient]);
 
   // Optimistic on all three: the read dot and the badge are the whole point of
   // the interaction, and waiting a round-trip to dim a row reads as a dropped tap.
@@ -161,9 +185,9 @@ export function useNotifications() {
 }
 
 /**
- * The unread number for always-mounted chrome. No second subscription: the
- * inbox screen keeps this key fresh and react-query dedupes the fetch behind one
- * cache entry.
+ * The unread number for always-mounted chrome. No second subscription:
+ * useInboxRealtime keeps this key fresh app-wide and react-query dedupes the
+ * fetch behind one cache entry.
  *
  * friend_request rows are excluded because the inbox renders those as
  * accept/decline cards and marks them read on open — counting them here would
