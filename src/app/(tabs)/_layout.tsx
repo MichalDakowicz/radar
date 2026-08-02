@@ -60,10 +60,14 @@ export default function TabsLayout() {
     <>
       <Tabs
         tabBar={(props) => <NavIslands {...props} />}
-        // Tabs used to cut between screens with no transition at all. `shift`
-        // cross-fades and slides the outgoing screen a little in the direction
-        // you moved, which reads as one surface changing rather than five.
-        screenOptions={{ headerShown: false, animation: 'shift' }}
+        // No scene animation: react-navigation cross-fades over the navigator's
+        // own background, which flashes white on every swap. The movement that
+        // makes a tab change feel smooth lives in the nav bar instead, where the
+        // active plate and glyph tween (see NavDestinationButton).
+        //
+        // sceneStyle pins the app background anyway, so nothing can show through
+        // between screens.
+        screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: 'hsl(0 0% 3.9%)' } }}
       >
         <Tabs.Screen name="index" options={{ title: 'Library' }} listeners={{ tabPress: () => handleTabPress('index') }} />
         <Tabs.Screen name="browse" options={{ title: 'Browse' }} listeners={{ tabPress: () => handleTabPress('browse') }} />

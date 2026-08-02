@@ -14,7 +14,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 - Navigation is a floating glass bar: the page's one action, the five destinations, your avatar
 - The top bar is gone, so every screen starts with its own content
 - Add a title, Search, Friend requests and Settings moved onto the nav bar's left button
-- Switching tabs cross-fades instead of cutting straight to the next screen
+- The nav bar's marker fades between destinations instead of jumping
 
 ### Removed
 
