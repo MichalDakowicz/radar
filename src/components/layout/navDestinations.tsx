@@ -12,6 +12,13 @@ export type NavDestination = {
   /** Route name in (tabs) — the key the navigator and `withTabReload` use. */
   tabName: string;
   icon: (color: string, size: number) => ReactNode;
+  /**
+   * Route-driven rather than read off the tab navigator, because the bar also
+   * renders on routes pushed *out* of the tabs (/settings, /friend-requests).
+   * Those keep their parent destination lit — you have not left Profile just
+   * because you opened its settings.
+   */
+  isActive: (pathname: string) => boolean;
 };
 
 export const NAV_DESTINATIONS: NavDestination[] = [
@@ -20,29 +27,42 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     label: 'Library',
     tabName: 'index',
     icon: (color, size) => <LibraryBig color={color} size={size} />,
+    isActive: (pathname) => pathname === '/',
   },
   {
     href: '/browse',
     label: 'Browse',
     tabName: 'browse',
     icon: (color, size) => <Compass color={color} size={size} />,
+    isActive: (pathname) => pathname.startsWith('/browse'),
   },
   {
     href: '/stats',
     label: 'Stats',
     tabName: 'stats',
     icon: (color, size) => <BarChart3 color={color} size={size} />,
+    isActive: (pathname) => pathname.startsWith('/stats'),
   },
   {
     href: '/social',
     label: 'Social',
     tabName: 'social',
     icon: (color, size) => <Users color={color} size={size} />,
+    // /friend-requests and a friend's shelf are pushed from this tab, so it
+    // stays lit while you are down there.
+    isActive: (pathname) => pathname.startsWith('/social') || pathname.startsWith('/friend'),
   },
   {
     href: '/profile',
     label: 'Profile',
     tabName: 'profile',
     icon: (color, size) => <CircleUserRound color={color} size={size} />,
+    // /settings is pushed from this tab's nav action, same reasoning.
+    isActive: (pathname) => pathname.startsWith('/profile') || pathname.startsWith('/settings'),
   },
 ];
+
+/** Which destination owns the current route, or null on a route no tab claims. */
+export function activeTabFor(pathname: string): string | null {
+  return NAV_DESTINATIONS.find((destination) => destination.isActive(pathname))?.tabName ?? null;
+}

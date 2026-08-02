@@ -1,18 +1,20 @@
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import type { NavDestination } from '@/components/layout/navDestinations';
 
 const ACCENT = 'hsl(217 91% 60%)';
-const ACTIVE_PLATE = 'rgba(255,255,255,0.12)';
 const ICON_ON = '#fafafa';
 const ICON_OFF = '#a3a3a3';
 const ICON_SIZE = 20;
 
-// Long enough to read as a move, short enough not to lag the screen transition
-// underneath it (Tabs uses `shift`, which is in the same ballpark).
-const DURATION = 200;
+/** Slot geometry, exported so the sliding marker in NavIslands matches it. */
+export const DEST_WIDTH = 46;
+export const DEST_HEIGHT = 42;
+
+// Matches the marker's travel so the glyph lights up as the plate arrives.
+const DURATION = 260;
 
 type NavDestinationButtonProps = {
   destination: NavDestination;
@@ -23,9 +25,9 @@ type NavDestinationButtonProps = {
 };
 
 /**
- * One destination in the centre island. The active plate and the glyph
- * cross-fade rather than snapping: the plate is the only thing marking where you
- * are, so it should look like it slid there with you.
+ * One destination in the centre island. The active plate is not drawn here: it
+ * is a single marker that slides between slots (NavIslands), so this only has to
+ * tween its glyph from dim to lit as the marker passes.
  *
  * Two copies of the glyph is the cheap way to tween a stroke colour — lucide
  * takes `color` as a plain prop, which Reanimated cannot drive.
@@ -37,9 +39,6 @@ export function NavDestinationButton({ destination, active, alert, onPress }: Na
     progress.value = withTiming(active ? 1 : 0, { duration: DURATION });
   }, [active, progress]);
 
-  const plateStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(progress.value, [0, 1], ['rgba(255,255,255,0)', ACTIVE_PLATE]),
-  }));
   const dimStyle = useAnimatedStyle(() => ({ opacity: 1 - progress.value }));
   const litStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
 
@@ -51,7 +50,6 @@ export function NavDestinationButton({ destination, active, alert, onPress }: Na
       accessibilityLabel={destination.label}
       style={styles.button}
     >
-      <Animated.View style={[StyleSheet.absoluteFill, styles.plate, plateStyle]} pointerEvents="none" />
       <Animated.View style={dimStyle}>{destination.icon(ICON_OFF, ICON_SIZE)}</Animated.View>
       <Animated.View style={[styles.overlay, litStyle]} pointerEvents="none">
         {destination.icon(ICON_ON, ICON_SIZE)}
@@ -62,8 +60,7 @@ export function NavDestinationButton({ destination, active, alert, onPress }: Na
 }
 
 const styles = StyleSheet.create({
-  button: { width: 46, height: 42, borderRadius: 99, alignItems: 'center', justifyContent: 'center' },
-  plate: { borderRadius: 99 },
+  button: { width: DEST_WIDTH, height: DEST_HEIGHT, borderRadius: 99, alignItems: 'center', justifyContent: 'center' },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   dot: {
     position: 'absolute',

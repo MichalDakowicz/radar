@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { CalendarRange, Inbox, Plus, Search, Settings, type LucideIcon } from 'lucide-react-native';
+import { ArrowLeft, CalendarRange, Inbox, Plus, Search, Settings, type LucideIcon } from 'lucide-react-native';
 import { useCallback } from 'react';
 
 import { useIncomingRequestCount } from '@/hooks/useFriends';
@@ -24,6 +24,15 @@ const ICONS: Record<string, LucideIcon> = {
   profile: Settings,
 };
 
+// Routes pushed out of the tabs that still render the bar. Their destination
+// stays lit, but the left island becomes Back: a tab's usual action here would
+// be the screen you are already standing on.
+const NESTED_ROUTES = ['/settings', '/friend-requests'];
+
+export function isNestedNavRoute(pathname: string): boolean {
+  return NESTED_ROUTES.includes(pathname);
+}
+
 /**
  * The one thing the current screen wants you to do, resolved for the nav bar's
  * left island. This is what replaced the top bar: each screen used to hang its
@@ -32,17 +41,19 @@ const ICONS: Record<string, LucideIcon> = {
  *
  * Wiring lives here rather than in the screens because four of the five targets
  * are already global — the Quick-Add sheet, the focused screen's search input,
- * the period sheet the nav itself mounts, and two pushed routes.
+ * the period sheet the tabs layout mounts, and two pushed routes.
  */
-export function useNavAction(tabName: string): NavAction {
+export function useNavAction(pathname: string, activeTab: string | null): NavAction {
   const router = useRouter();
   const presentQuickAdd = useQuickAddSheetStore((s) => s.present);
   const presentPeriod = useStatsPeriodSheet((s) => s.present);
   const period = useStatsPeriod((s) => s.period);
   const requestCount = useIncomingRequestCount();
+  const nested = isNestedNavRoute(pathname);
 
   const onPress = useCallback(() => {
-    switch (tabName) {
+    if (nested) return router.back();
+    switch (activeTab) {
       case 'index':
         return presentQuickAdd?.();
       case 'browse':
@@ -54,7 +65,11 @@ export function useNavAction(tabName: string): NavAction {
       case 'profile':
         return router.push('/settings');
     }
-  }, [tabName, presentQuickAdd, presentPeriod, router]);
+  }, [nested, activeTab, presentQuickAdd, presentPeriod, router]);
+
+  if (nested) {
+    return { label: 'Back', Icon: ArrowLeft, badge: 0, onPress };
+  }
 
   const labels: Record<string, string> = {
     index: 'Add a title',
@@ -63,11 +78,12 @@ export function useNavAction(tabName: string): NavAction {
     social: requestCount ? `Friend requests, ${requestCount} pending` : 'Friend requests',
     profile: 'Settings',
   };
+  const key = activeTab ?? 'index';
 
   return {
-    label: labels[tabName] ?? 'Add a title',
-    Icon: ICONS[tabName] ?? Plus,
-    badge: tabName === 'social' ? requestCount : 0,
+    label: labels[key] ?? 'Add a title',
+    Icon: ICONS[key] ?? Plus,
+    badge: key === 'social' ? requestCount : 0,
     onPress,
   };
 }
