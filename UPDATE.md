@@ -14,6 +14,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 - Continue watching keeps every title when you add one, instead of showing only the new one
 - The top bar is the same height on every tab, so Social and Profile no longer sit lower
 
+### Removed
+
+- Open your library button on your own Profile, which the Library tab already covers
+
 ## 2.5.0 — 2026-08-02
 
 ### Added
