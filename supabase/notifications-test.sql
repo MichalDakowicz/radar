@@ -21,7 +21,7 @@
 create or replace view public.zz_test_user as
   select id as user_id, email
     from auth.users
-   where email = 'michal.dakowicz@infotech.edu.pl';   -- <<< EDIT ME
+   where email = '';   -- <<< EDIT ME
 
 -- It lives in `public`, so PostgREST would otherwise serve it — and it reads
 -- auth.users with the owner's rights. Locked to the roles that already have
@@ -118,7 +118,7 @@ begin
   select m.id, m.tmdb_id, m.title, m.type, m.cover_url into pick
     from public.movies m
    where m.user_id = me and m.tmdb_id is not null
-   order by m.in_progress desc, m.created_at desc
+   order by m.in_progress desc, m.added_at desc
    limit 1;
 
   perform private.enqueue_notification(me, 'friend_request',
@@ -247,7 +247,7 @@ begin
   select id, release_date into target, real_dt
     from public.movies
    where user_id = me and in_watchlist
-   order by created_at desc limit 1;
+   order by added_at desc limit 1;
   if target is null then raise exception 'No watchlist title to release'; end if;
 
   update public.movies set release_date = (now() at time zone fake_tz)::date
