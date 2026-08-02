@@ -89,6 +89,21 @@ describe('fromMovie / buildMoviePayload round trip', () => {
     if (!result.remove) expect(result.updates.completedAt).toBe('2019-05-05T00:00:00.000Z');
   });
 
+  it('leaves an already-watched title undated rather than stamping today', () => {
+    // Ticking Watchlist on a title finished long ago (an import with no date)
+    // must not put a mark on today's square in the streak calendar.
+    const movie: Movie = { ...BASE_MOVIE, watched: true, completedAt: null, timesWatched: 1 };
+    const form = fromMovie(movie);
+    form.status = { inWatchlist: true, inProgress: false, watched: true, timesWatched: 1 };
+
+    const result = buildMoviePayload(form, movie);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.completedAt).toBeNull();
+      expect(result.updates.inWatchlist).toBe(true);
+    }
+  });
+
   it('builds tv ratings as { overall, seasons } instead of the movie category shape', () => {
     const tvMovie: Movie = { ...BASE_MOVIE, type: 'tv' };
     const form = fromMovie(tvMovie);
