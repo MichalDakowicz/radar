@@ -11,6 +11,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Fixed
 
 - In progress on a shelf no longer lists titles you have already finished
+- Continue watching keeps every title when you add one, instead of showing only the new one
 
 ## 2.5.0 — 2026-08-02
 
