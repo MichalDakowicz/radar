@@ -62,3 +62,7 @@ firebase-adminsdk*.json
 *.tsbuildinfo
 /ios
 /android
+
+# Supabase CLI scratch state — which project this checkout happens to be linked
+# to is per-machine, not part of the repo.
+supabase/.temp/
