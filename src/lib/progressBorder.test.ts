@@ -1,4 +1,4 @@
-import { progressDash, roundedRectPathReverse, roundedRectPerimeter, scoreToProgress } from './progressBorder';
+import { progressDash, roundedRectPathFromBottom, roundedRectPerimeter, scoreToProgress } from './progressBorder';
 
 describe('roundedRectPerimeter', () => {
   it('is the plain perimeter when there is no corner radius', () => {
@@ -25,37 +25,38 @@ describe('roundedRectPerimeter', () => {
   });
 });
 
-describe('roundedRectPathReverse', () => {
-  it('starts at the top-left corner and heads left, not right', () => {
-    const d = roundedRectPathReverse(1, 1, 100, 50, 12);
-    // Start sits r along the top edge; the first arc lands on the left edge, so
-    // the stroke travels anticlockwise instead of along the top to the right.
-    expect(d.startsWith('M 13 1 A 12 12 0 0 0 1 13')).toBe(true);
+describe('roundedRectPathFromBottom', () => {
+  it('starts at the middle of the bottom edge and heads left', () => {
+    const d = roundedRectPathFromBottom(1, 1, 100, 50, 12);
+    // Start sits halfway along the bottom edge; the first line runs left towards
+    // the bottom-left corner, so the stroke fills leftwards out of the centre.
+    expect(d.startsWith('M 51 51 L 13 51 A 12 12 0 0 1 1 39')).toBe(true);
   });
 
-  it('turns every corner the anticlockwise way', () => {
-    const d = roundedRectPathReverse(0, 0, 100, 50, 10);
-    // Four corners, every one with the sweep flag clear.
-    expect(d.match(/A 10 10 0 0 0 /g)).toHaveLength(4);
-    expect(d.match(/A 10 10 0 0 1 /g)).toBeNull();
+  it('turns every corner the clockwise way', () => {
+    const d = roundedRectPathFromBottom(0, 0, 100, 50, 10);
+    // Four corners, every one with the sweep flag set.
+    expect(d.match(/A 10 10 0 0 1 /g)).toHaveLength(4);
+    expect(d.match(/A 10 10 0 0 0 /g)).toBeNull();
   });
 
-  it('visits the left edge before the right one', () => {
-    const d = roundedRectPathReverse(0, 0, 100, 50, 10);
-    expect(d.indexOf('L 0 40')).toBeLessThan(d.indexOf('L 100 10'));
+  it('visits the left edge before the top and the top before the right', () => {
+    const d = roundedRectPathFromBottom(0, 0, 100, 50, 10);
+    expect(d.indexOf('L 0 10')).toBeLessThan(d.indexOf('L 90 0'));
+    expect(d.indexOf('L 90 0')).toBeLessThan(d.indexOf('L 100 40'));
   });
 
-  it('closes the loop', () => {
-    expect(roundedRectPathReverse(0, 0, 100, 50, 10).endsWith('Z')).toBe(true);
+  it('closes the loop back at the bottom middle', () => {
+    expect(roundedRectPathFromBottom(0, 0, 100, 50, 10).endsWith('L 50 50 Z')).toBe(true);
   });
 
   it('clamps a radius larger than the shape allows', () => {
-    expect(roundedRectPathReverse(0, 0, 80, 80, 999)).toBe(roundedRectPathReverse(0, 0, 80, 80, 40));
+    expect(roundedRectPathFromBottom(0, 0, 80, 80, 999)).toBe(roundedRectPathFromBottom(0, 0, 80, 80, 40));
   });
 
   it('returns nothing for a shape with no area', () => {
-    expect(roundedRectPathReverse(0, 0, 0, 50, 8)).toBe('');
-    expect(roundedRectPathReverse(0, 0, 100, 0, 8)).toBe('');
+    expect(roundedRectPathFromBottom(0, 0, 0, 50, 8)).toBe('');
+    expect(roundedRectPathFromBottom(0, 0, 100, 0, 8)).toBe('');
   });
 });
 

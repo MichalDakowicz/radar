@@ -4,6 +4,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.6.0 — Unreleased
 
+### Changed
+
+- The public score ring on a movie or show fills out of the bottom centre instead of a corner
+
 ## 2.5.0 — 2026-08-02
 
 ### Added
