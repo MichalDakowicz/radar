@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { View } from 'react-native';
 
 import { ContentShell } from '@/components/layout/ContentShell';
-import { Header } from '@/components/layout/Header';
+import { ScreenTop } from '@/components/layout/ScreenTop';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import type { BottomSheetModal } from '@/components/ui/Sheet';
@@ -12,7 +12,6 @@ import { LibraryFilterSheet } from '@/features/library/LibraryFilterSheet';
 import { LibraryMainList } from '@/features/library/LibraryMainList';
 import { LibrarySection } from '@/features/library/LibrarySection';
 import { LibraryToolbar } from '@/features/library/LibraryToolbar';
-import { RandomPickSheet } from '@/features/library/RandomPickSheet';
 import { useLibraryFilters } from '@/features/library/useLibraryFilters';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W } from '@/hooks/useResponsive';
@@ -36,7 +35,6 @@ function LibraryScreen() {
   const router = useRouter();
   const { movies, loading, error } = useMovies();
   const [searchQuery, setSearchQuery] = useState('');
-  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const {
     viewMode,
@@ -77,20 +75,13 @@ function LibraryScreen() {
   );
 
   const filterSheetRef = useRef<BottomSheetModal>(null);
-  const randomPickRef = useRef<BottomSheetModal>(null);
 
   const openMovie = (movie: Movie) => router.push({ pathname: '/edit/[movieId]', params: { movieId: movie.id } });
-
-  const handleRandomSelect = (movie: Movie) => {
-    randomPickRef.current?.dismiss();
-    setHighlightedId(movie.id);
-    openMovie(movie);
-  };
 
   if (loading) {
     return (
       <View className="flex-1 bg-background">
-        <Header />
+        <ScreenTop />
         <LoadingState label="Loading your library…" />
       </View>
     );
@@ -98,7 +89,7 @@ function LibraryScreen() {
   if (error) {
     return (
       <View className="flex-1 bg-background">
-        <Header />
+        <ScreenTop />
         <ErrorState message={error instanceof Error ? error.message : 'Failed to load your library'} />
       </View>
     );
@@ -106,13 +97,12 @@ function LibraryScreen() {
 
   const sections = (
     <>
-      <LibrarySection title="Continue watching" movies={filters.continueWatching} onPress={openMovie} highlightedId={highlightedId} />
-      <LibrarySection title="Recently added" movies={filters.recentlyAdded} onPress={openMovie} highlightedId={highlightedId} />
+      <LibrarySection title="Continue watching" movies={filters.continueWatching} onPress={openMovie} />
+      <LibrarySection title="Recently added" movies={filters.recentlyAdded} onPress={openMovie} />
       <LibrarySection
         title="Coming soon"
         movies={filters.comingSoon}
         onPress={openMovie}
-        highlightedId={highlightedId}
         collapsible
         collapsed={comingSoonCollapsed}
         onToggleCollapse={toggleComingSoonCollapsed}
@@ -123,7 +113,7 @@ function LibraryScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header onRandomPick={() => randomPickRef.current?.present()} maxWidth={MAX_W.grid} />
+      <ScreenTop />
       <ContentShell maxWidth={MAX_W.grid}>
         <LibraryToolbar
           searchQuery={searchQuery}
@@ -138,14 +128,12 @@ function LibraryScreen() {
           movies={filters.mainMovies}
           viewMode={viewMode}
           gridSize={gridSize}
-          highlightedId={highlightedId}
           onPress={openMovie}
           ListHeaderComponent={sections}
         />
       </ContentShell>
 
       <LibraryFilterSheet ref={filterSheetRef} />
-      <RandomPickSheet ref={randomPickRef} movies={filters.validPickMovies} onSelect={handleRandomSelect} />
     </View>
   );
 }

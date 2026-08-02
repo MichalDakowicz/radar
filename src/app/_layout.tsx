@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { NAV_DESTINATIONS } from '@/components/layout/NavLinks';
+import { NAV_DESTINATIONS } from '@/components/layout/navDestinations';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { RefreshMetadataProvider } from '@/features/settings/RefreshMetadataProvider';

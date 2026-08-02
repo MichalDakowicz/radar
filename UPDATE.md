@@ -4,6 +4,21 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.6.0 — Unreleased
 
+### Added
+
+- Stats has a time period picker, so every number can read the last 30 or 90 days or this year
+- Profile offers to pick something at random when you do not know what to watch
+
+### Changed
+
+- Navigation is a floating glass bar: the page's one action, the five destinations, your avatar
+- The top bar is gone, so every screen starts with its own content
+- Add a title, Search, Friend requests and Settings moved onto the nav bar's left button
+
+### Removed
+
+- Pick Random is no longer in the Library top bar — it lives on Profile now
+
 ## 2.5.1 — 2026-08-02
 
 ### Changed

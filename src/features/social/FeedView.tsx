@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { useToast } from '@/components/ui/Toast';
+import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { ActivityRail } from '@/features/social/ActivityRail';
 import { FeedCard } from '@/features/social/FeedCard';
 import { FeedFilterChips } from '@/features/social/FeedFilterChips';
@@ -74,6 +75,7 @@ export function FeedView({ me, friends, events, loading, pending, loadPending, s
   const visible = useMemo(() => scoped.filter((e) => matchesFeedFilter(e.kind, filter)), [scoped, filter]);
 
   const { social, available, toggleReaction, postComment } = useActivitySocial(visible.map((e) => e.id));
+  const navBarSpace = useNavBarSpace();
 
   const openTitle = (tmdbId: number | null, type: string | null, title: string) => {
     if (tmdbId == null || !type) {
@@ -94,7 +96,11 @@ export function FeedView({ me, friends, events, loading, pending, loadPending, s
   return (
     <View className="flex-1">
       <NewActivityPill count={pending} onPress={loadPending} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-8" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: navBarSpace }}
+        keyboardShouldPersistTaps="handled"
+      >
         <ActivityRail entries={railEntries} selectedId={railId} onSelect={setRailId} />
         <FeedFilterChips value={filter} onChange={setFilter} />
 

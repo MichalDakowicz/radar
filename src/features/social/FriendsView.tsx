@@ -6,6 +6,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { FriendActionSheet } from '@/features/social/FriendActionSheet';
 import { FriendListRow } from '@/features/social/FriendListRow';
 import type { FeedEvent } from '@/features/social/useFriendActivity';
@@ -42,10 +43,15 @@ export function FriendsView({ friends, events, freshIds, removing, onRemove, onF
         (f) => (f.displayName ?? '').toLowerCase().includes(trimmed) || f.username.toLowerCase().includes(trimmed),
       )
     : friends;
+  const navBarSpace = useNavBarSpace();
 
   return (
     <View className="flex-1">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="gap-3 px-4 pb-8 pt-4">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerClassName="gap-3 px-4 pt-4"
+        contentContainerStyle={{ paddingBottom: navBarSpace }}
+      >
         <View className="flex-row items-center gap-2 rounded-lg border border-border bg-secondary px-3">
           <Search size={17} color="hsl(0 0% 63.9%)" />
           <SearchInput

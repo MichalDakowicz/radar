@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 
 import { ContentShell } from '@/components/layout/ContentShell';
-import { Header } from '@/components/layout/Header';
+import { ScreenTop } from '@/components/layout/ScreenTop';
 import { useToast } from '@/components/ui/Toast';
 import { BottomSheetModal } from '@/components/ui/Sheet';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -21,6 +21,7 @@ import { SearchResultsGrid } from '@/features/browse/SearchResultsGrid';
 import { useBrowseSearch } from '@/features/browse/useBrowseSearch';
 import { type BrowseTabId, useDiscoveryFeed } from '@/features/browse/useDiscoveryFeed';
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
+import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { useScrollToTopOnChange } from '@/hooks/useScrollToTopOnChange';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -49,6 +50,7 @@ function Browse() {
   // Feed stays edge-to-edge on phones; on desktop it's a centred column so the
   // hero and the rows don't stretch across an ultrawide monitor.
   const feedContentStyle = useCenteredContentStyle(MAX_W.grid);
+  const navBarSpace = useNavBarSpace();
   // Calendar isn't a discovery feed - keep the feed/hero on the last media tab
   // so switching back to Movies/TV hits warm cache instead of refetching.
   const feedTab = tab === 'calendar' ? 'movies' : tab;
@@ -89,7 +91,7 @@ function Browse() {
   if (feed.isLoading && categories.length === 0 && !search.isSearching && tab !== 'calendar') {
     return (
       <View className="flex-1 bg-background">
-        <Header />
+        <ScreenTop />
         <LoadingState label="Loading discover feed…" />
       </View>
     );
@@ -97,7 +99,7 @@ function Browse() {
   if (feed.isError && categories.length === 0 && tab !== 'calendar') {
     return (
       <View className="flex-1 bg-background">
-        <Header />
+        <ScreenTop />
         <ErrorState message="Failed to load Browse" onRetry={() => feed.refetch()} />
       </View>
     );
@@ -105,7 +107,7 @@ function Browse() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header maxWidth={MAX_W.grid} />
+      <ScreenTop />
       <ContentShell maxWidth={MAX_W.grid}>
         <BrowseSearchBar
           value={search.query}
@@ -140,8 +142,8 @@ function Browse() {
         </ContentShell>
       ) : (
         <ScrollView
-          contentContainerClassName="gap-8 pb-12"
-          contentContainerStyle={feedContentStyle}
+          contentContainerClassName="gap-8"
+          contentContainerStyle={[feedContentStyle, { paddingBottom: navBarSpace + 16 }]}
           stickyHeaderIndices={[1]}
           refreshControl={<RefreshControl refreshing={feed.isRefetching} onRefresh={() => setRerollNonce((n) => n + 1)} />}
           onScroll={({ nativeEvent }) => {
