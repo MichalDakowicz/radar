@@ -17,7 +17,11 @@ type ShelfSectionsProps = {
   tags?: TasteTag[];
   onOpenTitle: (movie: Movie) => void;
   onOpenFavorite: (item: FavoriteItem) => void;
-  onOpenCollection: () => void;
+  /**
+   * Jump to the whole library behind the shelf. Omitted on your own Profile,
+   * where the Library tab is already one tap away and the button is noise.
+   */
+  onOpenCollection?: () => void;
   /** Owner-only: turns the top 4 into an editable row on your own profile. */
   onEditFavorites?: () => void;
   collectionLabel?: string;
@@ -116,14 +120,16 @@ export function ShelfSections({
         </View>
       )}
 
-      <Pressable
-        onPress={onOpenCollection}
-        accessibilityRole="button"
-        className="h-11 flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-border active:opacity-70"
-      >
-        <Text className="text-[13px] font-semibold text-foreground/80">{collectionLabel}</Text>
-        <ChevronRight size={16} color="hsl(0 0% 70%)" />
-      </Pressable>
+      {!!onOpenCollection && (
+        <Pressable
+          onPress={onOpenCollection}
+          accessibilityRole="button"
+          className="h-11 flex-row items-center justify-center gap-2 rounded-lg border border-dashed border-border active:opacity-70"
+        >
+          <Text className="text-[13px] font-semibold text-foreground/80">{collectionLabel}</Text>
+          <ChevronRight size={16} color="hsl(0 0% 70%)" />
+        </Pressable>
+      )}
     </View>
   );
 }

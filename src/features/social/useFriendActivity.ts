@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 
-import { activityVerb, feedKind, isFeedWorthy, type FeedKind } from '@/lib/socialFeed';
+import { isActivelyWatching } from '@/lib/movieStatus';
+import { activityVerb, feedKind, isFeedWorthy, isLiveProgress, type FeedKind } from '@/lib/socialFeed';
 import { supabase } from '@/lib/supabase';
 import type { ActivityEvent, ActivityType, MediaType } from '@/types/movie';
 
@@ -22,7 +23,8 @@ export type FeedEvent = ActivityEvent & {
   releaseYear: string | null;
   /** The rating on a rating_changed row, so the card can draw stars. */
   rating: number | null;
-  inProgress: boolean;
+  /** Whether the title is *still* underway, which is what keeps a 'progress' row honest. */
+  stillInProgress: boolean;
 };
 
 type ActivityRow = {
@@ -41,7 +43,13 @@ type PosterRow = {
   type: MediaType;
   cover_url: string | null;
   release_date: string | null;
+  // Enough of the watch state to tell a title still underway from a finished
+  // one, on the same rule the shelves use (isActivelyWatching).
   in_progress: boolean;
+  watched: boolean;
+  times_watched: number | null;
+  number_of_episodes: number | null;
+  episodes_watched: Record<string, boolean> | null;
 };
 
 async function fetchPosters(movieIds: string[]): Promise<Map<string, PosterRow>> {
@@ -50,7 +58,7 @@ async function fetchPosters(movieIds: string[]): Promise<Map<string, PosterRow>>
   // owner has since gone private simply drops out and the card renders coverless.
   const { data, error } = await supabase
     .from('movies')
-    .select('id, tmdb_id, type, cover_url, release_date, in_progress')
+    .select('id, tmdb_id, type, cover_url, release_date, in_progress, watched, times_watched, number_of_episodes, episodes_watched')
     .in('id', movieIds);
   if (error) throw error;
   return new Map((data as PosterRow[]).map((row) => [row.id, row]));
@@ -79,7 +87,16 @@ function toFeedEvent(row: ActivityRow, posters: Map<string, PosterRow>): FeedEve
     tmdbId: poster?.tmdb_id ?? null,
     releaseYear: poster?.release_date?.slice(0, 4) ?? null,
     rating,
-    inProgress: poster?.in_progress ?? false,
+    stillInProgress: poster
+      ? isActivelyWatching({
+          type: poster.type,
+          inProgress: poster.in_progress,
+          watched: poster.watched,
+          timesWatched: poster.times_watched ?? 0,
+          number_of_episodes: poster.number_of_episodes ?? undefined,
+          episodesWatched: poster.episodes_watched ?? undefined,
+        })
+      : true,
   };
 }
 
@@ -95,7 +112,7 @@ async function fetchFriendActivity(friendIds: string[]): Promise<FeedEvent[]> {
 
   const rows = (data as ActivityRow[]).filter(isFeedWorthy);
   const posters = await fetchPosters([...new Set(rows.map((r) => r.movie_id).filter((id): id is string => !!id))]);
-  return rows.map((row) => toFeedEvent(row, posters));
+  return rows.map((row) => toFeedEvent(row, posters)).filter(isLiveProgress);
 }
 
 /**

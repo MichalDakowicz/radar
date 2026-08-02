@@ -111,7 +111,13 @@ export function buildMoviePayload(form: EditForm, current: Movie): EditSaveResul
     return { remove: true };
   }
 
-  const completedAt = status.watched ? current.completedAt ?? new Date().toISOString() : null;
+  // Only the save that *flips* a title to watched may stamp a completion date.
+  // A row that was already watched keeps whatever date it had, including none:
+  // dating it now would drop a mark on today in the streak calendar for a save
+  // that changed nothing about the watch (ticking Watchlist for a rewatch, say).
+  const completedAt = status.watched
+    ? (current.completedAt ?? (current.watched ? null : new Date().toISOString()))
+    : null;
 
   const updates: Partial<Movie> = {
     title: form.title,

@@ -93,6 +93,33 @@ describe('inProgressTitles', () => {
     expect(result.map((m) => m.title)).toEqual(['watching']);
   });
 
+  it('drops a title that is finished but still flagged in progress', () => {
+    // Legacy "Watching" rows with timesWatched > 0 migrate to both flags set.
+    const result = inProgressTitles([
+      movie('rewatched', { inProgress: true, watched: true }),
+      movie('watching', { inProgress: true }),
+    ]);
+    expect(result.map((m) => m.title)).toEqual(['watching']);
+  });
+
+  it('drops a series whose every episode is ticked', () => {
+    const result = inProgressTitles([
+      movie('finished show', {
+        type: 'tv',
+        inProgress: true,
+        numberOfEpisodes: 2,
+        episodesWatched: { 'S1E1': true, 'S1E2': true },
+      }),
+      movie('half a show', {
+        type: 'tv',
+        inProgress: true,
+        numberOfEpisodes: 2,
+        episodesWatched: { 'S1E1': true },
+      }),
+    ]);
+    expect(result.map((m) => m.title)).toEqual(['half a show']);
+  });
+
   it('caps the list', () => {
     const many = Array.from({ length: 9 }, (_, i) => movie(`m${i}`, { inProgress: true }));
     expect(inProgressTitles(many, 2)).toHaveLength(2);

@@ -88,8 +88,6 @@ function ProfileScreen() {
               // library, which is the point of storing it that way.
               onOpenFavorite={(item) => openTmdb(item.tmdbId, item.type)}
               onEditFavorites={() => favoritesRef.current?.present()}
-              onOpenCollection={() => router.navigate('/')}
-              collectionLabel="Open your library"
             />
           </ScrollView>
         </ContentShell>

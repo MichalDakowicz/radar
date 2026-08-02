@@ -3,6 +3,7 @@
 // The scoring rule arrives as a callback so this stays free of the stars
 // component (see useFriendLibraries, which passes personalScore).
 
+import { isActivelyWatching } from '@/lib/movieStatus';
 import type { Movie } from '@/types/movie';
 
 export type ShelfStats = {
@@ -63,7 +64,7 @@ export function recentlyLogged(movies: Movie[], limit = 12): Movie[] {
 /** What they are partway through. The honest version of "watching now". */
 export function inProgressTitles(movies: Movie[], limit = 4): Movie[] {
   return movies
-    .filter((movie) => movie.inProgress)
+    .filter(isActivelyWatching)
     .sort((a, b) => loggedAt(b) - loggedAt(a))
     .slice(0, limit);
 }

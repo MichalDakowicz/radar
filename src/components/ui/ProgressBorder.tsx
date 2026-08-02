@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { progressDash, roundedRectPathReverse, roundedRectPerimeter } from '@/lib/progressBorder';
+import { progressDash, roundedRectPathFromBottom, roundedRectPerimeter } from '@/lib/progressBorder';
 
 type ProgressBorderProps = {
   /** 0-1. How far around the card the stroke travels. */
@@ -36,7 +36,7 @@ export function ProgressBorder({ progress, color, radius = 12, strokeWidth = 2 }
       {w > 0 && h > 0 && (
         <Svg width={size.width} height={size.height}>
           <Path
-            d={roundedRectPathReverse(inset, inset, w, h, radius)}
+            d={roundedRectPathFromBottom(inset, inset, w, h, radius)}
             fill="none"
             stroke={color}
             strokeWidth={strokeWidth}

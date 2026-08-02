@@ -19,11 +19,14 @@ export function progressDash(perimeter: number, progress: number): [number, numb
 }
 
 /**
- * A rounded rect traced anticlockwise from the top-left corner: the stroke leaves that
- * point heading left, down the near side and around the bottom, so a partial dash fills
- * leftwards. An SVG `Rect` can only be stroked the other way, hence the explicit path.
+ * A rounded rect traced from the middle of the bottom edge, heading left: down the
+ * bottom-left corner, up the left side, across the top, down the right side and back
+ * along the bottom to where it started. A partial dash therefore grows out of the
+ * bottom centre in one direction, which reads as a gauge rather than a stroke that
+ * happens to begin in a corner. An SVG `Rect` always starts top-left, hence the
+ * explicit path.
  */
-export function roundedRectPathReverse(
+export function roundedRectPathFromBottom(
   x: number,
   y: number,
   width: number,
@@ -34,17 +37,20 @@ export function roundedRectPathReverse(
   const r = Math.max(0, Math.min(radius, Math.min(width, height) / 2));
   const x2 = x + width;
   const y2 = y + height;
-  // Sweep flag 0 turns each corner the short way round for an anticlockwise loop.
-  const arc = (ex: number, ey: number) => `A ${r} ${r} 0 0 0 ${ex} ${ey}`;
+  const midX = x + width / 2;
+  // Sweep flag 1 turns each corner the short way round for a clockwise loop.
+  const arc = (ex: number, ey: number) => `A ${r} ${r} 0 0 1 ${ex} ${ey}`;
   return [
-    `M ${x + r} ${y}`,
-    arc(x, y + r),
-    `L ${x} ${y2 - r}`,
-    arc(x + r, y2),
-    `L ${x2 - r} ${y2}`,
-    arc(x2, y2 - r),
-    `L ${x2} ${y + r}`,
-    arc(x2 - r, y),
+    `M ${midX} ${y2}`,
+    `L ${x + r} ${y2}`,
+    arc(x, y2 - r),
+    `L ${x} ${y + r}`,
+    arc(x + r, y),
+    `L ${x2 - r} ${y}`,
+    arc(x2, y + r),
+    `L ${x2} ${y2 - r}`,
+    arc(x2 - r, y2),
+    `L ${midX} ${y2}`,
     'Z',
   ].join(' ');
 }

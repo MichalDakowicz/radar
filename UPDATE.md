@@ -2,7 +2,23 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.6.0 — Unreleased
+## 2.5.1 — 2026-08-02
+
+### Changed
+
+- The public score ring on a movie or show fills out of the bottom centre instead of a corner
+
+### Fixed
+
+- In progress on a shelf no longer lists titles you have already finished
+- Social drops a started watching entry once that title has been finished
+- Saving a title you had already watched no longer marks today on the streak calendar
+- Continue watching keeps every title when you add one, instead of showing only the new one
+- The top bar is the same height on every tab, so Social and Profile no longer sit lower
+
+### Removed
+
+- Open your library button on your own Profile, which the Library tab already covers
 
 ## 2.5.0 — 2026-08-02
 

@@ -106,6 +106,17 @@ export function isWatched(movie: MigratableMovie): boolean {
   return status === 'Completed' || status === 'Watched' || (movie.timesWatched || 0) > 0;
 }
 
+/**
+ * Underway *now*, which the inProgress flag alone does not prove: legacy
+ * "Watching" rows migrate with watched set too, and a series can have its last
+ * episode ticked without anyone clearing the flag. Anything that shows someone
+ * mid-title — a shelf's In progress list, the feed's In progress rows — asks
+ * this rather than reading the flag.
+ */
+export function isActivelyWatching(movie: MigratableMovie): boolean {
+  return isInProgress(movie) && !isWatched(movie) && watchProgressPercent(movie) < 100;
+}
+
 /** "Want to rewatch" (doc 06 #3): watched=true and still in the watchlist. */
 export function isRewatch(movie: MigratableMovie): boolean {
   return isWatched(movie) && isInWatchlist(movie);

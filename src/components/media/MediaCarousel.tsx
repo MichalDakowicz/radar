@@ -1,11 +1,11 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ScrollView, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 
 import { MovieCard, type MovieCardVariant } from '@/components/media/MovieCard';
-import { useHover, useIsDesktop, useMeasuredWidth, webTransition } from '@/hooks/useResponsive';
+import { ScrollArrow } from '@/components/media/ScrollArrow';
+import { useHover, useIsDesktop, useMeasuredWidth } from '@/hooks/useResponsive';
 import type { Movie } from '@/types/movie';
 
 // Horizontal row of MovieCards - ported from ScrollingRow.jsx (doc 12 part 1).
@@ -31,6 +31,14 @@ type MediaCarouselProps = {
   showRatings?: boolean;
   showFullDate?: boolean;
   readOnly?: boolean;
+  /**
+   * Off for the Library's own sections, which live inside another list's
+   * header: a FlashList that mounts there measures against a container that is
+   * already laid out and can settle on a single visible card until something
+   * forces it to measure again. Those rows are capped at 30 short cards, so
+   * rendering them all up front costs nothing and is always correct.
+   */
+  virtualized?: boolean;
 };
 
 const GAP = 16;
@@ -51,11 +59,13 @@ export function MediaCarousel({
   showRatings,
   showFullDate,
   readOnly,
+  virtualized = true,
 }: MediaCarouselProps) {
   const isDesktop = useIsDesktop();
   const { hovered, bind } = useHover();
   const { width: rowWidth, onLayout } = useMeasuredWidth();
   const listRef = useRef<FlashListRef<Movie>>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const [offset, setOffset] = useState(0);
 
   if (movies.length === 0) return null;
@@ -77,8 +87,46 @@ export function MediaCarousel({
   const step = Math.max(outerWidth + GAP, Math.floor((rowWidth * 0.8) / (outerWidth + GAP)) * (outerWidth + GAP));
   const scrollBy = (direction: -1 | 1) => {
     const next = Math.max(0, Math.min(offset + direction * step, contentWidth - rowWidth));
-    listRef.current?.scrollToOffset({ offset: next, animated: true });
+    if (virtualized) listRef.current?.scrollToOffset({ offset: next, animated: true });
+    else scrollRef.current?.scrollTo({ x: next, animated: true });
     setOffset(next);
+  };
+
+  const onScroll = ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>) => setOffset(nativeEvent.contentOffset.x);
+
+  const renderCard = (item: Movie, index: number) => (
+    <View
+      key={item.id}
+      style={{
+        width: outerWidth,
+        marginRight: index === movies.length - 1 ? 0 : GAP,
+      }}
+    >
+      <MovieCard
+        movie={item}
+        variant={cardVariant}
+        onPress={onPress}
+        onAdd={onAdd}
+        onRemove={onRemove}
+        isAdded={isAdded?.(item)}
+        highlighted={highlightedId === item.id}
+        showStatus={showStatus}
+        showRatings={showRatings}
+        showFullDate={showFullDate}
+        readOnly={readOnly}
+      />
+    </View>
+  );
+
+  const shared = {
+    horizontal: true as const,
+    showsHorizontalScrollIndicator: false,
+    contentContainerStyle: { paddingHorizontal: EDGE_PADDING },
+    snapToInterval: snapInterval,
+    snapToAlignment: 'start' as const,
+    decelerationRate: isFeatured ? ('fast' as const) : ('normal' as const),
+    scrollEventThrottle: 16,
+    onScroll,
   };
 
   return (
@@ -94,41 +142,19 @@ export function MediaCarousel({
         </View>
       )}
       <View className="relative" onLayout={onLayout}>
-        <FlashList
-          ref={listRef}
-          horizontal
-          data={movies}
-          keyExtractor={(item) => item.id}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: EDGE_PADDING }}
-          snapToInterval={snapInterval}
-          snapToAlignment="start"
-          decelerationRate={isFeatured ? 'fast' : 'normal'}
-          scrollEventThrottle={16}
-          onScroll={({ nativeEvent }) => setOffset(nativeEvent.contentOffset.x)}
-          renderItem={({ item, index }) => (
-            <View
-              style={{
-                width: outerWidth,
-                marginRight: index === movies.length - 1 ? 0 : GAP,
-              }}
-            >
-              <MovieCard
-                movie={item}
-                variant={cardVariant}
-                onPress={onPress}
-                onAdd={onAdd}
-                onRemove={onRemove}
-                isAdded={isAdded?.(item)}
-                highlighted={highlightedId === item.id}
-                showStatus={showStatus}
-                showRatings={showRatings}
-                showFullDate={showFullDate}
-                readOnly={readOnly}
-              />
-            </View>
-          )}
-        />
+        {virtualized ? (
+          <FlashList
+            {...shared}
+            ref={listRef}
+            data={movies}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item, index }) => renderCard(item, index)}
+          />
+        ) : (
+          <ScrollView {...shared} ref={scrollRef}>
+            {movies.map(renderCard)}
+          </ScrollView>
+        )}
         {/* Right-edge fade (ported from ScrollingRow.jsx's scroll-affordance
             gradient) - the visual cue that this row scrolls, without needing
             to track live scroll offset the way the hover-only arrows did. */}
@@ -148,39 +174,5 @@ export function MediaCarousel({
         )}
       </View>
     </View>
-  );
-}
-
-// Netflix-style edge control: only materializes while the pointer is over the
-// row, so a page of rows isn't covered in permanent chrome.
-function ScrollArrow({ side, visible, onPress }: { side: 'left' | 'right'; visible: boolean; onPress: () => void }) {
-  const { hovered, bind } = useHover();
-  const Icon = side === 'left' ? ChevronLeft : ChevronRight;
-
-  return (
-    <Pressable
-      {...bind}
-      onPress={onPress}
-      accessibilityLabel={side === 'left' ? 'Scroll left' : 'Scroll right'}
-      style={[
-        {
-          // Hidden arrows must not eat clicks meant for the posters underneath.
-          pointerEvents: visible ? 'auto' : 'none',
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          width: 44,
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          opacity: visible ? 1 : 0,
-          backgroundColor: hovered ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0.5)',
-        },
-        side === 'left' ? { left: 0 } : { right: 0 },
-        webTransition('opacity, background-color'),
-      ]}
-    >
-      <Icon size={26} color="#fff" />
-    </Pressable>
   );
 }

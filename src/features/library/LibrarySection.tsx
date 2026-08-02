@@ -69,6 +69,10 @@ export function LibrarySection({
             onPress={onPress}
             highlightedId={highlightedId}
             showFullDate={showFullDate}
+            // These rows sit in the main list's header, where a freshly mounted
+            // FlashList can stick at one visible card - the row a title lands in
+            // the moment it is added is exactly when that mount happens.
+            virtualized={false}
           />
         ))}
     </View>

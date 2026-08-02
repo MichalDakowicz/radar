@@ -88,7 +88,11 @@ export function Header({
       className="flex-row items-center justify-between gap-3 border-b border-border bg-background/95 px-4 pb-3"
       style={{ paddingTop: insets.top + 10 }}
     >
-      <View className="flex-1 flex-row items-center gap-2.5">
+      {/* Both halves are pinned to the same height as the tallest control so
+          the bar measures identically on every tab: Social's inbox and
+          Profile's gear are 44pt touch targets, and a screen without them
+          used to render a visibly shorter header. */}
+      <View className="h-11 flex-1 flex-row items-center gap-2.5">
         <Logo width={32} height={32} />
         <Text className="text-2xl font-bold tracking-tight text-foreground">Radar</Text>
         {!!refreshingLabel && (
@@ -98,18 +102,33 @@ export function Header({
         )}
       </View>
 
-      <View className="flex-row items-center gap-2">
+      <View className="h-11 flex-row items-center gap-2">
         {actions}
         {!!onRandomPick && (
-          <Pressable onPress={onRandomPick} className="flex-row items-center gap-1.5 rounded-full border border-border px-3 py-2">
+          <Pressable
+            onPress={onRandomPick}
+            accessibilityLabel="Pick Random"
+            accessibilityRole="button"
+            className="h-9 w-11 flex-row items-center justify-center rounded-full border border-border active:opacity-60"
+          >
             <Shuffle size={16} color="hsl(0 0% 98%)" />
           </Pressable>
         )}
-        <Pressable onPress={() => presentQuickAdd?.()} className="flex-row items-center gap-1.5 rounded-full bg-primary px-3 py-2">
+        <Pressable
+          onPress={() => presentQuickAdd?.()}
+          accessibilityLabel="Add Movie"
+          accessibilityRole="button"
+          className="h-9 w-11 flex-row items-center justify-center rounded-full bg-primary active:opacity-80"
+        >
           <Plus size={16} color="#fff" />
         </Pressable>
         {!!onShare && (
-          <Pressable onPress={onShare} className="rounded-full p-2">
+          <Pressable
+            onPress={onShare}
+            accessibilityLabel="Share shelf"
+            accessibilityRole="button"
+            className="h-11 w-11 items-center justify-center rounded-full active:opacity-60"
+          >
             <Share2 size={18} color="hsl(0 0% 63.9%)" />
           </Pressable>
         )}
