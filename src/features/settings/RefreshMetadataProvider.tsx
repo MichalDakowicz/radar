@@ -1,64 +1,51 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { useToast } from '@/components/ui/Toast';
-import { useMovies } from '@/hooks/useMovies';
+import { useAuth } from '@/features/auth/AuthProvider';
 import { useUserSettings } from '@/hooks/useUserSettings';
-import { fetchMediaMetadata } from '@/lib/tmdb';
+import { registerMetadataRefreshTask } from '@/lib/backgroundRefreshTask';
+import { ensureRefreshNotifications } from '@/lib/refreshNotifications';
+import { getFullRefreshSince, getLastRunAt, requestRefreshStop } from '@/lib/refreshState';
+import { beginFullRefresh, runMetadataRefresh } from '@/lib/runMetadataRefresh';
 import { useTheme } from '@/theme/ThemeProvider';
-import type { Movie } from '@/types/movie';
 
-// Port of legacy RefreshMetadataContext.jsx: sequentially re-fetches TMDB
-// metadata for every owned title and writes it back, keeping user-owned fields
-// (ratings/watch flags/notes/dates) untouched. Runs in the provider stack so it
-// survives navigation - the user can leave Settings and it keeps going. Writes
-// go through updateMovie(..., { silent: true }) so a full refresh doesn't spam
-// the activity log.
+// Thin foreground shell over lib/runMetadataRefresh. The sweep itself is
+// headless so WorkManager can run it with the app closed; this only provides
+// the in-app progress readout, kicks off a manual run, and makes sure the
+// background task is registered.
 
 type RefreshProgress = { current: number; total: number };
 
 type RefreshMetadataContextValue = {
   refreshing: boolean;
   progress: RefreshProgress;
+  /** A manual sweep the OS has to finish in the background. */
+  pending: boolean;
+  lastRunAt: number | null;
+  /** A stop has been asked for but the title in flight hasn't finished yet. */
+  stopping: boolean;
   refresh: () => Promise<void>;
+  /** Abandons the running sweep after the title in flight finishes. */
+  stop: () => void;
 };
 
 const RefreshMetadataContext = createContext<RefreshMetadataContextValue>({
   refreshing: false,
   progress: { current: 0, total: 0 },
+  pending: false,
+  lastRunAt: null,
+  stopping: false,
   refresh: async () => {},
+  stop: () => {},
 });
 
-// Only the TMDB-sourced metadata columns are overwritten; everything the user
-// owns is preserved by simply not being in the patch.
-function metadataPatch(movie: Movie, fresh: NonNullable<Awaited<ReturnType<typeof fetchMediaMetadata>>>): Partial<Movie> {
-  return {
-    title: fresh.title || movie.title,
-    coverUrl: fresh.coverUrl || movie.coverUrl,
-    releaseDate: fresh.releaseDate || movie.releaseDate,
-    genres: fresh.genres,
-    director: fresh.director,
-    cast: fresh.cast,
-    overview: fresh.overview,
-    runtime: fresh.runtime,
-    voteAverage: fresh.voteAverage,
-    voteCount: fresh.voteCount,
-    imdbId: fresh.imdbId || movie.imdbId,
-    numberOfSeasons: fresh.number_of_seasons ?? movie.numberOfSeasons,
-    numberOfEpisodes: fresh.number_of_episodes ?? movie.numberOfEpisodes,
-    tmdbStatus: fresh.tmdbStatus || movie.tmdbStatus,
-    tagline: fresh.tagline || movie.tagline,
-    budget: fresh.budget ?? movie.budget,
-    revenue: fresh.revenue ?? movie.revenue,
-    productionCompanies: fresh.productionCompanies?.length ? fresh.productionCompanies : movie.productionCompanies,
-    availability: fresh.availability?.length ? fresh.availability : movie.availability,
-  };
-}
-
 export function RefreshMetadataProvider({ children }: { children: React.ReactNode }) {
-  const { movies, updateMovie } = useMovies();
+  const { user } = useAuth();
   const { settings, loading: settingsLoading } = useUserSettings();
   const { show } = useToast();
   const { theme, setTheme } = useTheme();
+  const queryClient = useQueryClient();
 
   // Cross-device theme sync: the runtime theme lives in ThemeProvider (MMKV,
   // instant/offline) but user_settings.theme is the durable source. Once the
@@ -75,49 +62,85 @@ export function RefreshMetadataProvider({ children }: { children: React.ReactNod
 
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState<RefreshProgress>({ current: 0, total: 0 });
+  const [pending, setPending] = useState(() => getFullRefreshSince() != null);
+  const [lastRunAt, setLastRunAt] = useState(() => getLastRunAt());
+  const [stopping, setStopping] = useState(false);
   const runningRef = useRef(false);
+  const signedInRef = useRef(!!user);
+
+  useEffect(() => {
+    signedInRef.current = !!user;
+  }, [user]);
+
+  // Registration is persisted by the OS, but re-asserting it on every start is
+  // how the task survives a reinstall or a user who cleared the app's data.
+  useEffect(() => {
+    if (user) void registerMetadataRefreshTask();
+  }, [user]);
+
+  const run = useCallback(
+    async (start: boolean) => {
+      if (runningRef.current) return null;
+      runningRef.current = true;
+      setRefreshing(true);
+      setStopping(false);
+      setProgress({ current: 0, total: 0 });
+
+      await ensureRefreshNotifications();
+      if (start) beginFullRefresh();
+      setPending(getFullRefreshSince() != null);
+
+      try {
+        return await runMetadataRefresh({
+          mode: 'manual',
+          notify: true,
+          onProgress: setProgress,
+          isCancelled: () => !signedInRef.current,
+        });
+      } finally {
+        runningRef.current = false;
+        setRefreshing(false);
+        setStopping(false);
+        setProgress({ current: 0, total: 0 });
+        setPending(getFullRefreshSince() != null);
+        setLastRunAt(getLastRunAt());
+        queryClient.invalidateQueries({ queryKey: ['movies'] });
+      }
+    },
+    [queryClient],
+  );
+
+  // A sweep the OS never got to finish picks straight back up the next time the
+  // app is open, rather than waiting on another WorkManager window.
+  useEffect(() => {
+    if (user && getFullRefreshSince() != null) void run(false);
+  }, [user, run]);
 
   const refresh = useCallback(async () => {
-    if (runningRef.current) return;
-    const list = movies.filter((m) => m.tmdbId != null);
-    if (list.length === 0) {
-      show('No titles with TMDB data to refresh.');
-      return;
-    }
+    const outcome = await run(true);
+    if (!outcome) return;
 
-    runningRef.current = true;
-    setRefreshing(true);
-    setProgress({ current: 0, total: list.length });
+    if (outcome.skipped === 'nothing-due') show('Metadata is already up to date.');
+    else if (outcome.skipped) show('A refresh is already running.');
+    else if (outcome.stopped) show(`Stopped after ${outcome.ok} titles.`);
+    else if (outcome.remaining > 0) show(`Paused with ${outcome.remaining} left — Radar will finish in the background.`);
+    else if (outcome.failed > 0) show(`Refreshed ${outcome.ok} titles · ${outcome.failed} failed.`);
+    else show(`Refreshed ${outcome.ok} titles.`);
+  }, [run, show]);
 
-    let ok = 0;
-    let failed = 0;
-    try {
-      for (let i = 0; i < list.length; i++) {
-        const movie = list[i];
-        setProgress({ current: i + 1, total: list.length });
-        try {
-          const fresh = await fetchMediaMetadata(movie.tmdbId!, movie.type, settings.watchProviderCountry);
-          if (fresh) {
-            await updateMovie(movie.id, metadataPatch(movie, fresh), { silent: true });
-            ok++;
-          }
-        } catch (err) {
-          console.error(`Refresh failed for ${movie.title}:`, err);
-          failed++;
-        }
-        // Gentle pacing so a large library doesn't hammer TMDB.
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-      show(failed > 0 ? `Refreshed ${ok} titles · ${failed} failed.` : `Refreshed ${ok} titles.`);
-    } finally {
-      runningRef.current = false;
-      setRefreshing(false);
-      setProgress({ current: 0, total: 0 });
-    }
-  }, [movies, settings.watchProviderCountry, updateMovie, show]);
+  // The runner checks between titles, so the sweep winds down within one TMDB
+  // round-trip rather than instantly. Flipping `stopping` keeps the row from
+  // reading as if the press did nothing.
+  const stop = useCallback(() => {
+    if (!runningRef.current) return;
+    requestRefreshStop();
+    setStopping(true);
+  }, []);
 
   return (
-    <RefreshMetadataContext.Provider value={{ refreshing, progress, refresh }}>{children}</RefreshMetadataContext.Provider>
+    <RefreshMetadataContext.Provider value={{ refreshing, progress, pending, lastRunAt, stopping, refresh, stop }}>
+      {children}
+    </RefreshMetadataContext.Provider>
   );
 }
 

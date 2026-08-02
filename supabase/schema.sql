@@ -82,7 +82,11 @@ create table if not exists public.movies (
   budget              bigint,
   revenue             bigint,
   added_at       timestamptz not null default now(),
-  updated_at     timestamptz not null default now()
+  updated_at     timestamptz not null default now(),
+  -- Last time the background metadata refresh re-fetched this row from TMDB.
+  -- Null means never, which sorts first in the refresh queue. Distinct from
+  -- updated_at, which any user edit bumps.
+  metadata_synced_at timestamptz
 );
 
 -- Named explicitly, matching what Postgres auto-generated for the unnamed
@@ -93,6 +97,9 @@ create index if not exists movies_user_id_tmdb_id_idx      on public.movies (use
 create index if not exists movies_user_id_watched_idx      on public.movies (user_id, watched);
 create index if not exists movies_user_id_in_watchlist_idx on public.movies (user_id, in_watchlist);
 create index if not exists movies_user_id_expr_idx         on public.movies (user_id, ((ratings->>'overall')::numeric));
+-- movies_user_id_metadata_synced_at_idx is created down in COLUMN MIGRATIONS:
+-- on a live database this CREATE TABLE is skipped, so the column it indexes
+-- only exists after the `alter table ... add column if not exists` below.
 
 create table if not exists public.activity (
   id          uuid primary key default gen_random_uuid(),
@@ -189,6 +196,14 @@ end $$;
 -- user_settings.owned_services (Library "My services" filter).
 alter table public.user_settings
   add column if not exists owned_services text[] not null default '{}';
+
+-- movies.metadata_synced_at (background metadata refresh queue cursor).
+alter table public.movies
+  add column if not exists metadata_synced_at timestamptz;
+
+-- The refresh queue reads oldest-synced-first, never-synced ahead of everything.
+create index if not exists movies_user_id_metadata_synced_at_idx
+  on public.movies (user_id, metadata_synced_at nulls first);
 
 -- ============================================================================
 -- RLS

@@ -15,6 +15,11 @@ import { useWebShortcuts } from '@/hooks/useWebShortcuts';
 import { queryClient } from '@/lib/queryClient';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 
+// Side-effect import: TaskManager.defineTask has to have run by the time the OS
+// wakes the app headlessly for the background metadata refresh, and this module
+// is the first thing the router entry loads.
+import '@/lib/backgroundRefreshTask';
+
 SplashScreen.preventAutoHideAsync();
 
 function AuthGate({ children }: { children: React.ReactNode }) {
