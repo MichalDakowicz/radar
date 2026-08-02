@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import { useAuth } from '@/features/auth/AuthProvider';
 import { normalizeFavorites, toFavoritesPayload } from '@/lib/favorites';
@@ -52,6 +53,23 @@ export function useProfile(id: string | undefined) {
     staleTime: 5 * 60 * 1000,
   });
   return { profile: query.data ?? null, loading: query.isLoading, error: query.error };
+}
+
+/**
+ * Several profiles at once, as a lookup. For lists that name people they do not
+ * own — the inbox, where every row may have a different actor — one `in` query
+ * beats one useProfile per row. Keyed on the sorted id set, so a reordered list
+ * is not a new cache entry.
+ */
+export function useProfileMap(ids: string[]): Map<string, Profile> {
+  const unique = [...new Set(ids.filter(Boolean))].sort();
+  const query = useQuery({
+    queryKey: ['profiles', unique.join(',')],
+    queryFn: () => fetchProfiles(unique),
+    enabled: unique.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+  return useMemo(() => new Map((query.data ?? []).map((profile) => [profile.id, profile])), [query.data]);
 }
 
 export type ProfileUpdate = {

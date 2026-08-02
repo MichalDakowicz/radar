@@ -27,7 +27,7 @@ export type FeedEvent = ActivityEvent & {
   stillInProgress: boolean;
 };
 
-type ActivityRow = {
+export type ActivityRow = {
   id: string;
   user_id: string;
   movie_id: string | null;
@@ -52,7 +52,8 @@ type PosterRow = {
   episodes_watched: Record<string, boolean> | null;
 };
 
-async function fetchPosters(movieIds: string[]): Promise<Map<string, PosterRow>> {
+/** Shared with the single-event detail page, which hydrates exactly one row. */
+export async function fetchPosters(movieIds: string[]): Promise<Map<string, PosterRow>> {
   if (movieIds.length === 0) return new Map();
   // Friends' movies rows are readable through movies_visible_read; a title whose
   // owner has since gone private simply drops out and the card renders coverless.
@@ -64,7 +65,7 @@ async function fetchPosters(movieIds: string[]): Promise<Map<string, PosterRow>>
   return new Map((data as PosterRow[]).map((row) => [row.id, row]));
 }
 
-function toFeedEvent(row: ActivityRow, posters: Map<string, PosterRow>): FeedEvent {
+export function toFeedEvent(row: ActivityRow, posters: Map<string, PosterRow>): FeedEvent {
   const details = row.details ?? {};
   const poster = row.movie_id ? posters.get(row.movie_id) : undefined;
   const base = {

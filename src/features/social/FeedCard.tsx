@@ -20,6 +20,8 @@ type FeedCardProps = {
   composing: boolean;
   onOpenProfile: () => void;
   onOpenTitle: () => void;
+  /** Opens the event's own page. Omitted on that page itself, where it is a no-op. */
+  onOpenEvent?: () => void;
   onToggleReaction: (kind: ReactionKind) => void;
   onToggleComposer: () => void;
   onPostComment: (body: string) => void;
@@ -36,6 +38,7 @@ export function FeedCard({
   composing,
   onOpenProfile,
   onOpenTitle,
+  onOpenEvent,
   onToggleReaction,
   onToggleComposer,
   onPostComment,
@@ -44,7 +47,16 @@ export function FeedCard({
   const subtitle = [event.releaseYear, event.mediaType === 'tv' ? 'Series' : null].filter(Boolean).join(' · ');
 
   return (
-    <View className="gap-2.5 rounded-xl border border-border bg-card p-3">
+    // The card itself opens the event. Nested pressables keep their own taps —
+    // whichever one is touched claims the responder, so the avatar still opens a
+    // shelf and the poster still opens the title. This catches everything else.
+    <Pressable
+      onPress={onOpenEvent}
+      disabled={!onOpenEvent}
+      accessibilityRole={onOpenEvent ? 'button' : undefined}
+      accessibilityLabel={onOpenEvent ? `Open ${name}'s activity: ${event.verb} ${event.movieTitle}` : undefined}
+      className="gap-2.5 rounded-xl border border-border bg-card p-3"
+    >
       <View className="flex-row items-start gap-2.5">
         <Pressable
           onPress={onOpenProfile}
@@ -94,6 +106,6 @@ export function FeedCard({
           <CommentThread comments={social.comments} composing={composing} onSubmit={onPostComment} />
         </>
       )}
-    </View>
+    </Pressable>
   );
 }

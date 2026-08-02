@@ -8,6 +8,10 @@
 -- so re-running only applies what is actually missing. It never drops a table,
 -- a column, or a row — the only things it replaces are policies and functions,
 -- which are re-created immediately from the definitions below.
+--
+-- Run `notifications.sql` after this one. It hangs the inbox, the delivery
+-- preferences and the push queue off these tables, and has manual setup steps
+-- of its own (FCM credentials, pg_cron/pg_net, Vault secrets, edge function).
 
 -- ============================================================================
 -- SCHEMA

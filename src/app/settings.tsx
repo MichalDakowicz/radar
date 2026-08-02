@@ -1,4 +1,4 @@
-import { BarChart3, Clock, Database, Globe, Info, LogOut, Monitor, Tv } from 'lucide-react-native';
+import { BarChart3, Bell, Clock, Database, Globe, Info, LogOut, Monitor, Tv } from 'lucide-react-native';
 import { useRef } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -11,6 +11,7 @@ import { AppUpdateControl } from '@/features/settings/AppUpdateControl';
 import { DataTools } from '@/features/settings/DataTools';
 import { ImportExportSheet } from '@/features/settings/ImportExportSheet';
 import { MyServicesControl } from '@/features/settings/MyServicesControl';
+import { NotificationsControl } from '@/features/settings/NotificationsControl';
 import { PrivacyControl } from '@/features/settings/PrivacyControl';
 import { RecentlyAddedControl } from '@/features/settings/RecentlyAddedControl';
 import { RegionControl } from '@/features/settings/RegionControl';
@@ -47,6 +48,10 @@ export default function Settings() {
         >
           <SettingsSection icon={<Globe size={18} color={MUTED} />} title="Privacy">
             <PrivacyControl />
+          </SettingsSection>
+
+          <SettingsSection icon={<Bell size={18} color={MUTED} />} title="Notifications">
+            <NotificationsControl />
           </SettingsSection>
 
           <SettingsSection icon={<Monitor size={18} color={MUTED} />} title="Appearance">

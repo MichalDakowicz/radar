@@ -2,7 +2,24 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.7.0 — Unreleased
+## 2.7.0 — 2026-08-02
+
+### Added
+
+- Notifications for friend activity, releases, streaks and suggestions, with a full inbox
+- Inbox replaces the friend requests screen, so requests and everything else share one place
+- Settings choose what friends' watching notifies you about: nothing, your titles, or everything
+- A heads-up before a watchlist title comes out, and again on release day
+- A warning in the evening when today would break your watching streak
+- The occasional suggestion to pick something back up after a few quiet days
+- Quiet hours hold banners overnight without keeping anything out of the inbox
+- Tapping a notification opens the title, friend or screen it is about and marks it read
+- Friend activity opens the event's own page, from the notification or the feed card
+- The inbox badge lights up as a notification arrives and on app open, not on inbox open
+
+### Changed
+
+- The nav bar's inbox button counts unread notifications as well as pending friend requests
 
 ## 2.6.1 — 2026-08-02
 

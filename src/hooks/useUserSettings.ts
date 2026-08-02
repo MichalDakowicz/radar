@@ -3,83 +3,31 @@ import { useEffect } from 'react';
 
 import { useAuth } from '@/features/auth/AuthProvider';
 import { supabase } from '@/lib/supabase';
+import {
+  DEFAULT_SETTINGS,
+  normalizeSettings,
+  settingsToRow,
+  type UserSettings,
+  type UserSettingsRow,
+} from '@/lib/userSettings';
 
-// Server-canonical settings backed by public.user_settings (schema.sql). Replaces
-// the scattered legacy storage: theme (localStorage), watch-provider country +
-// recently-added (Firebase settings/*), streak thresholds + privacy (Firebase).
-// user_settings is owner-only (settings_owner_all RLS), so this hook only ever
-// reads/writes the signed-in user's own row - the public shelf uses defaults.
+// Server-canonical settings backed by public.user_settings (schema.sql +
+// notifications.sql). Replaces the scattered legacy storage: theme
+// (localStorage), watch-provider country + recently-added (Firebase settings/*),
+// streak thresholds + privacy (Firebase). user_settings is owner-only
+// (settings_owner_all RLS), so this hook only ever reads/writes the signed-in
+// user's own row - the public shelf uses defaults.
+//
+// The row shape and its column mapping live in lib/userSettings so they can be
+// tested without a network; this file is the I/O and the cache.
 
-export type ThemePref = 'dark' | 'light' | 'system';
-export type FriendsVisibility = 'public' | 'friends' | 'noone';
-
-export type UserSettings = {
-  watchProviderCountry: string;
-  recentlyAddedDays: number;
-  showRecentlyAdded: boolean;
-  friendsVisibility: FriendsVisibility;
-  streakThreshold: number;
-  tvStreakThreshold: number;
-  theme: ThemePref;
-  ownedServices: string[];
-};
-
-type UserSettingsRow = {
-  watch_provider_country: string;
-  recently_added_days: number;
-  show_recently_added: boolean;
-  friends_visibility: FriendsVisibility;
-  streak_threshold: number;
-  tv_streak_threshold: number;
-  theme: string | null;
-  owned_services: string[] | null;
-};
-
-export const DEFAULT_SETTINGS: UserSettings = {
-  watchProviderCountry: 'US',
-  recentlyAddedDays: 30,
-  showRecentlyAdded: true,
-  friendsVisibility: 'friends',
-  streakThreshold: 2,
-  tvStreakThreshold: 5,
-  theme: 'dark',
-  ownedServices: [],
-};
-
-function normalize(row: UserSettingsRow): UserSettings {
-  return {
-    watchProviderCountry: row.watch_provider_country,
-    recentlyAddedDays: row.recently_added_days,
-    showRecentlyAdded: row.show_recently_added,
-    friendsVisibility: row.friends_visibility,
-    streakThreshold: row.streak_threshold,
-    tvStreakThreshold: row.tv_streak_threshold,
-    theme: row.theme === 'light' || row.theme === 'system' ? row.theme : 'dark',
-    // Null until the owned_services column migration has been applied, so the
-    // client tolerates a row that predates it rather than crashing the filter.
-    ownedServices: Array.isArray(row.owned_services) ? row.owned_services : [],
-  };
-}
-
-const TO_COLUMN: Record<keyof UserSettings, keyof UserSettingsRow> = {
-  watchProviderCountry: 'watch_provider_country',
-  recentlyAddedDays: 'recently_added_days',
-  showRecentlyAdded: 'show_recently_added',
-  friendsVisibility: 'friends_visibility',
-  streakThreshold: 'streak_threshold',
-  tvStreakThreshold: 'tv_streak_threshold',
-  theme: 'theme',
-  ownedServices: 'owned_services',
-};
-
-function toRow(patch: Partial<UserSettings>): Record<string, unknown> {
-  const row: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(patch)) {
-    const column = TO_COLUMN[key as keyof UserSettings];
-    if (column) row[column] = value;
-  }
-  return row;
-}
+export {
+  DEFAULT_SETTINGS,
+  type FriendActivityScope,
+  type FriendsVisibility,
+  type ThemePref,
+  type UserSettings,
+} from '@/lib/userSettings';
 
 function settingsKey(userId: string | undefined) {
   return ['user-settings', userId] as const;
@@ -90,7 +38,7 @@ async function fetchSettings(userId: string): Promise<UserSettings> {
   if (error) throw error;
   // The auth trigger inserts a default row on signup; a missing row (e.g. a
   // pre-trigger account) falls back to defaults rather than erroring.
-  return data ? normalize(data as UserSettingsRow) : DEFAULT_SETTINGS;
+  return data ? normalizeSettings(data as UserSettingsRow) : DEFAULT_SETTINGS;
 }
 
 export function useUserSettings() {
@@ -125,7 +73,7 @@ export function useUserSettings() {
       if (!user) throw new Error('Not signed in');
       const { error } = await supabase
         .from('user_settings')
-        .upsert({ user_id: user.id, ...toRow(patch) }, { onConflict: 'user_id' });
+        .upsert({ user_id: user.id, ...settingsToRow(patch) }, { onConflict: 'user_id' });
       if (error) throw error;
     },
     // Optimistic: reflect the change immediately, roll back on failure.
