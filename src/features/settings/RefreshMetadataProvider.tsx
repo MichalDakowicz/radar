@@ -6,7 +6,7 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { registerMetadataRefreshTask } from '@/lib/backgroundRefreshTask';
 import { ensureRefreshNotifications } from '@/lib/refreshNotifications';
-import { getFullRefreshSince, getLastRunAt } from '@/lib/refreshState';
+import { getFullRefreshSince, getLastRunAt, requestRefreshStop } from '@/lib/refreshState';
 import { beginFullRefresh, runMetadataRefresh } from '@/lib/runMetadataRefresh';
 import { useTheme } from '@/theme/ThemeProvider';
 
@@ -23,7 +23,11 @@ type RefreshMetadataContextValue = {
   /** A manual sweep the OS has to finish in the background. */
   pending: boolean;
   lastRunAt: number | null;
+  /** A stop has been asked for but the title in flight hasn't finished yet. */
+  stopping: boolean;
   refresh: () => Promise<void>;
+  /** Abandons the running sweep after the title in flight finishes. */
+  stop: () => void;
 };
 
 const RefreshMetadataContext = createContext<RefreshMetadataContextValue>({
@@ -31,7 +35,9 @@ const RefreshMetadataContext = createContext<RefreshMetadataContextValue>({
   progress: { current: 0, total: 0 },
   pending: false,
   lastRunAt: null,
+  stopping: false,
   refresh: async () => {},
+  stop: () => {},
 });
 
 export function RefreshMetadataProvider({ children }: { children: React.ReactNode }) {
@@ -58,6 +64,7 @@ export function RefreshMetadataProvider({ children }: { children: React.ReactNod
   const [progress, setProgress] = useState<RefreshProgress>({ current: 0, total: 0 });
   const [pending, setPending] = useState(() => getFullRefreshSince() != null);
   const [lastRunAt, setLastRunAt] = useState(() => getLastRunAt());
+  const [stopping, setStopping] = useState(false);
   const runningRef = useRef(false);
   const signedInRef = useRef(!!user);
 
@@ -76,6 +83,7 @@ export function RefreshMetadataProvider({ children }: { children: React.ReactNod
       if (runningRef.current) return null;
       runningRef.current = true;
       setRefreshing(true);
+      setStopping(false);
       setProgress({ current: 0, total: 0 });
 
       await ensureRefreshNotifications();
@@ -92,6 +100,7 @@ export function RefreshMetadataProvider({ children }: { children: React.ReactNod
       } finally {
         runningRef.current = false;
         setRefreshing(false);
+        setStopping(false);
         setProgress({ current: 0, total: 0 });
         setPending(getFullRefreshSince() != null);
         setLastRunAt(getLastRunAt());
@@ -113,13 +122,23 @@ export function RefreshMetadataProvider({ children }: { children: React.ReactNod
 
     if (outcome.skipped === 'nothing-due') show('Metadata is already up to date.');
     else if (outcome.skipped) show('A refresh is already running.');
+    else if (outcome.stopped) show(`Stopped after ${outcome.ok} titles.`);
     else if (outcome.remaining > 0) show(`Paused with ${outcome.remaining} left — Radar will finish in the background.`);
     else if (outcome.failed > 0) show(`Refreshed ${outcome.ok} titles · ${outcome.failed} failed.`);
     else show(`Refreshed ${outcome.ok} titles.`);
   }, [run, show]);
 
+  // The runner checks between titles, so the sweep winds down within one TMDB
+  // round-trip rather than instantly. Flipping `stopping` keeps the row from
+  // reading as if the press did nothing.
+  const stop = useCallback(() => {
+    if (!runningRef.current) return;
+    requestRefreshStop();
+    setStopping(true);
+  }, []);
+
   return (
-    <RefreshMetadataContext.Provider value={{ refreshing, progress, pending, lastRunAt, refresh }}>
+    <RefreshMetadataContext.Provider value={{ refreshing, progress, pending, lastRunAt, stopping, refresh, stop }}>
       {children}
     </RefreshMetadataContext.Provider>
   );

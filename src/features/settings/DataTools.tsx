@@ -1,4 +1,4 @@
-import { Database, RefreshCw } from 'lucide-react-native';
+import { CircleStop, Database, RefreshCw } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
@@ -8,18 +8,36 @@ import { relativeTime } from '@/lib/socialFeed';
 
 const MUTED = 'hsl(0 0% 63.9%)';
 
-function refreshSubtitle(
-  refreshing: boolean,
-  progress: { current: number; total: number },
-  pending: boolean,
-  lastRunAt: number | null,
-): string {
+type RefreshRowState = {
+  refreshing: boolean;
+  stopping: boolean;
+  progress: { current: number; total: number };
+  pending: boolean;
+  lastRunAt: number | null;
+};
+
+// While a sweep is running the row stops being "start a refresh" and becomes
+// "stop this one" - the sweep outlives the screen, so a disabled row would
+// leave no way back out of it.
+function refreshRow(state: RefreshRowState): { title: string; subtitle: string } {
+  const { refreshing, stopping, progress, pending, lastRunAt } = state;
+
+  if (stopping) return { title: 'Stopping…', subtitle: 'Finishing the current title' };
   if (refreshing) {
-    return progress.total > 0 ? `${progress.current} of ${progress.total}…` : 'Starting…';
+    return {
+      title: 'Stop refreshing',
+      subtitle: progress.total > 0 ? `${progress.current} of ${progress.total}…` : 'Starting…',
+    };
   }
-  if (pending) return 'Paused — Radar will finish this in the background';
-  if (lastRunAt) return `Last refreshed ${relativeTime(new Date(lastRunAt).toISOString())}`;
-  return 'Re-fetch posters, cast, and availability from TMDB';
+  if (pending) {
+    return { title: 'Refresh all metadata', subtitle: 'Paused — Radar will finish this in the background' };
+  }
+  return {
+    title: 'Refresh all metadata',
+    subtitle: lastRunAt
+      ? `Last refreshed ${relativeTime(new Date(lastRunAt).toISOString())}`
+      : 'Re-fetch posters, cast, and availability from TMDB',
+  };
 }
 
 function ToolRow({
@@ -52,17 +70,24 @@ function ToolRow({
 }
 
 export function DataTools({ onOpenImportExport }: { onOpenImportExport: () => void }) {
-  const { refreshing, progress, pending, lastRunAt, refresh } = useRefreshMetadata();
+  const { refreshing, progress, pending, lastRunAt, stopping, refresh, stop } = useRefreshMetadata();
   const [confirm, setConfirm] = useState(false);
+  const row = refreshRow({ refreshing, stopping, progress, pending, lastRunAt });
+
+  function refreshIcon() {
+    if (stopping) return <ActivityIndicator size="small" color={MUTED} />;
+    if (refreshing) return <CircleStop size={20} color={MUTED} />;
+    return <RefreshCw size={20} color={MUTED} />;
+  }
 
   return (
     <View className="gap-2">
       <ToolRow
-        icon={refreshing ? <ActivityIndicator size="small" color={MUTED} /> : <RefreshCw size={20} color={MUTED} />}
-        title="Refresh all metadata"
-        subtitle={refreshSubtitle(refreshing, progress, pending, lastRunAt)}
-        onPress={() => setConfirm(true)}
-        disabled={refreshing}
+        icon={refreshIcon()}
+        title={row.title}
+        subtitle={row.subtitle}
+        onPress={refreshing ? stop : () => setConfirm(true)}
+        disabled={stopping}
       />
       <ToolRow
         icon={<Database size={20} color={MUTED} />}

@@ -1,12 +1,16 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { requestRefreshStop } from '@/lib/refreshState';
+
 // The refresh's only UI when the app isn't on screen. expo-notifications has no
 // Android progress-bar binding, so "progress" is a sticky, low-importance
 // notification whose body is rewritten in place (same identifier) each title.
 
 const CHANNEL_ID = 'metadata-refresh';
 const PROGRESS_ID = 'metadata-refresh-progress';
+const CATEGORY_ID = 'metadata-refresh-actions';
+const STOP_ACTION = 'metadata-refresh-stop';
 const ACCENT = '#3b82f6';
 
 const supported = Platform.OS !== 'web';
@@ -25,7 +29,18 @@ if (supported) {
   });
 }
 
+// A stop that only works from inside the app would defeat the point of the
+// sweep surviving the app being closed, so the progress notification carries
+// its own action. It can only ever arrive while the JS context is alive - which
+// is exactly when there is a run to stop.
+if (supported) {
+  Notifications.addNotificationResponseReceivedListener((response) => {
+    if (response.actionIdentifier === STOP_ACTION) requestRefreshStop();
+  });
+}
+
 let channelReady = false;
+let categoryReady = false;
 
 async function ensureChannel(): Promise<void> {
   if (channelReady || Platform.OS !== 'android') return;
@@ -36,6 +51,14 @@ async function ensureChannel(): Promise<void> {
     lightColor: ACCENT,
   });
   channelReady = true;
+}
+
+async function ensureCategory(): Promise<void> {
+  if (categoryReady) return;
+  await Notifications.setNotificationCategoryAsync(CATEGORY_ID, [
+    { identifier: STOP_ACTION, buttonTitle: 'Stop', options: { opensAppToForeground: false } },
+  ]);
+  categoryReady = true;
 }
 
 /**
@@ -58,14 +81,23 @@ export async function ensureRefreshNotifications(): Promise<boolean> {
 }
 
 // Reusing one identifier is what makes this read as a single updating row in
-// the shade instead of a stack of one notification per title.
+// the shade instead of a stack of one notification per title. Only the sticky
+// in-progress notification is actionable - a finished run has nothing to stop.
 async function present(body: string, title: string, sticky: boolean): Promise<void> {
   if (!supported) return;
   try {
     await ensureChannel();
+    if (sticky) await ensureCategory();
     await Notifications.scheduleNotificationAsync({
       identifier: PROGRESS_ID,
-      content: { title, body, sticky, autoDismiss: !sticky, color: ACCENT },
+      content: {
+        title,
+        body,
+        sticky,
+        autoDismiss: !sticky,
+        color: ACCENT,
+        categoryIdentifier: sticky ? CATEGORY_ID : undefined,
+      },
       trigger: Platform.OS === 'android' ? { channelId: CHANNEL_ID } : null,
     });
   } catch (error) {
@@ -80,6 +112,10 @@ export function showRefreshProgress(current: number, total: number, title?: stri
 
 export function showRefreshPaused(remaining: number): Promise<void> {
   return present(`${remaining} titles left · will finish in the background`, 'Metadata refresh paused', false);
+}
+
+export function showRefreshStopped(ok: number, remaining: number): Promise<void> {
+  return present(`${ok} titles updated · ${remaining} not refreshed`, 'Metadata refresh stopped', false);
 }
 
 export function showRefreshDone(ok: number, failed: number): Promise<void> {

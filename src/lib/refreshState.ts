@@ -49,3 +49,22 @@ export function renewRefreshLock(now: number): void {
 export function releaseRefreshLock(): void {
   storage.remove(LOCK_UNTIL);
 }
+
+// Stop request for the pass currently running. Deliberately in-memory, not
+// MMKV: it only means anything while a sweep is live in this process, and a
+// flag that outlived the run would silently cancel the next one. Lives here
+// rather than in the runner so the notification's Stop action can set it
+// without importing the runner and closing an import cycle.
+let stopRequested = false;
+
+export function requestRefreshStop(): void {
+  stopRequested = true;
+}
+
+export function clearRefreshStop(): void {
+  stopRequested = false;
+}
+
+export function isRefreshStopRequested(): boolean {
+  return stopRequested;
+}

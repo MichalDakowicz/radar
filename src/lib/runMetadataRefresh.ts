@@ -8,13 +8,20 @@ import {
 import { toMovieRow } from '@/lib/normalizeMovie';
 import {
   acquireRefreshLock,
+  clearRefreshStop,
   getFullRefreshSince,
+  isRefreshStopRequested,
   releaseRefreshLock,
   renewRefreshLock,
   setFullRefreshSince,
   setLastRunAt,
 } from '@/lib/refreshState';
-import { showRefreshDone, showRefreshPaused, showRefreshProgress } from '@/lib/refreshNotifications';
+import {
+  showRefreshDone,
+  showRefreshPaused,
+  showRefreshProgress,
+  showRefreshStopped,
+} from '@/lib/refreshNotifications';
 import { stripUndefined } from '@/lib/stripUndefined';
 import { supabase } from '@/lib/supabase';
 import { fetchMediaMetadata } from '@/lib/tmdb';
@@ -44,11 +51,13 @@ export type RefreshOutcome = {
   failed: number;
   /** Titles still queued when the budget ran out. */
   remaining: number;
+  /** The user stopped this sweep; `remaining` titles were left untouched. */
+  stopped: boolean;
   /** Set when the pass did no work; the sweep itself is not in a bad state. */
   skipped?: 'locked' | 'signed-out' | 'nothing-due';
 };
 
-const IDLE: RefreshOutcome = { ok: 0, failed: 0, remaining: 0 };
+const IDLE: RefreshOutcome = { ok: 0, failed: 0, remaining: 0, stopped: false };
 
 async function watchProviderCountry(userId: string): Promise<string> {
   const { data } = await supabase
@@ -120,9 +129,17 @@ export async function runMetadataRefresh({
     let ok = 0;
     let failed = 0;
     let index = 0;
+    let stopped = false;
+
+    // A stop left over from a previous run would cancel this one before it
+    // started, so the flag is cleared on the way in, not on the way out.
+    clearRefreshStop();
 
     for (; index < queue.length; index++) {
-      if (isCancelled?.()) break;
+      if (isRefreshStopRequested() || isCancelled?.()) {
+        stopped = true;
+        break;
+      }
       if (Date.now() > deadline) break;
 
       const candidate = queue[index];
@@ -152,15 +169,21 @@ export async function runMetadataRefresh({
     }
 
     const remaining = queue.length - index;
-    if (fullRefreshSince && remaining === 0 && !isCancelled?.()) setFullRefreshSince(null);
+    // Stopping abandons the sweep outright: keeping the marker would have the
+    // background task quietly resume the thing the user just stopped. Titles
+    // already done keep their metadata_synced_at, so a later run picks up from
+    // there anyway - nothing is redone, it just isn't automatic.
+    if (fullRefreshSince && (stopped || remaining === 0)) setFullRefreshSince(null);
     setLastRunAt(Date.now());
+    clearRefreshStop();
 
     if (notify) {
-      if (remaining > 0) await showRefreshPaused(remaining);
+      if (stopped) await showRefreshStopped(ok, remaining);
+      else if (remaining > 0) await showRefreshPaused(remaining);
       else await showRefreshDone(ok, failed);
     }
 
-    return { ok, failed, remaining };
+    return { ok, failed, remaining, stopped };
   } finally {
     releaseRefreshLock();
   }

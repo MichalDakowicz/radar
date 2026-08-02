@@ -8,6 +8,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - Radar re-fetches stale posters, cast and streaming availability on its own in the background
 - A progress notification tracks a metadata refresh, so you can close Radar while it runs
+- Stop a running refresh from Settings or straight from its notification
 
 ### Changed
 
