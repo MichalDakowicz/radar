@@ -1,5 +1,10 @@
 -- Radar — notification test bench. NOT part of the schema; nothing here is run
--- by the app. Paste one numbered block at a time into the Supabase SQL editor.
+-- by the app.
+--
+-- DO NOT RUN THE WHOLE FILE. Paste one numbered block at a time into the
+-- Supabase SQL editor — the editor runs a whole script as a single transaction,
+-- so a top-to-bottom run seeds section 4 and cleans it up in section 9 before
+-- you ever see it. Section 1 first, then whichever section you want.
 --
 -- Everything writes through the same security-definer path the real system uses
 -- (private.enqueue_notification), so preferences, quiet hours, dedupe and the
@@ -421,9 +426,14 @@ select token, platform, updated_at from public.device_tokens d
 -- 9. CLEANUP
 -- ============================================================================
 
+-- Commented on purpose. Running this file top to bottom in one go would seed
+-- section 4 and delete it again here, in the same transaction — nine rows in,
+-- nine rows out, an empty inbox and no clue why. Uncomment when you actually
+-- mean to clean up.
+
 -- Seeded rows only. Real notifications keep their own dedupe prefixes.
-delete from public.notifications n using public.zz_test_user u
- where n.user_id = u.user_id and n.dedupe_key like 'test:%';
+-- delete from public.notifications n using public.zz_test_user u
+--  where n.user_id = u.user_id and n.dedupe_key like 'test:%';
 
 -- Restore the default quiet window if section 3 opened it.
 -- update public.user_settings s set notify_quiet_start = 23, notify_quiet_end = 8
@@ -433,4 +443,5 @@ delete from public.notifications n using public.zz_test_user u
 -- delete from public.notifications n using public.zz_test_user u
 --  where n.user_id = u.user_id;
 
-drop view if exists public.zz_test_user;
+-- Drops the section 1 view. Everything above needs it, so leave it until last.
+-- drop view if exists public.zz_test_user;
