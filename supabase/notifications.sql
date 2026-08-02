@@ -790,6 +790,28 @@ end $$;
 -- SCHEDULES — guarded, so this file runs with or without pg_cron installed
 -- ============================================================================
 
+/**
+ * Does schema.name exist as a function, whatever its arguments?
+ *
+ * NOT to_regproc(): that returns null for an *overloaded* name as readily as for
+ * a missing one, and pg_cron ships cron.schedule in both a two-argument and a
+ * three-argument form. The guard below spent a whole debugging session reporting
+ * pg_cron as absent on a database where it was installed and working.
+ */
+create or replace function private.function_exists(p_schema text, p_name text)
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select exists (
+    select 1
+      from pg_catalog.pg_proc p
+      join pg_catalog.pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = p_schema and p.proname = p_name
+  );
+$$;
+
 -- `raise warning`, not `raise notice`: the Supabase SQL editor does not surface
 -- notices, so a guard that bailed out looked exactly like a clean success — the
 -- one failure mode this block must not have.
@@ -799,7 +821,7 @@ declare
   key     text;
   post_fn text;
 begin
-  if to_regproc('cron.schedule') is null then
+  if not private.function_exists('cron', 'schedule') then
     raise warning 'pg_cron not installed - no schedules created. Run: create extension if not exists pg_cron;';
     return;
   end if;
@@ -822,8 +844,8 @@ begin
   -- the way the Supabase dashboard does it, and the function name is the only
   -- part that is stable. Resolve it rather than assuming one of the two.
   post_fn := case
-    when to_regproc('net.http_post') is not null        then 'net.http_post'
-    when to_regproc('extensions.http_post') is not null then 'extensions.http_post'
+    when private.function_exists('net', 'http_post')        then 'net.http_post'
+    when private.function_exists('extensions', 'http_post') then 'extensions.http_post'
   end;
 
   if post_fn is null then
@@ -882,14 +904,17 @@ begin
   -- at CREATE time and fail outright on a database where cron.job does not yet
   -- exist — which is precisely the database this function has to diagnose.
   item := 'pg_cron extension';
-  ok := to_regproc('cron.schedule') is not null;
-  detail := coalesce(to_regproc('cron.schedule')::text, 'run: create extension if not exists pg_cron;');
+  ok := private.function_exists('cron', 'schedule');
+  detail := case when ok then 'cron.schedule' else 'run: create extension if not exists pg_cron;' end;
   return next;
 
   item := 'pg_net extension';
-  ok := to_regproc('net.http_post') is not null or to_regproc('extensions.http_post') is not null;
-  detail := coalesce(to_regproc('net.http_post')::text, to_regproc('extensions.http_post')::text,
-                     'run: create extension if not exists pg_net;');
+  ok := private.function_exists('net', 'http_post') or private.function_exists('extensions', 'http_post');
+  detail := case
+    when private.function_exists('net', 'http_post')        then 'net.http_post'
+    when private.function_exists('extensions', 'http_post') then 'extensions.http_post'
+    else 'run: create extension if not exists pg_net;'
+  end;
   return next;
 
   foreach job_name in array array['radar_functions_url','radar_service_role_key'] loop
