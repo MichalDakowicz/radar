@@ -19,7 +19,20 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+
+/** Injected by the edge runtime. Used to reach PostgREST, nothing else. */
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+// What the caller has to present. Deliberately a *separate* secret from
+// SERVICE_KEY: this endpoint is invoked by a pg_cron job carrying a bearer from
+// Vault, and making that bearer the service role key means two independently
+// managed copies of one string have to stay byte-identical forever. They will
+// not — a project can hold both a legacy JWT service key and a new sb_secret_
+// one, and the copy in Vault need not be the copy the runtime injects.
+//
+// Falls back to SERVICE_KEY so an install that never sets RADAR_PUSH_SECRET
+// still works; see MANUAL SETUP in notifications.sql for setting it.
+const AUTH_SECRET = Deno.env.get('RADAR_PUSH_SECRET') || SERVICE_KEY;
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -164,12 +177,20 @@ async function drain(): Promise<{ pending: number; pushed: number; pruned: numbe
 }
 
 Deno.serve(async (request: Request) => {
-  // The only legitimate caller holds the service-role key. Without this check
-  // --no-verify-jwt would leave the endpoint open to anyone who found the URL —
-  // harmless in effect (it only flushes a queue) but a free way to burn quota.
+  // Without this check --no-verify-jwt would leave the endpoint open to anyone
+  // who found the URL — harmless in effect (it only flushes a queue) but a free
+  // way to burn quota.
   const auth = request.headers.get('Authorization');
-  if (auth !== `Bearer ${SERVICE_KEY}`) {
-    return new Response('Unauthorized', { status: 401 });
+  if (auth !== `Bearer ${AUTH_SECRET}`) {
+    // Says which secret was compared and whether one was even configured, but
+    // never any part of either value — a 401 you cannot diagnose costs more
+    // debugging time than this hint costs in exposure.
+    const using = Deno.env.get('RADAR_PUSH_SECRET') ? 'RADAR_PUSH_SECRET' : 'SUPABASE_SERVICE_ROLE_KEY';
+    console.error(`Rejected caller: bearer did not match ${using}`);
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized', compared_against: using, bearer_present: !!auth }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } },
+    );
   }
 
   try {

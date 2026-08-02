@@ -859,9 +859,19 @@ begin
   end if;
 
   execute $q$ select decrypted_secret from vault.decrypted_secrets where name = 'radar_functions_url' $q$ into base;
-  execute $q$ select decrypted_secret from vault.decrypted_secrets where name = 'radar_service_role_key' $q$ into key;
+
+  -- radar_push_secret is what send-push actually checks against (its
+  -- RADAR_PUSH_SECRET env var). radar_service_role_key is the fallback, for an
+  -- install that has not set a dedicated secret — but prefer the dedicated one:
+  -- a project can hold both a legacy JWT service key and a new sb_secret_ one,
+  -- and only one of them will match what the edge runtime injects.
+  execute $q$ select decrypted_secret from vault.decrypted_secrets where name = 'radar_push_secret' $q$ into key;
+  if key is null then
+    execute $q$ select decrypted_secret from vault.decrypted_secrets where name = 'radar_service_role_key' $q$ into key;
+  end if;
+
   if base is null or key is null then
-    raise warning 'Vault secrets radar_functions_url / radar_service_role_key missing - push drain not scheduled.';
+    raise warning 'Vault secrets radar_functions_url / radar_push_secret missing - push drain not scheduled.';
     return;
   end if;
 
@@ -917,14 +927,20 @@ begin
   end;
   return next;
 
-  foreach job_name in array array['radar_functions_url','radar_service_role_key'] loop
+  foreach job_name in array array['radar_functions_url','radar_push_secret','radar_service_role_key'] loop
     secret_ok := false;
     if to_regclass('vault.secrets') is not null then
       execute format('select exists (select 1 from vault.secrets where name = %L)', job_name) into secret_ok;
     end if;
     item := 'vault secret ' || job_name;
-    ok := secret_ok;
-    detail := case when secret_ok then 'present' else 'run vault.create_secret(...) - see MANUAL SETUP' end;
+    -- radar_service_role_key is only a fallback for radar_push_secret, so its
+    -- absence is not a fault when the dedicated secret is set.
+    ok := secret_ok or job_name = 'radar_service_role_key';
+    detail := case
+      when secret_ok then 'present'
+      when job_name = 'radar_service_role_key' then 'not set (fine - radar_push_secret is preferred)'
+      else 'run vault.create_secret(...) - see MANUAL SETUP'
+    end;
     return next;
   end loop;
 
@@ -976,11 +992,21 @@ grant execute on function public.notification_setup_status() to authenticated, s
 -- 3. Vault secrets, so the cron job can reach the edge function:
 --      select vault.create_secret('https://<project-ref>.supabase.co/functions/v1',
 --                                 'radar_functions_url');
---      select vault.create_secret('<service-role-key>', 'radar_service_role_key');
+--      select vault.create_secret('<shared secret>', 'radar_push_secret');
 --    Then re-run this file so the schedule block picks them up.
+--
+--    <shared secret> is any long random string. It is NOT the service role key:
+--    it has to equal the function's RADAR_PUSH_SECRET env var exactly, and a
+--    project may hold two different service keys (a legacy JWT and a newer
+--    sb_secret_ one) of which only one is what the edge runtime injects. Using a
+--    value we set on both sides removes the guesswork. Set the other side with:
+--      npx supabase secrets set RADAR_PUSH_SECRET=<same value> --project-ref <ref>
 --
 -- 4. Deploy the function:
 --      npx supabase functions deploy send-push --no-verify-jwt --project-ref <ref>
+--
+--    Its 401 body names which env var it compared against, so a mismatch is
+--    visible in net._http_response without reading any function logs.
 --
 -- Check it is alive — one query, says what is still missing:
 --   select * from public.notification_setup_status();
