@@ -1,20 +1,15 @@
 import { Redirect, Tabs } from 'expo-router';
-import { BarChart3, Compass, CircleUserRound, LibraryBig, Users } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 
+import { NavIslands } from '@/components/layout/NavIslands';
 import type { BottomSheetModal } from '@/components/ui/Sheet';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { useBrowsePreload } from '@/features/browse/useBrowsePreload';
 import { FriendRequestListener } from '@/features/friends/FriendRequestListener';
 import { QuickAddSheet } from '@/features/movies/add/QuickAddSheet';
-import { useIsDesktop } from '@/hooks/useResponsive';
+import { StatsPeriodSheet } from '@/features/stats/StatsPeriodSheet';
 import { useQuickAddSheetStore } from '@/store/quickAddSheet';
-import { useTabReload } from '@/store/tabReload';
-
-// A second press on a tab within this window counts as a "double press" and
-// reloads that screen. The first press just switches to (or stays on) the tab,
-// so a lone stray tap on the current tab never wipes its state by accident.
-const DOUBLE_PRESS_MS = 400;
+import { useStatsPeriodSheet } from '@/store/statsPeriod';
 
 // Bottom tab shell (doc 05 proposed route tree). Swipe-between-main-tabs was
 // confirmed as wanted but is deferred - standard bottom tabs first, revisit
@@ -22,82 +17,59 @@ const DOUBLE_PRESS_MS = 400;
 // (switching the nav primitive later, once four more screens exist, is a
 // bigger refactor than doing it now for one real tab).
 //
-// On desktop web this navigator renders no bar at all: navigation is the
-// persistent sidebar mounted in the root layout (components/layout/Sidebar),
-// which survives stack pushes like movie detail. Same route tree, two shells.
-// Keep the screen order below in sync with NAV_DESTINATIONS there.
+// The bar is the floating nav islands on every viewport, phone and desktop web
+// alike - it is the app's only navigation chrome now that the top bar is gone.
+// It drives itself off the route rather than off this navigator (so it can also
+// render on /settings and /friend-requests), which is why there are no tabPress
+// listeners here any more: NavIslands owns the double-press-to-reload window.
+// Keep the screen order below in sync with NAV_DESTINATIONS all the same - the
+// web digit shortcuts index into it.
 export default function TabsLayout() {
   const { user } = useAuth();
-  const isDesktop = useIsDesktop();
   const quickAddRef = useRef<BottomSheetModal>(null);
-  const setPresent = useQuickAddSheetStore((s) => s.setPresent);
-  const bump = useTabReload((s) => s.bump);
-  const lastPress = useRef<{ name: string; time: number } | null>(null);
+  const periodRef = useRef<BottomSheetModal>(null);
+  const setPresentQuickAdd = useQuickAddSheetStore((s) => s.setPresent);
+  const setPresentPeriod = useStatsPeriodSheet((s) => s.setPresent);
 
   // Warm the Browse discovery feed in the background so its first open is instant.
   useBrowsePreload();
 
-  // Reload only on the *second* press of the same tab inside the window - by
-  // then the tab is already focused, so this fires both when you switch to a
-  // tab and immediately tap again, and when you double-tap the tab you're on.
-  const handleTabPress = (name: string) => {
-    const now = Date.now();
-    const prev = lastPress.current;
-    lastPress.current = { name, time: now };
-    if (prev && prev.name === name && now - prev.time < DOUBLE_PRESS_MS) {
-      bump(name);
-    }
-  };
-
-  // Mounted once here (not per-tab) so every screen's Header can open the
-  // same "Add Movie" sheet, matching legacy Navbar's global Add button.
+  // Both sheets mount once here rather than per-screen, so anything on any route
+  // can open the same instance: Add from the nav's left action on Library, the
+  // period picker from both that action on Stats and the pill on the screen.
   useEffect(() => {
-    setPresent(() => quickAddRef.current?.present());
-    return () => setPresent(null);
-  }, [setPresent]);
+    setPresentQuickAdd(() => quickAddRef.current?.present());
+    return () => setPresentQuickAdd(null);
+  }, [setPresentQuickAdd]);
+
+  useEffect(() => {
+    setPresentPeriod(() => periodRef.current?.present());
+    return () => setPresentPeriod(null);
+  }, [setPresentPeriod]);
 
   if (!user) return <Redirect href="/login" />;
 
   return (
     <>
       <Tabs
-        // Desktop navigation is the persistent sidebar in the root layout, so
-        // this navigator renders no bar of its own there.
-        tabBar={isDesktop ? () => null : undefined}
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: 'hsl(217 91% 60%)',
-          tabBarInactiveTintColor: 'hsl(0 0% 63.9%)',
-          tabBarStyle: { backgroundColor: '#0a0a0a', borderTopColor: '#262626' },
-        }}
+        tabBar={() => <NavIslands />}
+        // No scene animation: react-navigation cross-fades over the navigator's
+        // own background, which flashes white on every swap. The movement that
+        // makes a tab change feel smooth lives in the nav bar instead, where the
+        // marker slides between destinations.
+        //
+        // sceneStyle pins the app background anyway, so nothing can show through
+        // between screens.
+        screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: 'hsl(0 0% 3.9%)' } }}
       >
-        <Tabs.Screen
-          name="index"
-          options={{ title: 'Library', tabBarIcon: ({ color, size }) => <LibraryBig color={color} size={size} /> }}
-          listeners={{ tabPress: () => handleTabPress('index') }}
-        />
-        <Tabs.Screen
-          name="browse"
-          options={{ title: 'Browse', tabBarIcon: ({ color, size }) => <Compass color={color} size={size} /> }}
-          listeners={{ tabPress: () => handleTabPress('browse') }}
-        />
-        <Tabs.Screen
-          name="stats"
-          options={{ title: 'Stats', tabBarIcon: ({ color, size }) => <BarChart3 color={color} size={size} /> }}
-          listeners={{ tabPress: () => handleTabPress('stats') }}
-        />
-        <Tabs.Screen
-          name="social"
-          options={{ title: 'Social', tabBarIcon: ({ color, size }) => <Users color={color} size={size} /> }}
-          listeners={{ tabPress: () => handleTabPress('social') }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <CircleUserRound color={color} size={size} /> }}
-          listeners={{ tabPress: () => handleTabPress('profile') }}
-        />
+        <Tabs.Screen name="index" options={{ title: 'Library' }} />
+        <Tabs.Screen name="browse" options={{ title: 'Browse' }} />
+        <Tabs.Screen name="stats" options={{ title: 'Stats' }} />
+        <Tabs.Screen name="social" options={{ title: 'Social' }} />
+        <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
       </Tabs>
       <QuickAddSheet ref={quickAddRef} />
+      <StatsPeriodSheet ref={periodRef} onPicked={() => periodRef.current?.dismiss()} />
       <FriendRequestListener />
     </>
   );

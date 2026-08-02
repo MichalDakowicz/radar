@@ -1,9 +1,8 @@
-import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { ContentShell } from '@/components/layout/ContentShell';
-import { Header } from '@/components/layout/Header';
+import { ScreenTop } from '@/components/layout/ScreenTop';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { useToast } from '@/components/ui/Toast';
@@ -11,7 +10,6 @@ import { useAuth } from '@/features/auth/AuthProvider';
 import { FeedView } from '@/features/social/FeedView';
 import { FindView } from '@/features/social/FindView';
 import { FriendsView } from '@/features/social/FriendsView';
-import { SocialHeaderActions } from '@/features/social/SocialHeaderActions';
 import { useFeedWatermark } from '@/features/social/useFeedWatermark';
 import { useFriendActivity } from '@/features/social/useFriendActivity';
 import { useFriends } from '@/hooks/useFriends';
@@ -32,11 +30,10 @@ export default withTabReload(SocialScreen, 'social');
  * a real back stack and its own URL on web.
  */
 function SocialScreen() {
-  const router = useRouter();
   const { show } = useToast();
   const { user } = useAuth();
   const { profile: me } = useProfile(user?.id);
-  const { friends, requests, loading, error, sendRequest, removeFriend } = useFriends();
+  const { friends, loading, error, sendRequest, removeFriend } = useFriends();
   const [segment, setSegment] = useState<Segment>('activity');
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const since = useFeedWatermark();
@@ -81,7 +78,7 @@ function SocialScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-background">
-        <Header maxWidth={MAX_W.text} />
+        <ScreenTop />
         <LoadingState label="Loading social…" />
       </View>
     );
@@ -89,7 +86,7 @@ function SocialScreen() {
   if (error) {
     return (
       <View className="flex-1 bg-background">
-        <Header maxWidth={MAX_W.text} />
+        <ScreenTop />
         <ErrorState message={error instanceof Error ? error.message : 'Failed to load your friends'} />
       </View>
     );
@@ -97,18 +94,12 @@ function SocialScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header
-        maxWidth={MAX_W.text}
-        actions={
-          <SocialHeaderActions
-            requestCount={requests.length}
-            onOpenRequests={() => router.push('/friend-requests')}
-            onFind={() => setSegment('find')}
-          />
-        }
-      />
+      <ScreenTop />
 
-      <View className="px-4 pt-3">
+      {/* The requests inbox is the nav bar's action on this tab, and Find is
+          right here in the segmented control, so the screen carries no chrome of
+          its own beyond the switch. */}
+      <View className="px-4 pt-1">
         <ContentShell maxWidth={MAX_W.text}>
           <View className="flex-row gap-0.5 rounded-lg bg-secondary p-1">
             <SegBtn active={segment === 'activity'} onPress={() => setSegment('activity')} dot={activity.pending > 0}>

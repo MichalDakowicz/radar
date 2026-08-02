@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ContentShell } from '@/components/layout/ContentShell';
+import { NavIslands } from '@/components/layout/NavIslands';
 import type { BottomSheetModal } from '@/components/ui/Sheet';
 import { signOut } from '@/features/auth/authActions';
 import { CardSizeControl } from '@/features/settings/AppearanceExtras';
@@ -17,6 +18,7 @@ import { SettingsSection } from '@/features/settings/SettingsSection';
 import { StreakThresholdsControl } from '@/features/settings/StreakThresholdsControl';
 import { ThemeControl } from '@/features/settings/ThemeControl';
 import { NestedHeader } from '@/features/social/NestedHeader';
+import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 
 const MUTED = 'hsl(0 0% 63.9%)';
@@ -31,13 +33,18 @@ const MUTED = 'hsl(0 0% 63.9%)';
 // (theme runtime, card size).
 export default function Settings() {
   const contentStyle = useCenteredContentStyle(MAX_W.text);
+  const navBarSpace = useNavBarSpace();
   const importExportRef = useRef<BottomSheetModal>(null);
 
   return (
     <View className="flex-1 bg-background">
       <NestedHeader title="Settings" />
       <ContentShell fill maxWidth={MAX_W.text}>
-        <ScrollView className="flex-1" contentContainerClassName="gap-10 px-6 pb-16 pt-6" contentContainerStyle={contentStyle}>
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="gap-10 px-6 pt-6"
+          contentContainerStyle={[contentStyle, { paddingBottom: navBarSpace + 16 }]}
+        >
           <SettingsSection icon={<Globe size={18} color={MUTED} />} title="Privacy">
             <PrivacyControl />
           </SettingsSection>
@@ -80,6 +87,10 @@ export default function Settings() {
           </Pressable>
         </ScrollView>
       </ContentShell>
+
+      {/* Pushed out of the tabs, so the navigator's own bar is gone - the screen
+          mounts it itself and Profile stays lit while you are down here. */}
+      <NavIslands />
 
       <ImportExportSheet ref={importExportRef} />
     </View>

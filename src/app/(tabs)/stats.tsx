@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
 import { ContentShell } from '@/components/layout/ContentShell';
-import { Header } from '@/components/layout/Header';
+import { ScreenTop } from '@/components/layout/ScreenTop';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { StatsView } from '@/features/stats/StatsView';
@@ -10,6 +10,7 @@ import { useActivity } from '@/hooks/useActivity';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { useStatsPeriod, useStatsPeriodSheet } from '@/store/statsPeriod';
 import { withTabReload } from '@/store/tabReload';
 import type { Movie } from '@/types/movie';
 
@@ -23,13 +24,17 @@ function StatsScreen() {
   const { movies, loading, error } = useMovies();
   const { activities } = useActivity(20);
   const { settings } = useUserSettings();
+  const period = useStatsPeriod((s) => s.period);
+  // The sheet itself is mounted by the nav bar, so its left action can open it
+  // from here; the pill on the screen opens the same instance.
+  const presentPeriod = useStatsPeriodSheet((s) => s.present);
 
   const openMovie = (movie: Movie) => router.push({ pathname: '/edit/[movieId]', params: { movieId: movie.id } });
 
   if (loading) {
     return (
       <View className="flex-1 bg-background">
-        <Header />
+        <ScreenTop />
         <LoadingState label="Loading your stats…" />
       </View>
     );
@@ -37,7 +42,7 @@ function StatsScreen() {
   if (error) {
     return (
       <View className="flex-1 bg-background">
-        <Header />
+        <ScreenTop />
         <ErrorState message={error instanceof Error ? error.message : 'Failed to load stats'} />
       </View>
     );
@@ -45,13 +50,15 @@ function StatsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <Header maxWidth={MAX_W.detail} />
+      <ScreenTop extra={0} />
       <ContentShell fill maxWidth={MAX_W.detail}>
         <StatsView
           movies={movies}
           activities={activities}
           streakThreshold={settings.streakThreshold}
           tvStreakThreshold={settings.tvStreakThreshold}
+          period={period}
+          onEditPeriod={() => presentPeriod?.()}
           onOpenMovie={openMovie}
           onManageMovies={(date) => router.push({ pathname: '/manage-completions', params: { date } })}
           onManageTV={(date) => router.push({ pathname: '/manage-tv-completions', params: { date } })}

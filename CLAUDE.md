@@ -112,6 +112,23 @@ Release builds are signed with the debug keystore, so `adb install -r` upgrades 
 Gradle emits `app-release.apk`; the `radar-v<version>.apk` name is applied by the rename
 above and is what gets attached to the GitHub release.
 
+**Launch the app after every install** — the user should not have to tap the icon to see
+what you built:
+
+```sh
+adb shell monkey -p com.michaldakowicz.radar -c android.intent.category.LAUNCHER 1
+```
+
+Then confirm it actually came up rather than crashed on boot:
+
+```sh
+adb shell pidof com.michaldakowicz.radar     # empty = it died
+adb logcat -d -s ReactNativeJS:* AndroidRuntime:E
+```
+
+If the device is locked the launch is queued behind the lock screen — say so instead of
+claiming it is running. Never `input keyevent`/`swipe` to get past a lock screen.
+
 Report the actual result — if the build fails or the install rejects, say so with the
 error, do not describe the change as shipped.
 

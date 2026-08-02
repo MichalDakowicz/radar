@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pencil, Share2 } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/features/friends/Avatar';
 import type { ShelfStats } from '@/lib/shelfSummary';
@@ -25,6 +26,9 @@ type MyShelfHeaderProps = {
  * things you can do to your own profile are edit it and hand out its link.
  */
 export function MyShelfHeader({ profile, email, stats, backdropUrl, onEdit, onShare }: MyShelfHeaderProps) {
+  // This block is the top of the screen now that the global bar is gone, so the
+  // backdrop runs under the status bar and the content clears it.
+  const insets = useSafeAreaInsets();
   const name = profile?.displayName || profile?.username || 'You';
   const handle = profile?.username ? `@${profile.username}` : email;
   const cells: { value: string; label: string }[] = [
@@ -51,7 +55,7 @@ export function MyShelfHeader({ profile, email, stats, backdropUrl, onEdit, onSh
         style={StyleSheet.absoluteFill}
       />
 
-      <View className="gap-3.5 px-4 pb-4 pt-5">
+      <View className="gap-3.5 px-4 pb-4" style={{ paddingTop: insets.top + 16 }}>
         <View className="flex-row items-end gap-3">
           <View className="rounded-full border-[3px] border-background">
             <Avatar profile={profile} size={68} />

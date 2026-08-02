@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { columnsFor, gapForSize } from '@/components/media/MediaGrid';
 import { MovieCard } from '@/components/media/MovieCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { useMeasuredWidth } from '@/hooks/useResponsive';
 import type { BrowseSearchResult } from '@/lib/tmdb';
 import type { Movie } from '@/types/movie';
@@ -38,6 +39,7 @@ export function SearchResultsGrid({
   listRef,
 }: SearchResultsGridProps) {
   const { width, onLayout } = useMeasuredWidth();
+  const navBarSpace = useNavBarSpace();
   const columns = columnsFor('normal', width);
   const halfGap = gapForSize('normal') / 2;
 
@@ -56,7 +58,7 @@ export function SearchResultsGrid({
         data={results}
         numColumns={columns}
         keyExtractor={(item) => item.resultKey}
-        contentContainerStyle={{ padding: halfGap }}
+        contentContainerStyle={{ padding: halfGap, paddingBottom: halfGap + navBarSpace }}
         renderItem={({ item }) => (
           <View style={{ flex: 1, padding: halfGap }}>
             {item.resultType === 'person' ? (

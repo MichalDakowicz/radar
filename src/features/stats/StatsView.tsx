@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { BarChart3, CheckCircle2, Clock, Film, Flame, History, Star, Trophy } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ContentMix } from '@/components/stats/ContentMix';
@@ -13,7 +13,10 @@ import { QuickStat } from '@/components/stats/QuickStat';
 import { StreakCalendar } from '@/components/stats/StreakCalendar';
 import { ThinProgressBar } from '@/components/stats/ThinProgressBar';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { StatsPeriodPill } from '@/features/stats/StatsPeriodPill';
 import { useStats } from '@/features/stats/useStats';
+import { useNavBarSpace } from '@/hooks/useNavBarSpace';
+import { periodShortLabel, periodStart, scopeMoviesToPeriod, type StatsPeriodId } from '@/lib/statsPeriod';
 import type { ActivityEvent, Movie } from '@/types/movie';
 
 const MUTED = 'hsl(0 0% 63.9%)';
@@ -38,6 +41,10 @@ type StatsViewProps = {
   // the defaults.
   streakThreshold?: number;
   tvStreakThreshold?: number;
+  // Own screen only: which window the numbers cover, plus the way back into the
+  // picker. The public shelf omits both and always reads all-time.
+  period?: StatsPeriodId;
+  onEditPeriod?: () => void;
 };
 
 // The shared Stats body (own screen + public shelf render the same component,
@@ -51,18 +58,32 @@ export function StatsView({
   onManageTV,
   streakThreshold,
   tvStreakThreshold,
+  period = 'all',
+  onEditPeriod,
 }: StatsViewProps) {
   const router = useRouter();
-  const stats = useStats(movies, { streakThreshold, tvStreakThreshold });
+  const navBarSpace = useNavBarSpace();
+  // Everything below reads the scoped list, the Masterpieces rail included, so
+  // no section can quietly stay all-time while the rest narrows.
+  const scoped = useMemo(() => scopeMoviesToPeriod(movies, periodStart(period)), [movies, period]);
+  const stats = useStats(scoped, { streakThreshold, tvStreakThreshold });
   const [calendarView, setCalendarView] = useState<'movies' | 'tv'>('movies');
+  const pill = onEditPeriod ? <StatsPeriodPill period={period} onPress={onEditPeriod} /> : null;
 
   if (!stats) {
     return (
-      <EmptyState
-        icon={<BarChart3 size={40} color={MUTED} />}
-        title="No data yet"
-        description="No tracked titles to build stats from."
-      />
+      <View className="flex-1">
+        {pill}
+        <EmptyState
+          icon={<BarChart3 size={40} color={MUTED} />}
+          title="No data yet"
+          description={
+            period === 'all'
+              ? 'No tracked titles to build stats from.'
+              : `Nothing watched in this window (${periodShortLabel(period)}). Try a wider period.`
+          }
+        />
+      </View>
     );
   }
 
@@ -72,7 +93,9 @@ export function StatsView({
   const isMovieView = calendarView === 'movies';
 
   return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 48 }} showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={{ paddingBottom: navBarSpace + 24 }} showsVerticalScrollIndicator={false}>
+      {pill}
+
       {/* Recent activity rail */}
       {activities.length > 0 && (
         <View className="pt-6">
@@ -159,7 +182,7 @@ export function StatsView({
 
       {/* Masterpieces (formerly Hall of Fame) */}
       <View className="mb-12">
-        <Masterpieces movies={movies} onPress={onOpenMovie} />
+        <Masterpieces movies={scoped} onPress={onOpenMovie} />
       </View>
 
       {/* Status breakdown */}

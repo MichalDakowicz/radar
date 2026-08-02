@@ -9,6 +9,7 @@ import { MovieCard } from '@/components/media/MovieCard';
 import { BottomSheetModal, Sheet, SheetScrollView } from '@/components/ui/Sheet';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { useMeasuredWidth } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { countryName } from '@/lib/countries';
@@ -55,6 +56,7 @@ export function ReleaseCalendar({ onPress, onAdd, onRemove, isAdded }: ReleaseCa
   // Measured (not window) width: the calendar sits inside a capped content
   // column on desktop.
   const { width, onLayout } = useMeasuredWidth();
+  const navBarSpace = useNavBarSpace();
   const cellW = Math.min(MAX_CELL_W, Math.floor((width - GRID_PAD * 2 - GRID_GAP * 6) / 7));
   const cellH = Math.round(cellW * 1.5);
 
@@ -153,7 +155,7 @@ export function ReleaseCalendar({ onPress, onAdd, onRemove, isAdded }: ReleaseCa
 
   return (
     <>
-      <ScrollView className="flex-1" contentContainerClassName="pb-12" onLayout={onLayout}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: navBarSpace + 16 }} onLayout={onLayout}>
         {/* Month navigation */}
         <View className="flex-row items-center justify-between px-4 pb-2 pt-3">
           <Pressable onPress={() => step(-1)} className="h-9 w-9 items-center justify-center rounded-full border border-border">

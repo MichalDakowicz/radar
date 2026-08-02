@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { columnsFor, gapForSize } from '@/components/media/MediaGrid';
 import { MovieCard } from '@/components/media/MovieCard';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { useMeasuredWidth } from '@/hooks/useResponsive';
 import type { GridSize, ViewMode } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
@@ -26,6 +27,7 @@ export function LibraryMainList({ movies, viewMode, gridSize, highlightedId, onP
   // Measured, not window width: on desktop the sidebar + centred content column
   // make the window hundreds of pixels wider than this list actually gets.
   const { width, onLayout } = useMeasuredWidth();
+  const navBarSpace = useNavBarSpace();
   const columns = viewMode === 'grid' ? columnsFor(gridSize, width) : 1;
   const cardVariant = viewMode === 'grid' ? 'poster' : 'row';
   const emptyState = <EmptyState title="Your library is empty" description="Add a title to start tracking." />;
@@ -49,7 +51,7 @@ export function LibraryMainList({ movies, viewMode, gridSize, highlightedId, onP
         keyExtractor={(item) => item.id}
         ListHeaderComponent={ListHeaderComponent}
         ListEmptyComponent={emptyState}
-        contentContainerStyle={{ padding: halfGap }}
+        contentContainerStyle={{ padding: halfGap, paddingBottom: halfGap + navBarSpace }}
         renderItem={({ item }) => (
           <View style={viewMode === 'grid' ? { flex: 1, padding: halfGap } : { paddingHorizontal: halfGap, paddingBottom: halfGap * 2 }}>
             <MovieCard movie={item} variant={cardVariant} onPress={onPress} highlighted={highlightedId === item.id} />

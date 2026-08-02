@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-nati
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Avatar } from '@/features/friends/Avatar';
+import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { useUserSearch } from '@/hooks/useUserSearch';
 import type { Profile } from '@/types/movie';
 
@@ -29,11 +30,13 @@ export function FindView({ friendIds, sentIds, onSendRequest }: FindViewProps) {
   }, [text]);
 
   const trimmed = debounced.trim();
+  const navBarSpace = useNavBarSpace();
 
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
-      contentContainerClassName="gap-3.5 px-4 pb-8 pt-4"
+      contentContainerClassName="gap-3.5 px-4 pt-4"
+      contentContainerStyle={{ paddingBottom: navBarSpace }}
       keyboardShouldPersistTaps="handled"
     >
       <View className="flex-row items-center gap-2 rounded-lg border border-border bg-secondary px-3">
