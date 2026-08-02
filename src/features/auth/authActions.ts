@@ -1,6 +1,7 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
+import { clearPushToken } from '@/lib/pushRegistration';
 import { supabase } from '@/lib/supabase';
 
 // Completes the auth session popup on web - recommended by expo-web-browser.
@@ -46,6 +47,10 @@ export async function signUpWithEmail(email: string, password: string) {
 }
 
 export async function signOut() {
+  // Before signOut, not after: device_tokens is owner-scoped by RLS, so a delete
+  // issued once the session is gone matches nothing and this phone keeps getting
+  // push meant for an account that is no longer signed in on it.
+  await clearPushToken();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
