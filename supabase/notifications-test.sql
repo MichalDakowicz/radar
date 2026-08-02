@@ -186,8 +186,23 @@ begin
                        'coverUrl', pick.cover_url));
 end $test$;
 
--- What landed, and what the preferences ate. A kind missing from this list was
--- refused by notification_allowed() — check section 3.
+-- Written vs blocked, one line per kind — the answer to "why is that one kind
+-- missing". allowed = false is a preference, not a bug: notification_allowed()
+-- refused it and enqueue_notification returned null. Section 3 shows which
+-- switch, and note that 'friend_request' and 'friend_accepted' share one
+-- (notify_friend_requests), while friend_request rows never appear in the inbox
+-- list at all — the screen renders those as accept/decline cards instead.
+select k.kind,
+       private.notification_allowed(u.user_id, k.kind) as allowed,
+       count(n.id)                                     as seeded
+  from public.zz_test_user u
+ cross join unnest(enum_range(null::public.notification_kind)) as k(kind)
+  left join public.notifications n
+    on n.user_id = u.user_id and n.kind = k.kind and n.dedupe_key like 'test:%'
+ group by k.kind, u.user_id
+ order by k.kind;
+
+-- The rows themselves, newest first.
 select n.kind, n.title, n.body, n.data, n.pushed_at, n.created_at
   from public.notifications n
   join public.zz_test_user u on u.user_id = n.user_id
@@ -353,6 +368,39 @@ end $test$;
 --   join public.activity a on a.user_id = u.user_id
 --   join public.friendships f on f.user_id = u.user_id
 --  order by a.created_at desc limit 1;
+
+-- 7d. Accept → notifies whoever *sent* the request, not whoever tapped Accept.
+--     So the test account has to be the sender for the row to land in the inbox
+--     you are watching. Mirrors accept_friend_request() by hand because the RPC
+--     reads auth.uid(), which the SQL editor has none of — the trigger under
+--     test is untouched. Destructive: drops the pair's existing friendship rows
+--     and re-inserts both, so run it on a friend you can afford to re-add.
+-- do $test$
+-- declare me uuid; other uuid;
+-- begin
+--   select user_id into me from public.zz_test_user;
+--   select id into other from auth.users where email = 'friend@example.com';  -- <<< EDIT
+--   if other is null then raise exception 'No such account'; end if;
+--
+--   delete from public.friendships where (user_id, friend_id) in ((me, other), (other, me));
+--   delete from public.friend_requests where sender_id = me and recipient_id = other;
+--   insert into public.friend_requests (sender_id, recipient_id) values (me, other);
+--
+--   update public.friend_requests set status = 'accepted'
+--    where sender_id = me and recipient_id = other;
+--   -- Accepter's own row first, then the sender's — the second one is the news,
+--   -- and private.on_friendship only speaks for that one.
+--   insert into public.friendships (user_id, friend_id) values (other, me) on conflict do nothing;
+--   insert into public.friendships (user_id, friend_id) values (me, other) on conflict do nothing;
+-- end $test$;
+
+-- Trigger present and enabled? 'O' is enabled; a missing row means
+-- notifications.sql has not been run against this database.
+select c.relname as table_name, t.tgname, t.tgenabled
+  from pg_trigger t
+  join pg_class c on c.oid = t.tgrelid
+ where not t.tgisinternal and t.tgname like 'notify_on_%'
+ order by c.relname, t.tgname;
 
 -- Did the cap bite? Five per actor per 24h is private.friend_activity_cap().
 select n.actor_id, count(*) as rows_24h
