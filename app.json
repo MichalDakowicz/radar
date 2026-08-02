@@ -2,7 +2,7 @@
   "expo": {
     "name": "Radar",
     "slug": "radar",
-    "version": "2.5.1",
+    "version": "2.6.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "radar",
@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.michaldakowicz.radar",
-      "versionCode": 10
+      "versionCode": 11
     },
     "web": {
       "output": "single",
