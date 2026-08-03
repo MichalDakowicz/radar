@@ -11,6 +11,8 @@ type RecapSlideCardProps = {
   progress: SharedValue<number>;
   width: number;
   justify?: 'center' | 'space-between';
+  /** Leaves room for the player's action button, which floats over the card. */
+  reserveAction?: boolean;
   children: ReactNode;
 };
 
@@ -23,21 +25,24 @@ type RecapSlideCardProps = {
  * Each card is opaque: a translucent one would show its neighbour sliding
  * underneath and turn the push into a smear.
  */
-export function RecapSlideCard({ index, progress, width, justify = 'center', children }: RecapSlideCardProps) {
+export function RecapSlideCard({ index, progress, width, justify = 'center', reserveAction, children }: RecapSlideCardProps) {
   const insets = useSafeAreaInsets();
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: (index - progress.value) * width }] }));
 
   return (
     <Animated.View
-      // The tap zones sit above the deck and own every touch, so a card never
-      // has to compete with them for the gesture.
+      // The whole deck is transparent to touch. On Android a nested View becomes
+      // the hit target and the responder search only walks *up*, so any content
+      // view left touchable would silently swallow the tap instead of letting the
+      // zones underneath advance the story. Slides that need a real button
+      // declare an `action` and the player draws it in its own layer above.
       pointerEvents="none"
       style={[
         StyleSheet.absoluteFill,
         {
           backgroundColor: RECAP.bg,
           paddingTop: insets.top + 58,
-          paddingBottom: insets.bottom + 26,
+          paddingBottom: insets.bottom + 26 + (reserveAction ? 66 : 0),
           paddingHorizontal: 26,
           justifyContent: justify,
         },

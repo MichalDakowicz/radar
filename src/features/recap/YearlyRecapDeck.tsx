@@ -35,7 +35,7 @@ export function YearlyRecapDeck({ recap, username, onClose }: YearlyRecapDeckPro
       { content: <YearDecadesSlide recap={recap} /> },
       { content: <YearMasterpiecesSlide recap={recap} /> },
       { content: <YearRewatchSlide recap={recap} /> },
-      { content: <YearShareSlide data={card} onShare={share} /> },
+      { content: <YearShareSlide data={card} />, action: { label: 'Share the report', onPress: share } },
     ],
     [recap, username, card, share],
   );

@@ -1,5 +1,4 @@
-import { Share2 } from 'lucide-react-native';
-import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 
 import { RecapPoster } from '@/features/recap/parts/RecapPoster';
 import { SlideLabel } from '@/features/recap/parts/SlideLabel';
@@ -7,13 +6,15 @@ import { RECAP } from '@/features/recap/recapTheme';
 import { StarRow } from '@/features/social/StarRow';
 import type { MonthlyRecap } from '@/lib/recap';
 
-type MonthFilmSlideProps = { recap: MonthlyRecap; onShare: () => void };
+type MonthFilmSlideProps = { recap: MonthlyRecap };
 
-/** The verdict, the guilt pile, and the way out. */
-export function MonthFilmSlide({ recap, onShare }: MonthFilmSlideProps) {
+/**
+ * The verdict and the guilt pile. The share button belongs to the player, which
+ * draws it over the card — see slideTypes.
+ */
+export function MonthFilmSlide({ recap }: MonthFilmSlideProps) {
   const { width } = useWindowDimensions();
   const { film } = recap;
-  const monthWord = recap.display.charAt(0) + recap.display.slice(1).toLowerCase();
   // Four aging posters across the card's inner width, 10px gutters.
   const aging = Math.floor((width - 52 - 30) / 4);
 
@@ -58,16 +59,6 @@ export function MonthFilmSlide({ recap, onShare }: MonthFilmSlideProps) {
         </View>
       )}
 
-      <Pressable
-        onPress={onShare}
-        className="mt-1 h-[52px] flex-row items-center justify-center gap-2.5 rounded-full active:opacity-80"
-        style={{ backgroundColor: RECAP.ink }}
-        accessibilityRole="button"
-        accessibilityLabel={`Share your ${monthWord}`}
-      >
-        <Share2 size={16} color="#0a0a0a" strokeWidth={2.4} />
-        <Text style={{ fontSize: 14, fontWeight: '700', color: '#0a0a0a' }}>Share your {monthWord}</Text>
-      </Pressable>
     </View>
   );
 }

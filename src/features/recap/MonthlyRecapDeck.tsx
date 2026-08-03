@@ -28,7 +28,11 @@ export function MonthlyRecapDeck({ recap, onClose }: MonthlyRecapDeckProps) {
       { content: <MonthHoursSlide recap={recap} /> },
     ];
     if (recap.leaderboard.length > 1) pages.push({ content: <MonthFriendsSlide recap={recap} /> });
-    pages.push({ content: <MonthFilmSlide recap={recap} onShare={share} /> });
+    const monthWord = recap.display.charAt(0) + recap.display.slice(1).toLowerCase();
+    pages.push({
+      content: <MonthFilmSlide recap={recap} />,
+      action: { label: `Share your ${monthWord}`, onPress: share },
+    });
     return pages;
   }, [recap, share]);
 

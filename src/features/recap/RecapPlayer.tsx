@@ -1,4 +1,4 @@
-import { X } from 'lucide-react-native';
+import { Share2, X } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -49,6 +49,7 @@ export function RecapPlayer({ slides, title, stamp, onClose, paused = false }: R
   }, [index, slides.length, onClose]);
 
   const previous = useCallback(() => setIndex((current) => Math.max(0, current - 1)), []);
+  const action = slides[index]?.action;
 
   return (
     <View className="flex-1 overflow-hidden" style={{ backgroundColor: RECAP.bg }}>
@@ -72,10 +73,30 @@ export function RecapPlayer({ slides, title, stamp, onClose, paused = false }: R
       </View>
 
       {slides.map((slide, i) => (
-        <RecapSlideCard key={i} index={i} progress={progress} width={width} justify={slide.justify}>
+        <RecapSlideCard
+          key={i}
+          index={i}
+          progress={progress}
+          width={width}
+          justify={slide.justify}
+          reserveAction={!!slide.action}
+        >
           {slide.content}
         </RecapSlideCard>
       ))}
+
+      {action && (
+        <Pressable
+          onPress={action.onPress}
+          className="absolute left-[26px] right-[26px] h-[52px] flex-row items-center justify-center gap-2.5 rounded-full active:opacity-80"
+          style={{ bottom: insets.bottom + 26, backgroundColor: RECAP.ink }}
+          accessibilityRole="button"
+          accessibilityLabel={action.label}
+        >
+          <Share2 size={16} color="#0a0a0a" strokeWidth={2.4} />
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#0a0a0a' }}>{action.label}</Text>
+        </Pressable>
+      )}
 
       <View
         pointerEvents="box-none"
