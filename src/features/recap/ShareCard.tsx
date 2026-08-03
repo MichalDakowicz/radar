@@ -46,7 +46,7 @@ export function ShareCard({ data, width }: ShareCardProps) {
       <View>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-2">
-            <RecapBrandMark size={20} />
+            <RecapBrandMark size={24} />
             <Text style={{ fontSize: 12, fontWeight: '700', color: RECAP.ink }}>Radar</Text>
           </View>
           <Text style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: '600', letterSpacing: 1.3, color: RECAP.muted }}>

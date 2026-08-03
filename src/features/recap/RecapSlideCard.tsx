@@ -26,12 +26,13 @@ type RecapSlideCardProps = {
  * underneath and turn the push into a smear.
  */
 /**
- * Content is bottom-weighted by default. A phone is far taller than the 760px
- * card this was designed on, so centring left a void above and below every page;
- * anchoring low is also how a story is read — the eye starts at the bottom of the
- * frame and the empty top becomes deliberate space rather than a gap.
+ * Content is vertically centred by default. Bottom-weighting read as content
+ * sliding off the foot of a tall phone, and the pages carry one block each, so
+ * the block sits in the middle of the space left by the chrome — the padding
+ * below already accounts for the action button, so a page with one stays centred
+ * in the room it actually has.
  */
-export function RecapSlideCard({ index, progress, width, justify = 'flex-end', reserveAction, children }: RecapSlideCardProps) {
+export function RecapSlideCard({ index, progress, width, justify = 'center', reserveAction, children }: RecapSlideCardProps) {
   const insets = useSafeAreaInsets();
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: (index - progress.value) * width }] }));
 

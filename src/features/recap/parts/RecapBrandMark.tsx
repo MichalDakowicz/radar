@@ -1,28 +1,13 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { Radio } from 'lucide-react-native';
+import Logo from '@/assets/brand/logo.svg';
 
 type RecapBrandMarkProps = { size?: number };
 
 /**
- * The blue Radar tile the player's chrome and the share card are signed with.
- * Built here rather than imported: the app has no logo component, and the recap
- * is the first surface that needs the mark at two sizes.
+ * The app's own mark, signing the share card. The recap used to draw a stand-in
+ * tile with a generic radio glyph; the real logo ships as an SVG (the same one
+ * the login screen and the launcher icon use), so use that instead — a card
+ * people screenshot should carry the mark they recognise.
  */
 export function RecapBrandMark({ size = 22 }: RecapBrandMarkProps) {
-  return (
-    <LinearGradient
-      colors={['#3b82f6', '#1d4ed8']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size * 0.27,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Radio size={Math.round(size * 0.6)} color="#fff" strokeWidth={2.6} />
-    </LinearGradient>
-  );
+  return <Logo width={size} height={size} />;
 }
