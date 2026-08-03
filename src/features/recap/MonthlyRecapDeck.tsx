@@ -9,7 +9,7 @@ import { useRecapShare } from '@/features/recap/useRecapShare';
 import type { RecapSlide } from '@/features/recap/slideTypes';
 import type { MonthlyRecap } from '@/lib/recap';
 
-type MonthlyRecapDeckProps = { recap: MonthlyRecap; onClose: () => void };
+type MonthlyRecapDeckProps = { recap: MonthlyRecap; username: string; onClose: () => void };
 
 /**
  * The monthly reel: loud, short, disposable. Four pages — the design's "3 AM
@@ -19,8 +19,8 @@ type MonthlyRecapDeckProps = { recap: MonthlyRecap; onClose: () => void };
  * The friends page is dropped when there is no leaderboard to show, rather than
  * rendered as an empty ranking of one.
  */
-export function MonthlyRecapDeck({ recap, onClose }: MonthlyRecapDeckProps) {
-  const share = useRecapShare(recap);
+export function MonthlyRecapDeck({ recap, username, onClose }: MonthlyRecapDeckProps) {
+  const { share, canvas } = useRecapShare(recap, username);
 
   const slides = useMemo<RecapSlide[]>(() => {
     const pages: RecapSlide[] = [
@@ -36,5 +36,11 @@ export function MonthlyRecapDeck({ recap, onClose }: MonthlyRecapDeckProps) {
     return pages;
   }, [recap, share]);
 
-  return <RecapPlayer slides={slides} onClose={onClose} />;
+  return (
+    <>
+      <RecapPlayer slides={slides} onClose={onClose} />
+      {/* The card the share sheet sends, parked off screen. */}
+      {canvas}
+    </>
+  );
 }

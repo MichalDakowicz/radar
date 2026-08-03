@@ -62,6 +62,6 @@ export default function RecapScreen() {
   return recap.kind === 'year' ? (
     <YearlyRecapDeck recap={recap} username={profile?.username ?? 'you'} onClose={() => router.back()} />
   ) : (
-    <MonthlyRecapDeck recap={recap} onClose={() => router.back()} />
+    <MonthlyRecapDeck recap={recap} username={profile?.username ?? 'you'} onClose={() => router.back()} />
   );
 }

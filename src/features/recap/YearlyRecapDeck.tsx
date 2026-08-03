@@ -22,7 +22,7 @@ type YearlyRecapDeckProps = { recap: YearlyRecap; username: string; onClose: () 
  * closing on the share card rather than on a second certificate.
  */
 export function YearlyRecapDeck({ recap, username, onClose }: YearlyRecapDeckProps) {
-  const share = useRecapShare(recap);
+  const { share, canvas } = useRecapShare(recap, username);
   const card = useMemo(() => shareCardFromYear(recap, username), [recap, username]);
 
   const slides = useMemo<RecapSlide[]>(
@@ -40,5 +40,11 @@ export function YearlyRecapDeck({ recap, username, onClose }: YearlyRecapDeckPro
     [recap, username, card, share],
   );
 
-  return <RecapPlayer slides={slides} onClose={onClose} />;
+  return (
+    <>
+      <RecapPlayer slides={slides} onClose={onClose} />
+      {/* The card the share sheet sends, parked off screen. */}
+      {canvas}
+    </>
+  );
 }

@@ -48,26 +48,14 @@ export function RecapArchiveCard({ kind, periodKey, recap, username, width, onPr
   );
 }
 
-/** The width the share card is composed at. Thumbnails are this, scaled down. */
-const DESIGN_WIDTH = 320;
-
 /**
- * The card drawn at full size and scaled, rather than re-laid-out narrow: a
- * thumbnail has to look like the thing it is a thumbnail of, and letting a 9:16
- * card reflow at 160px would give the archive a layout the share sheet never
- * produces.
+ * The card itself at thumbnail width. ShareCard scales every dimension off its
+ * width, so a 160px card is the same card rather than a reflowed one — no outer
+ * transform needed, and the text stays crisp instead of being drawn once and
+ * shrunk.
  */
 function MiniShareCard({ recap, username, width }: { recap: Recap; username: string; width: number }) {
-  const scale = width / DESIGN_WIDTH;
-  const designHeight = Math.round((DESIGN_WIDTH * 16) / 9);
-
-  return (
-    <View style={{ width, height: Math.round(designHeight * scale), overflow: 'hidden' }}>
-      <View style={{ width: DESIGN_WIDTH, height: designHeight, transform: [{ scale }], transformOrigin: 'top left' }}>
-        <ShareCard data={shareCardFor(recap, username)} width={DESIGN_WIDTH} />
-      </View>
-    </View>
-  );
+  return <ShareCard data={shareCardFor(recap, username)} width={width} />;
 }
 
 function UnopenedPlate({ kind, periodKey, width }: { kind: RecapKind; periodKey: string; width: number }) {

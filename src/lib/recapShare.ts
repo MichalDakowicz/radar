@@ -61,9 +61,10 @@ export function shareCardFor(recap: Recap, username: string): ShareCardData {
 }
 
 /**
- * What actually leaves the app when Share is pressed. Text, not an image: an
- * image would need a native view-capture dependency, and the numbers are the
- * part a friend reacts to.
+ * The fallback share, for when the card cannot be captured as a bitmap. Share
+ * sends the image now (see useRecapShare); this keeps the numbers sendable on a
+ * platform where the capture fails, with a link back to the shelf that the
+ * image-only share sheet has no room for.
  */
 export function recapShareText(recap: Recap, url: string | null): string {
   const period = periodLabel(recap.kind, recap.key);

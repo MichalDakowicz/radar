@@ -11,7 +11,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 - Your recaps sit on Profile as a shelf of cover tiles, under what you are watching
 - The monthly recap covers hours watched, how you rank among friends, and the film of the month
 - The month closes on its best titles in order, not on what you left in the watchlist
-- The yearly report opens on an archive cover and closes on a share card you can send
+- The yearly report opens on an archive cover and closes on a card you share as an image
 - Genres in the yearly report are a type wall, sized by how much you actually watched them
 - Directors get a podium, with bars scaled to the real gap between first and third
 - The year day by day, as a heatmap of films and episodes with your longest streak named
