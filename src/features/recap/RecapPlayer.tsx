@@ -63,6 +63,14 @@ export function RecapPlayer({ slides, onClose, paused = false }: RecapPlayerProp
     setIndex((current) => Math.max(0, current - 1));
   }, []);
 
+  // A right swipe means "back" in the Android sense: back a page, or out of the
+  // story when there is no page behind. The left tap zone deliberately does not
+  // do this — a mistimed tap should not close the player.
+  const swipeBack = useCallback(() => {
+    if (index > 0) previous();
+    else onClose();
+  }, [index, previous, onClose]);
+
   const action = slides[index]?.action;
 
   // minDistance keeps taps out of the pan's way: a press has to travel before it
@@ -81,7 +89,7 @@ export function RecapPlayer({ slides, onClose, paused = false }: RecapPlayerProp
         return;
       }
       if (!vertical && Math.abs(event.translationX) > SWIPE_DISTANCE) {
-        runOnJS(event.translationX < 0 ? next : previous)();
+        runOnJS(event.translationX < 0 ? next : swipeBack)();
       }
       dragY.value = withTiming(0, { duration: 200 });
     });
