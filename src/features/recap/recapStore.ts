@@ -74,6 +74,29 @@ export async function saveRecap(userId: string, recap: Recap): Promise<void> {
   }
 }
 
+/**
+ * Every stored payload, keyed `kind:period`. The archive draws each recap as its
+ * own share card, which means it needs the real numbers — one query for all of
+ * them beats one per tile, and a period with no stored payload simply falls back
+ * to cover art.
+ */
+export async function fetchRecapPayloads(userId: string): Promise<Record<string, Recap>> {
+  const { data, error } = await supabase.from('recaps').select('kind, period_key, payload').eq('user_id', userId);
+
+  if (error) {
+    if (isMissingTable(error)) {
+      warnMissing();
+      return {};
+    }
+    throw error;
+  }
+  const payloads: Record<string, Recap> = {};
+  for (const row of data as { kind: RecapKind; period_key: string; payload: Recap }[]) {
+    if (row.payload?.version === RECAP_VERSION) payloads[`${row.kind}:${row.period_key}`] = row.payload;
+  }
+  return payloads;
+}
+
 /** What is already cached, newest first. Drives the "ready" marks in the archive. */
 export async function listRecaps(userId: string): Promise<StoredRecap[]> {
   const { data, error } = await supabase

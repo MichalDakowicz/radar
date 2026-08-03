@@ -79,7 +79,8 @@
     "test": "jest",
     "icons": "node ./scripts/generate-icons.mjs",
     "migrate:data": "node --env-file=.env --import tsx ./scripts/migrate-data.ts",
-    "seed:demo": "node --env-file=.env ./scripts/seed-demo-friend.mjs"
+    "seed:demo": "node --env-file=.env ./scripts/seed-demo-friend.mjs",
+    "seed:recap": "node --env-file=.env --import tsx ./scripts/seed-test-recap.ts"
   },
   "jest": {
     "preset": "jest-expo",

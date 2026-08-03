@@ -1,26 +1,26 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
-import { personalScore } from '@/components/media/RatingStars';
 import { useAuth } from '@/features/auth/AuthProvider';
 import { fetchRecap, listRecaps, saveRecap, type StoredRecap } from '@/features/recap/recapStore';
 import { useRecapLeaderboard } from '@/features/recap/useRecapLeaderboard';
 import { useMovies } from '@/hooks/useMovies';
+import { personalScore } from '@/lib/personalScore';
 import { buildMonthlyRecap, buildYearlyRecap } from '@/lib/recapBuild';
 import { availablePeriods, isPeriodClosed, isValidPeriodKey, type RecapKind } from '@/lib/recapPeriod';
 import type { Recap } from '@/lib/recap';
+import type { Movie } from '@/types/movie';
 
-// Load a recap: stored payload first, freshly built and cached on a miss. The
-// period that is still running is always rebuilt — its numbers are moving, and a
-// cached "this month" that is three days stale is worse than a slower open.
+// Load a recap: stored payload first, freshly built and cached on a miss. Every
+// recap covers a period that has already ended, so there is no such thing as a
+// stale one — only a schema version bump forces the work again.
 
 const recapKey = (uid: string | undefined, kind: RecapKind, key: string) => ['recap', uid, kind, key] as const;
 const indexKey = (uid: string | undefined) => ['recaps', uid] as const;
 
 /**
- * Which recaps exist for this library and which are already cached. The Profile
- * buttons and the archive both read this — the periods come from watch activity,
- * not from the cache, so a recap that has never been opened is still offered.
+ * Which recaps this account can open, and which of them are already cached. The
+ * Profile rail and the archive both read this.
  */
 export function useRecapIndex() {
   const { user } = useAuth();
@@ -31,12 +31,28 @@ export function useRecapIndex() {
     enabled: !!user?.id,
   });
 
+  const rows = stored.data ?? ([] as StoredRecap[]);
+
   return {
-    months: availablePeriods(movies, 'month'),
-    years: availablePeriods(movies, 'year'),
-    stored: stored.data ?? ([] as StoredRecap[]),
+    months: offered(movies, 'month', rows),
+    years: offered(movies, 'year', rows),
+    stored: rows,
     loading: loading || stored.isLoading,
   };
+}
+
+/**
+ * Periods worth offering: the ones the library can build, plus any already
+ * stored. A stored recap is a kept record — it stays openable even after the
+ * titles behind it have been edited or removed, which is the whole reason the
+ * payload is snapshotted rather than re-derived.
+ */
+function offered(movies: Movie[], kind: RecapKind, rows: StoredRecap[]): string[] {
+  const keys = new Set(availablePeriods(movies, kind));
+  for (const row of rows) {
+    if (row.kind === kind && isPeriodClosed(kind, row.key)) keys.add(row.key);
+  }
+  return [...keys].sort().reverse();
 }
 
 export function useRecap(kind: RecapKind, key: string) {

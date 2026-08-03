@@ -2,19 +2,13 @@ import { Star } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
 import { TmdbLogo } from '@/components/media/TmdbLogo';
+import { personalScore } from '@/lib/personalScore';
 import type { Ratings } from '@/types/movie';
 
-// The one overall-or-average score logic (doc 04 issue H equivalent for
-// ratings - was inline `ratingScore` in legacy MovieCard.jsx, doc 12 part 1).
-export function personalScore(ratings: Ratings | null | undefined): number | null {
-  if (!ratings) return null;
-  if (ratings.overall && ratings.overall > 0) return ratings.overall;
-
-  const { overall, seasons, ...subRatings } = ratings;
-  const subVals = Object.values(subRatings).filter((v): v is number => typeof v === 'number' && v > 0);
-  if (subVals.length === 0) return null;
-  return subVals.reduce((a, b) => a + b, 0) / subVals.length;
-}
+// The scoring rule moved to lib/personalScore so non-React callers (the recap
+// builders, scripts) can use it. Re-exported here because every existing call
+// site imports it from this module.
+export { personalScore };
 
 type RatingStarsProps = {
   ratings?: Ratings | null;

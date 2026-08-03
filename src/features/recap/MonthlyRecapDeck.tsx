@@ -36,12 +36,5 @@ export function MonthlyRecapDeck({ recap, onClose }: MonthlyRecapDeckProps) {
     return pages;
   }, [recap, share]);
 
-  return (
-    <RecapPlayer
-      slides={slides}
-      title="Radar Recap"
-      stamp={() => `${recap.display.slice(0, 3)} ${recap.year}`}
-      onClose={onClose}
-    />
-  );
+  return <RecapPlayer slides={slides} onClose={onClose} />;
 }

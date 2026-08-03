@@ -1,131 +1,156 @@
-import { Share2, X } from 'lucide-react-native';
+import { Share2 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
-import { Easing, useSharedValue, withTiming } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RecapProgressBars } from '@/features/recap/RecapProgressBars';
 import { RecapSlideCard } from '@/features/recap/RecapSlideCard';
-import { RecapBrandMark } from '@/features/recap/parts/RecapBrandMark';
-import { MONO, PUSH_EASING, PUSH_MS, RECAP } from '@/features/recap/recapTheme';
+import { PUSH_EASING, PUSH_MS, RECAP } from '@/features/recap/recapTheme';
 import type { RecapSlide } from '@/features/recap/slideTypes';
+
+/** Drag distance, in px, that counts as "put this away". */
+const DISMISS_DISTANCE = 130;
+/** Horizontal travel that counts as a swipe between pages. */
+const SWIPE_DISTANCE = 55;
 
 type RecapPlayerProps = {
   slides: RecapSlide[];
-  /** "Radar Recap" for the monthly, "Annual Report" for the yearly. */
-  title: string;
-  /** Right-hand stamp, per slide — "JUL 2026" or "PAGE 03 / 09". */
-  stamp: (index: number) => string;
   onClose: () => void;
-  /** True while a sheet is open over the player, which has to hold the clock. */
+  /** True while something is open over the player, which has to hold the clock. */
   paused?: boolean;
 };
 
 /**
- * The story player both recaps run on: a deck of pushed cards, segmented
- * progress bars, tap right to advance and left to go back, hold to pause.
+ * The story player both recaps run on: a deck of pushed cards with segmented
+ * progress bars. Tap right to advance, left to go back, hold to pause, swipe
+ * sideways to page, drag down to put it away. No header and no close button —
+ * the bars say where you are and the gesture says how to leave, and a story is
+ * the one screen that can afford to be nothing but its content.
  *
- * Touch layering, which is the only subtle part: the tap zones are rendered
- * *under* the cards and the cards are `box-none`, so a slide's own button (share,
- * open a title) wins the touch while every other pixel falls through to the
- * zones. Rendering the zones on top instead would eat those buttons.
+ * Touch layering, the only subtle part: the tap zones are rendered *under* the
+ * cards and the cards are `pointerEvents="none"`, so every pixel of content
+ * falls through to the zones while the one real button per page — declared as a
+ * slide `action` and drawn above — still gets its own taps.
  */
-export function RecapPlayer({ slides, title, stamp, onClose, paused = false }: RecapPlayerProps) {
+export function RecapPlayer({ slides, onClose, paused = false }: RecapPlayerProps) {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(0);
   const [held, setHeld] = useState(false);
+  // Autoplay stops the moment someone goes back and stays stopped until they ask
+  // to move on again: going back means they want to read the page, and having it
+  // slide away five seconds later is the player arguing with them.
+  const [autoplay, setAutoplay] = useState(true);
   const progress = useSharedValue(0);
+  const dragY = useSharedValue(0);
 
   useEffect(() => {
     progress.value = withTiming(index, { duration: PUSH_MS, easing: Easing.bezier(...PUSH_EASING) });
   }, [index, progress]);
 
   const next = useCallback(() => {
+    setAutoplay(true);
     // Past the last page the story is over — closing is what the reader wants,
-    // rather than the design canvas's loop back to page one.
+    // rather than a loop back to page one.
     if (index < slides.length - 1) setIndex(index + 1);
     else onClose();
   }, [index, slides.length, onClose]);
 
-  const previous = useCallback(() => setIndex((current) => Math.max(0, current - 1)), []);
+  const previous = useCallback(() => {
+    setAutoplay(false);
+    setIndex((current) => Math.max(0, current - 1));
+  }, []);
+
   const action = slides[index]?.action;
 
+  // minDistance keeps taps out of the pan's way: a press has to travel before it
+  // is treated as a drag, so tap-to-advance and hold-to-pause still work.
+  const pan = Gesture.Pan()
+    .minDistance(14)
+    .onUpdate((event) => {
+      // Downward only, and only while the drag is more vertical than horizontal —
+      // paging sideways must not drag the deck off the bottom of the screen.
+      dragY.value = event.translationY > 0 && event.translationY > Math.abs(event.translationX) ? event.translationY : 0;
+    })
+    .onEnd((event) => {
+      const vertical = event.translationY > Math.abs(event.translationX);
+      if (vertical && (event.translationY > DISMISS_DISTANCE || event.velocityY > 1000)) {
+        runOnJS(onClose)();
+        return;
+      }
+      if (!vertical && Math.abs(event.translationX) > SWIPE_DISTANCE) {
+        runOnJS(event.translationX < 0 ? next : previous)();
+      }
+      dragY.value = withTiming(0, { duration: 200 });
+    });
+
+  const shell = useAnimatedStyle(() => ({
+    transform: [{ translateY: dragY.value }, { scale: 1 - Math.min(dragY.value / 2600, 0.06) }],
+    borderRadius: Math.min(dragY.value / 4, 28),
+  }));
+
   return (
-    <View className="flex-1 overflow-hidden" style={{ backgroundColor: RECAP.bg }}>
-      <View className="absolute inset-0 flex-row">
-        <Pressable
-          className="w-[32%]"
-          onPress={previous}
-          onPressIn={() => setHeld(true)}
-          onPressOut={() => setHeld(false)}
-          accessibilityRole="button"
-          accessibilityLabel="Previous slide"
-        />
-        <Pressable
-          className="flex-1"
-          onPress={next}
-          onPressIn={() => setHeld(true)}
-          onPressOut={() => setHeld(false)}
-          accessibilityRole="button"
-          accessibilityLabel="Next slide"
-        />
-      </View>
-
-      {slides.map((slide, i) => (
-        <RecapSlideCard
-          key={i}
-          index={i}
-          progress={progress}
-          width={width}
-          justify={slide.justify}
-          reserveAction={!!slide.action}
-        >
-          {slide.content}
-        </RecapSlideCard>
-      ))}
-
-      {action && (
-        <Pressable
-          onPress={action.onPress}
-          className="absolute left-[26px] right-[26px] h-[52px] flex-row items-center justify-center gap-2.5 rounded-full active:opacity-80"
-          style={{ bottom: insets.bottom + 26, backgroundColor: RECAP.ink }}
-          accessibilityRole="button"
-          accessibilityLabel={action.label}
-        >
-          <Share2 size={16} color="#0a0a0a" strokeWidth={2.4} />
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#0a0a0a' }}>{action.label}</Text>
-        </Pressable>
-      )}
-
-      <View
-        pointerEvents="box-none"
-        className="absolute left-0 right-0 top-0 gap-[11px] px-4"
-        style={{ paddingTop: insets.top + 12 }}
-      >
-        <RecapProgressBars key={index} count={slides.length} index={index} paused={held || paused} onAdvance={next} />
-        <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-2">
-            <RecapBrandMark />
-            <Text style={{ fontSize: 13, fontWeight: '700', letterSpacing: -0.1, color: RECAP.ink }}>{title}</Text>
-          </View>
-          <View className="flex-row items-center gap-2">
-            <Text style={{ fontFamily: MONO, fontSize: 10, fontWeight: '600', letterSpacing: 0.6, color: 'rgba(255,255,255,.5)' }}>
-              {stamp(index)}
-            </Text>
+    <GestureDetector gesture={pan}>
+      <View className="flex-1" style={{ backgroundColor: '#000' }}>
+        <Animated.View className="flex-1 overflow-hidden" style={[{ backgroundColor: RECAP.bg }, shell]}>
+          <View className="absolute inset-0 flex-row">
             <Pressable
-              onPress={onClose}
-              hitSlop={10}
-              className="h-9 w-9 items-center justify-center rounded-full active:opacity-60"
-              style={{ backgroundColor: 'rgba(255,255,255,.08)' }}
+              className="w-[32%]"
+              onPress={previous}
+              onPressIn={() => setHeld(true)}
+              onPressOut={() => setHeld(false)}
               accessibilityRole="button"
-              accessibilityLabel="Close recap"
-            >
-              <X size={16} color={RECAP.muted} />
-            </Pressable>
+              accessibilityLabel="Previous page"
+            />
+            <Pressable
+              className="flex-1"
+              onPress={next}
+              onPressIn={() => setHeld(true)}
+              onPressOut={() => setHeld(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Next page"
+            />
           </View>
-        </View>
+
+          {slides.map((slide, i) => (
+            <RecapSlideCard
+              key={i}
+              index={i}
+              progress={progress}
+              width={width}
+              justify={slide.justify}
+              reserveAction={!!slide.action}
+            >
+              {slide.content}
+            </RecapSlideCard>
+          ))}
+
+          {action && (
+            <Pressable
+              onPress={action.onPress}
+              className="absolute left-[26px] right-[26px] h-[52px] flex-row items-center justify-center gap-2.5 rounded-full active:opacity-80"
+              style={{ bottom: insets.bottom + 26, backgroundColor: RECAP.ink }}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}
+            >
+              <Share2 size={16} color="#0a0a0a" strokeWidth={2.4} />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#0a0a0a' }}>{action.label}</Text>
+            </Pressable>
+          )}
+
+          <View pointerEvents="none" className="absolute left-0 right-0 top-0 px-4" style={{ paddingTop: insets.top + 12 }}>
+            <RecapProgressBars
+              key={index}
+              count={slides.length}
+              index={index}
+              paused={held || paused || !autoplay}
+              onAdvance={next}
+            />
+          </View>
+        </Animated.View>
       </View>
-    </View>
+    </GestureDetector>
   );
 }

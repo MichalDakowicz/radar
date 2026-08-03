@@ -6,16 +6,18 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ### Added
 
-- Radar Recap on Profile — your month as a four page story, your year as a nine page report
+- Radar Recap — your month as a four page story, your year as a nine page report
 - A recap arrives once its period ends: July's on 1 August, the year's on 1 January
+- Your recaps sit on Profile as a shelf of cover tiles, under what you are watching
 - The monthly recap covers hours watched, how you rank among friends, and the film of the month
 - The month closes on its best titles in order, not on what you left in the watchlist
 - The yearly report opens on an archive cover and closes on a share card you can send
 - Genres in the yearly report are a type wall, sized by how much you actually watched them
 - Directors get a podium, with bars scaled to the real gap between first and third
 - The year day by day, as a heatmap of films and episodes with your longest streak named
-- An archive button on Profile opens every past recap Radar still holds
-- Tap the right of a recap to move on, the left to go back, hold anywhere to pause
+- Tap right to move on, left to go back, hold to pause, swipe sideways, drag down to close
+- Going back holds the story where it is until you tap forward again
+- The archive shows every recap Radar still holds as its own shareable card
 
 ## 2.7.0 — 2026-08-02
 

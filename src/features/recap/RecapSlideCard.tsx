@@ -41,7 +41,9 @@ export function RecapSlideCard({ index, progress, width, justify = 'center', res
         StyleSheet.absoluteFill,
         {
           backgroundColor: RECAP.bg,
-          paddingTop: insets.top + 58,
+          // Only the progress bars sit above the content now, so the card starts
+          // just under them rather than under a header row.
+          paddingTop: insets.top + 34,
           paddingBottom: insets.bottom + 26 + (reserveAction ? 66 : 0),
           paddingHorizontal: 26,
           justifyContent: justify,

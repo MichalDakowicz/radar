@@ -40,12 +40,5 @@ export function YearlyRecapDeck({ recap, username, onClose }: YearlyRecapDeckPro
     [recap, username, card, share],
   );
 
-  return (
-    <RecapPlayer
-      slides={slides}
-      title="Annual Report"
-      stamp={(index) => `PAGE ${String(index + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`}
-      onClose={onClose}
-    />
-  );
+  return <RecapPlayer slides={slides} onClose={onClose} />;
 }
