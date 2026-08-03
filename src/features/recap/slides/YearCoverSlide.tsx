@@ -19,7 +19,9 @@ export function YearCoverSlide({ recap, username }: YearCoverSlideProps) {
         <Stamp>No. {String(recap.edition).padStart(2, '0')}</Stamp>
       </View>
 
-      <View>
+      {/* Pushed to the foot of the space between the masthead and the credits,
+          which is where it sits on the printed page the cover is imitating. */}
+      <View className="flex-1 justify-end pb-8">
         <Text style={{ fontSize: 15, color: RECAP.muted, letterSpacing: 0.3 }}>The</Text>
         <Text className="mt-1" style={{ fontSize: 44, lineHeight: 42, fontWeight: '700', letterSpacing: -1.5, color: RECAP.ink }}>
           Annual{'\n'}Report

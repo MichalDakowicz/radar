@@ -10,7 +10,7 @@ type RecapSlideCardProps = {
   /** Animated position of the deck, in slides. Shared by every card. */
   progress: SharedValue<number>;
   width: number;
-  justify?: 'center' | 'space-between';
+  justify?: 'flex-end' | 'center' | 'space-between';
   /** Leaves room for the player's action button, which floats over the card. */
   reserveAction?: boolean;
   children: ReactNode;
@@ -25,7 +25,13 @@ type RecapSlideCardProps = {
  * Each card is opaque: a translucent one would show its neighbour sliding
  * underneath and turn the push into a smear.
  */
-export function RecapSlideCard({ index, progress, width, justify = 'center', reserveAction, children }: RecapSlideCardProps) {
+/**
+ * Content is bottom-weighted by default. A phone is far taller than the 760px
+ * card this was designed on, so centring left a void above and below every page;
+ * anchoring low is also how a story is read — the eye starts at the bottom of the
+ * frame and the empty top becomes deliberate space rather than a gap.
+ */
+export function RecapSlideCard({ index, progress, width, justify = 'flex-end', reserveAction, children }: RecapSlideCardProps) {
   const insets = useSafeAreaInsets();
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: (index - progress.value) * width }] }));
 

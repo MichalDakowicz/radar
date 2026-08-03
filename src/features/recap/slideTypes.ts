@@ -14,6 +14,6 @@ import type { ReactNode } from 'react';
  */
 export type RecapSlide = {
   content: ReactNode;
-  justify?: 'center' | 'space-between';
+  justify?: 'flex-end' | 'center' | 'space-between';
   action?: { label: string; onPress: () => void };
 };
