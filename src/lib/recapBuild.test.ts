@@ -1,0 +1,208 @@
+import { buildMonthlyRecap, buildYearlyRecap, longDate, longestRun } from '@/lib/recapBuild';
+import type { Movie, Ratings } from '@/types/movie';
+
+const score = (ratings: Ratings | null | undefined) => ratings?.overall ?? null;
+
+function movie(overrides: Partial<Movie>): Movie {
+  return {
+    id: Math.random().toString(36).slice(2),
+    userId: 'u',
+    tmdbId: 1,
+    imdbId: null,
+    type: 'movie',
+    title: 'Title',
+    director: [],
+    cast: [],
+    genres: [],
+    releaseDate: null,
+    coverUrl: null,
+    overview: '',
+    runtime: 120,
+    voteAverage: 0,
+    voteCount: 0,
+    tagline: '',
+    budget: 0,
+    revenue: 0,
+    productionCompanies: [],
+    numberOfSeasons: null,
+    numberOfEpisodes: null,
+    tmdbStatus: null,
+    availability: [],
+    status: 'Completed',
+    inWatchlist: false,
+    inProgress: false,
+    watched: true,
+    timesWatched: 1,
+    completedAt: null,
+    lastWatchedPosition: null,
+    ratings: {},
+    notes: '',
+    url: '',
+    addedAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    episodesWatched: {},
+    episodeWatchDates: {},
+    seasonEpisodeCounts: {},
+    ...overrides,
+  };
+}
+
+/** Local noon, so a test never straddles a timezone boundary. */
+function at(year: number, month: number, day: number): string {
+  return new Date(year, month - 1, day, 12).toISOString();
+}
+
+describe('longestRun', () => {
+  it('finds the run and the dates it spans', () => {
+    expect(longestRun(['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-20'])).toEqual({
+      length: 3,
+      from: '2026-10-08',
+      to: '2026-10-10',
+    });
+  });
+
+  it('is null with no active days', () => {
+    expect(longestRun([])).toBeNull();
+  });
+
+  it('counts a single day as a run of one', () => {
+    expect(longestRun(['2026-05-05'])).toEqual({ length: 1, from: '2026-05-05', to: '2026-05-05' });
+  });
+});
+
+describe('longDate', () => {
+  it('reads as a date, not a key', () => {
+    expect(longDate('2026-10-08')).toBe('8 October');
+  });
+});
+
+describe('buildMonthlyRecap', () => {
+  const movies = [
+    movie({ title: 'July A', completedAt: at(2026, 7, 3), runtime: 120, ratings: { overall: 5 } }),
+    movie({ title: 'July B', completedAt: at(2026, 7, 4), runtime: 60, genres: [{ id: 53, name: 'Thriller' }] }),
+    movie({ title: 'June A', completedAt: at(2026, 6, 10), runtime: 120 }),
+    movie({ title: 'Never', watched: false, inWatchlist: true, completedAt: null, addedAt: at(2026, 3, 1) }),
+  ];
+
+  it('counts only the month asked for', () => {
+    const recap = buildMonthlyRecap('2026-07', { movies, score });
+    expect(recap.titles).toBe(2);
+    expect(recap.hours).toBe(3);
+    expect(recap.activeDays).toBe(2);
+    expect(recap.display).toBe('JULY');
+    expect(recap.year).toBe('2026');
+  });
+
+  it('compares against the month before', () => {
+    const recap = buildMonthlyRecap('2026-07', { movies, score });
+    expect(recap.previous).toEqual({ short: 'JUN', hours: 2 });
+    expect(recap.deltaPercent).toBe(50);
+  });
+
+  it('has no delta when the previous month was empty', () => {
+    const recap = buildMonthlyRecap('2026-06', { movies, score });
+    expect(recap.deltaPercent).toBeNull();
+  });
+
+  it('picks the best-rated finish as the film of the month', () => {
+    expect(buildMonthlyRecap('2026-07', { movies, score }).film?.title).toBe('July A');
+  });
+
+  it('ages the watchlist by when it was added', () => {
+    const recap = buildMonthlyRecap('2026-07', { movies, score });
+    expect(recap.aging.map((a) => a.title)).toEqual(['Never']);
+    expect(recap.agingSince).toBe('March');
+  });
+
+  it('snapshots the leaderboard it is handed', () => {
+    const rows = [{ name: 'You', initials: 'YO', hours: 3, ratio: 1, isYou: true }];
+    expect(buildMonthlyRecap('2026-07', { movies, score, leaderboard: rows }).leaderboard).toEqual(rows);
+    expect(buildMonthlyRecap('2026-07', { movies, score }).leaderboard).toEqual([]);
+  });
+});
+
+describe('buildYearlyRecap', () => {
+  const movies = [
+    movie({
+      title: 'Dune',
+      completedAt: at(2026, 10, 8),
+      runtime: 155,
+      releaseDate: '2021-10-22',
+      ratings: { overall: 5 },
+      director: [{ id: 1, name: 'Denis Villeneuve' }],
+      genres: [{ id: 18, name: 'Drama' }],
+    }),
+    movie({
+      title: 'Dune Two',
+      completedAt: at(2026, 10, 9),
+      runtime: 166,
+      releaseDate: '2024-03-01',
+      director: [{ id: 1, name: 'Denis Villeneuve' }],
+      genres: [{ id: 18, name: 'Drama' }],
+      timesWatched: 3,
+    }),
+    movie({
+      title: 'Parasite',
+      completedAt: at(2026, 2, 2),
+      runtime: 132,
+      releaseDate: '2019-05-30',
+      director: [{ id: 2, name: 'Bong Joon-ho' }],
+      genres: [{ id: 53, name: 'Thriller' }],
+    }),
+    movie({ title: 'Last year', completedAt: at(2025, 5, 5), runtime: 90 }),
+  ];
+
+  const recap = buildYearlyRecap('2026', { movies, score });
+
+  it('numbers the edition by tracked years', () => {
+    expect(recap.edition).toBe(2);
+    expect(buildYearlyRecap('2025', { movies, score }).edition).toBe(1);
+  });
+
+  it('excludes other years', () => {
+    expect(recap.titles).toBe(3);
+    expect(recap.activeDays).toBe(3);
+  });
+
+  it('finds the streak and names the months', () => {
+    expect(recap.longestStreak).toBe(2);
+    expect(recap.streakRange).toEqual({ from: '8 October', to: '9 October' });
+    expect(recap.busiestMonth).toEqual({ name: 'October', count: 2 });
+    expect(recap.quietestMonth).toEqual({ name: 'February', count: 1 });
+  });
+
+  it('builds a wall and a podium with true ratios', () => {
+    expect(recap.genres[0].name).toBe('Drama');
+    expect(recap.genres[1].ratio).toBeCloseTo(0.5, 5);
+    expect(recap.directors.map((d) => d.place)).toEqual([2, 1, 3].slice(0, recap.directors.length));
+    expect(recap.directors.find((d) => d.place === 1)?.name).toBe('Denis Villeneuve');
+  });
+
+  it('keeps decades in time order', () => {
+    expect(recap.decades.map((d) => d.name)).toEqual(['2010s', '2020s']);
+  });
+
+  it('reports the perfect scores and the rewatch', () => {
+    expect(recap.masterpieces.map((m) => m.title)).toEqual(['Dune']);
+    expect(recap.masterpiecePercent).toBeCloseTo(33.3, 1);
+    expect(recap.rewatch?.title).toBe('Dune Two');
+    expect(recap.rewatch?.times).toBe(3);
+  });
+
+  it('finds the oldest release and the median year', () => {
+    expect(recap.oldest).toEqual({ title: 'Parasite', year: '2019' });
+    expect(recap.medianYear).toBe('2021');
+  });
+
+  it('classifies the year', () => {
+    expect(recap.classification.name).toBe('The Slow-Burn Completionist');
+  });
+
+  it('does not fall over on an empty year', () => {
+    const empty = buildYearlyRecap('2020', { movies, score });
+    expect(empty.titles).toBe(0);
+    expect(empty.longestStreak).toBe(0);
+    expect(empty.weeks.length).toBeGreaterThan(50);
+    expect(empty.classification.name).toBeTruthy();
+  });
+});

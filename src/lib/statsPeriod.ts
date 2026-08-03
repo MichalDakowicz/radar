@@ -32,10 +32,10 @@ export function periodStart(id: StatsPeriodId, now: Date = new Date()): Date | n
   return start;
 }
 
-function isAfter(timestamp: string | null | undefined, from: number): boolean {
+function isInside(timestamp: string | null | undefined, from: number, until: number): boolean {
   if (!timestamp) return false;
   const value = new Date(timestamp).getTime();
-  return Number.isFinite(value) && value >= from;
+  return Number.isFinite(value) && value >= from && value < until;
 }
 
 /**
@@ -49,13 +49,16 @@ function isAfter(timestamp: string | null | undefined, from: number): boolean {
  * - Shows keep the episodes whose watch date lands in the window. Full-series
  *   rewatches (`timesWatched`) carry no dates at all, so they are dropped too.
  */
-export function scopeMoviesToPeriod(movies: Movie[], start: Date | null): Movie[] {
-  if (!start) return movies;
-  const from = start.getTime();
+export function scopeMoviesToPeriod(movies: Movie[], start: Date | null, end: Date | null = null): Movie[] {
+  if (!start && !end) return movies;
+  const from = start ? start.getTime() : -Infinity;
+  // Exclusive: a period's `end` is the first instant of the next one, so a title
+  // finished at 00:00 on 1 August belongs to August, not to July.
+  const until = end ? end.getTime() : Infinity;
   const scoped: Movie[] = [];
 
   for (const movie of movies) {
-    const completedInWindow = isAfter(movie.completedAt, from);
+    const completedInWindow = isInside(movie.completedAt, from, until);
 
     if (movie.type !== 'tv') {
       if (!completedInWindow) continue;
@@ -65,7 +68,7 @@ export function scopeMoviesToPeriod(movies: Movie[], start: Date | null): Movie[
 
     const episodeWatchDates: Record<string, string> = {};
     for (const [key, timestamp] of Object.entries(movie.episodeWatchDates || {})) {
-      if (isAfter(timestamp, from)) episodeWatchDates[key] = timestamp;
+      if (isInside(timestamp, from, until)) episodeWatchDates[key] = timestamp;
     }
     if (Object.keys(episodeWatchDates).length === 0 && !completedInWindow) continue;
 

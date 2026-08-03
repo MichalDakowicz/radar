@@ -16,6 +16,8 @@ import { FavoritesEditorSheet } from '@/features/profile/FavoritesEditorSheet';
 import { MyShelfHeader } from '@/features/profile/MyShelfHeader';
 import { RandomPickCard, type RandomPickScope } from '@/features/profile/RandomPickCard';
 import { RandomPickSheet } from '@/features/profile/RandomPickSheet';
+import { RecapCard } from '@/features/recap/RecapCard';
+import { useRecapIndex } from '@/features/recap/useRecap';
 import { ShelfSections } from '@/features/social/ShelfSections';
 import { useMovies } from '@/hooks/useMovies';
 import { useNavBarSpace } from '@/hooks/useNavBarSpace';
@@ -23,6 +25,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { MAX_W } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { isInWatchlist } from '@/lib/movieStatus';
+import { retainedMonthKeys, type RecapKind } from '@/lib/recapPeriod';
 import { MY_SERVICES_KEY, matchesServiceFilter } from '@/lib/serviceFilter';
 import { publicShelfUrl } from '@/lib/shelfLink';
 import { inProgressTitles, recentlyLogged, shelfStats } from '@/lib/shelfSummary';
@@ -64,6 +67,14 @@ function ProfileScreen() {
     [pickable, settings.ownedServices],
   );
   const pickPool = pickRequest?.scope === 'library' ? pickable : onMyServices;
+
+  // Recap offers the newest month and year outright; the archive holds the rest.
+  // Months past the retained two are not offered at all — the database only keeps
+  // this month and last (supabase/recaps.sql), so a third would never cache.
+  const { months, years } = useRecapIndex();
+  const retainedMonths = months.filter((key) => retainedMonthKeys().includes(key));
+  const openRecap = (kind: RecapKind, key: string) =>
+    router.push({ pathname: '/recap/[kind]/[key]', params: { kind, key } });
 
   // Presented from an effect, not from the press handler: the sheet starts its
   // spin the moment it opens, so the new pool has to be committed as a prop
@@ -125,12 +136,21 @@ function ProfileScreen() {
               inProgress={inProgress}
               recent={recent}
               belowFavorites={
-                <RandomPickCard
-                  serviceCount={onMyServices.length}
-                  libraryCount={pickable.length}
-                  hasServices={settings.ownedServices.length > 0}
-                  onPick={openPicker}
-                />
+                <View className="gap-3">
+                  <RandomPickCard
+                    serviceCount={onMyServices.length}
+                    libraryCount={pickable.length}
+                    hasServices={settings.ownedServices.length > 0}
+                    onPick={openPicker}
+                  />
+                  <RecapCard
+                    monthKey={retainedMonths[0] ?? null}
+                    yearKey={years[0] ?? null}
+                    hasArchive={years.length > 1 || retainedMonths.length > 1}
+                    onOpen={openRecap}
+                    onOpenArchive={() => router.push('/recap')}
+                  />
+                </View>
               }
               onOpenTitle={openTitle}
               // profiles.favorites is a snapshot, not an FK - a pinned title

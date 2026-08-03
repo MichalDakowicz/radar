@@ -4,6 +4,17 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.8.0 — Unreleased
 
+### Added
+
+- Radar Recap on Profile — your month as a four page story, your year as a nine page report
+- The monthly recap covers hours watched, how you rank among friends, and the film of the month
+- The yearly report opens on an archive cover and closes on a share card you can send
+- Genres in the yearly report are a type wall, sized by how much you actually watched them
+- Directors get a podium, with bars scaled to the real gap between first and third
+- The year day by day, as a heatmap of films and episodes with your longest streak named
+- An archive button on Profile opens every past recap Radar still holds
+- Tap the right of a recap to move on, the left to go back, hold anywhere to pause
+
 ## 2.7.0 — 2026-08-02
 
 ### Added
