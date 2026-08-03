@@ -8,7 +8,7 @@ import { dateKey } from '@/lib/stats';
 // moved on. No Date objects, no undefined — jsonb round-trips neither.
 
 /** Schema version of the stored payload. Bump when a slide needs a new field. */
-export const RECAP_VERSION = 1;
+export const RECAP_VERSION = 2;
 
 export type PosterRef = {
   title: string;
@@ -16,6 +16,9 @@ export type PosterRef = {
   tmdbId: number | null;
   type: MediaType;
 };
+
+/** A poster that carries the score it earned, for rows that show the number. */
+export type RatedPoster = PosterRef & { rating: number | null };
 
 export type TitleCard = PosterRef & {
   /** Release year as text, or null when TMDB has no date. */
@@ -59,9 +62,8 @@ export type MonthlyRecap = {
   deltaPercent: number | null;
   topGenre: RankedItem | null;
   film: TitleCard | null;
-  /** Watchlist posters that have been sitting unwatched the longest. */
-  aging: PosterRef[];
-  agingSince: string | null;
+  /** The rest of the month's best, behind `film` — highest rated first. */
+  runnersUp: RatedPoster[];
   leaderboard: LeaderboardRow[];
   /** Title everyone on the leaderboard watched this month, when there is one. */
   sharedTitle: string | null;
@@ -90,8 +92,15 @@ export type YearlyRecap = {
   decades: RankedItem[];
   medianYear: string | null;
   oldest: { title: string; year: string } | null;
+  /** Only the genuine fives. Empty is a real answer, not something to pad. */
   masterpieces: PosterRef[];
   masterpiecePercent: number;
+  /**
+   * The best you actually gave, for the year where nothing reached five. Ordered
+   * by score, so the slide can name the ceiling instead of picking a title at
+   * random to stand in for a masterpiece.
+   */
+  topRated: RatedPoster[];
   rewatch: (TitleCard & { times: number }) | null;
   classification: { name: string; blurb: string };
 };

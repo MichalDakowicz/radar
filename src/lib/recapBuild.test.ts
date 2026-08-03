@@ -108,10 +108,14 @@ describe('buildMonthlyRecap', () => {
     expect(buildMonthlyRecap('2026-07', { movies, score }).film?.title).toBe('July A');
   });
 
-  it('ages the watchlist by when it was added', () => {
+  it('lists the month\'s other finishes as runners-up, best first', () => {
     const recap = buildMonthlyRecap('2026-07', { movies, score });
-    expect(recap.aging.map((a) => a.title)).toEqual(['Never']);
-    expect(recap.agingSince).toBe('March');
+    expect(recap.film?.title).toBe('July A');
+    // The film of the month is not repeated in its own runners-up row, and the
+    // unwatched watchlist title never appears — the recap is about what was
+    // actually watched.
+    expect(recap.runnersUp.map((r) => r.title)).toEqual(['July B']);
+    expect(recap.runnersUp[0].rating).toBeNull();
   });
 
   it('snapshots the leaderboard it is handed', () => {
@@ -187,6 +191,25 @@ describe('buildYearlyRecap', () => {
     expect(recap.masterpiecePercent).toBeCloseTo(33.3, 1);
     expect(recap.rewatch?.title).toBe('Dune Two');
     expect(recap.rewatch?.times).toBe(3);
+  });
+
+  it('offers no stand-in when a five exists', () => {
+    expect(recap.topRated).toEqual([]);
+  });
+
+  it('falls back to the real ceiling when nothing reached five', () => {
+    const noFives = [
+      movie({ title: 'Good', completedAt: at(2026, 4, 1), ratings: { overall: 4 } }),
+      movie({ title: 'Fine', completedAt: at(2026, 4, 2), ratings: { overall: 3 } }),
+      movie({ title: 'Unrated', completedAt: at(2026, 4, 3) }),
+    ];
+    const built = buildYearlyRecap('2026', { movies: noFives, score });
+    expect(built.masterpieces).toEqual([]);
+    // Ordered by score, and an unrated title is never promoted to fill a slot.
+    expect(built.topRated.map((t) => [t.title, t.rating])).toEqual([
+      ['Good', 4],
+      ['Fine', 3],
+    ]);
   });
 
   it('finds the oldest release and the median year', () => {

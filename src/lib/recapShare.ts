@@ -15,6 +15,10 @@ export type ShareCardData = {
 };
 
 export function shareCardFromYear(recap: YearlyRecap, username: string): ShareCardData {
+  // Falls back to the year's best scores when nothing reached five, so the card
+  // never claims a masterpiece that does not exist.
+  const perfect = recap.masterpieces.length > 0;
+  const posters = perfect ? recap.masterpieces : recap.topRated.slice(0, 4);
   return {
     headline: 'My year\nin film.',
     stamp: `${recap.key} · @${username}`,
@@ -24,11 +28,10 @@ export function shareCardFromYear(recap: YearlyRecap, username: string): ShareCa
       { label: 'Top genre', value: recap.genres[0]?.name ?? '—' },
       { label: 'Streak', value: `${recap.longestStreak} days` },
     ],
-    posters: recap.masterpieces,
-    postersLabel:
-      recap.masterpieces.length > 0
-        ? `${recap.masterpieces.length} perfect ${recap.masterpieces.length === 1 ? 'score' : 'scores'}`
-        : 'No perfect scores',
+    posters,
+    postersLabel: perfect
+      ? `${recap.masterpieces.length} perfect ${recap.masterpieces.length === 1 ? 'score' : 'scores'}`
+      : 'Highest rated',
     footer: recap.classification.name,
   };
 }

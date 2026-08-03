@@ -10,10 +10,11 @@ import {
   type LeaderboardRow,
   type MonthlyRecap,
   type PosterRef,
+  type RatedPoster,
   type TitleCard,
   type YearlyRecap,
 } from '@/lib/recap';
-import { availablePeriods, monthName, periodDisplayName, periodRange, periodShortName, previousPeriodKey } from '@/lib/recapPeriod';
+import { activityPeriods, monthName, periodDisplayName, periodRange, periodShortName, previousPeriodKey } from '@/lib/recapPeriod';
 import { classifyViewer } from '@/lib/recapClassify';
 import { computeStats, dateKey, type Stats } from '@/lib/stats';
 import { scopeMoviesToPeriod } from '@/lib/statsPeriod';
@@ -92,6 +93,17 @@ function masterpieces(movies: Movie[], score: ScoreFn, limit: number): Movie[] {
     .slice(0, limit);
 }
 
+/** Best score first, most recent breaking the tie. Ratings only, never guesses. */
+function bestRated(movies: Movie[], score: ScoreFn, limit: number): RatedPoster[] {
+  return movies
+    .filter((m) => (score(m.ratings) ?? 0) > 0)
+    .sort(
+      (a, b) => (score(b.ratings) ?? 0) - (score(a.ratings) ?? 0) || (b.completedAt ?? '').localeCompare(a.completedAt ?? ''),
+    )
+    .slice(0, limit)
+    .map((m) => ({ ...posterRef(m), rating: Number((score(m.ratings) ?? 0).toFixed(1)) }));
+}
+
 export function buildMonthlyRecap(key: string, input: BuildInput): MonthlyRecap {
   const { movies, score } = input;
   const { start, end } = periodRange('month', key);
@@ -113,12 +125,6 @@ export function buildMonthlyRecap(key: string, input: BuildInput): MonthlyRecap 
       (a, b) => (score(b.ratings) ?? 0) - (score(a.ratings) ?? 0) || (b.completedAt ?? '').localeCompare(a.completedAt ?? ''),
     );
 
-  // Oldest additions still sitting on the watchlist — the guilt slide.
-  const aging = movies
-    .filter((m) => m.inWatchlist && !isWatched(m))
-    .sort((a, b) => (a.addedAt ?? '').localeCompare(b.addedAt ?? ''))
-    .slice(0, 4);
-
   return {
     version: RECAP_VERSION,
     kind: 'month',
@@ -132,8 +138,12 @@ export function buildMonthlyRecap(key: string, input: BuildInput): MonthlyRecap 
     deltaPercent: previousHours > 0 ? Math.round(((hours - previousHours) / previousHours) * 100) : null,
     topGenre: stats ? (rank(stats.topGenres, 1)[0] ?? null) : null,
     film: finished[0] ? titleCard(finished[0], score) : null,
-    aging: aging.map(posterRef),
-    agingSince: aging[0]?.addedAt ? monthName(new Date(aging[0].addedAt).getMonth()) : null,
+    // The month's other highlights, not its leftovers: the rest of what was
+    // finished, best first, with the film of the month itself left out.
+    runnersUp: finished.slice(1, 5).map((m) => {
+      const rating = score(m.ratings);
+      return { ...posterRef(m), rating: rating != null ? Number(rating.toFixed(1)) : null };
+    }),
     leaderboard: input.leaderboard ?? [],
     sharedTitle: input.sharedTitle ?? null,
   };
@@ -185,8 +195,10 @@ export function buildYearlyRecap(key: string, input: BuildInput): YearlyRecap {
     version: RECAP_VERSION,
     kind: 'year',
     key,
-    // Which report this is: the user's first tracked year is No. 01.
-    edition: availablePeriods(movies, 'year').filter((y) => Number(y) <= year).length || 1,
+    // Which report this is: the user's first tracked year is No. 01. Counted from
+    // all activity, not from what is publishable — the year being reported on is
+    // itself one of them.
+    edition: activityPeriods(movies, 'year').filter((y) => Number(y) <= year).length || 1,
     titles,
     hours: stats?.totalHours ?? 0,
     activeDays: days.length,
@@ -210,6 +222,7 @@ export function buildYearlyRecap(key: string, input: BuildInput): YearlyRecap {
     oldest: oldestMovie ? { title: oldestMovie.title, year: releaseYear(oldestMovie) ?? '' } : null,
     masterpieces: perfect.map(posterRef),
     masterpiecePercent: titles > 0 ? Number(((perfectTotal / titles) * 100).toFixed(1)) : 0,
+    topRated: perfect.length === 0 ? bestRated(scoped, score, 6) : [],
     rewatch: rewatched ? { ...titleCard(rewatched, score), times: rewatched.timesWatched } : null,
     classification: classifyViewer(scoped, stats),
   };

@@ -9,7 +9,7 @@ import { YearlyRecapDeck } from '@/features/recap/YearlyRecapDeck';
 import { useRecap } from '@/features/recap/useRecap';
 import { RECAP } from '@/features/recap/recapTheme';
 import { useProfile } from '@/hooks/useProfile';
-import { isValidPeriodKey, periodLabel, type RecapKind } from '@/lib/recapPeriod';
+import { isPeriodClosed, isValidPeriodKey, periodLabel, type RecapKind } from '@/lib/recapPeriod';
 
 // The recap player. A full-screen route rather than a sheet: it is a story with
 // its own chrome and its own dark canvas, and a sheet would put the app's header
@@ -21,13 +21,23 @@ export default function RecapScreen() {
   const { profile } = useProfile(user?.id);
 
   const validKind: RecapKind | null = kind === 'month' || kind === 'year' ? kind : null;
-  const valid = !!validKind && !!key && isValidPeriodKey(validKind, key);
-  const { recap, loading, error } = useRecap(validKind ?? 'month', valid ? key : '');
+  const parsed = !!validKind && !!key && isValidPeriodKey(validKind, key);
+  // A recap is published once its period ends, so an in-progress one is a real
+  // route with nothing behind it yet rather than a malformed request.
+  const closed = parsed && isPeriodClosed(validKind!, key);
+  const { recap, loading, error } = useRecap(validKind ?? 'month', parsed ? key : '');
 
-  if (!valid) {
+  if (!parsed || !closed) {
     return (
       <View className="flex-1" style={{ backgroundColor: RECAP.bg }}>
-        <ErrorState message="That is not a recap Radar can build" onRetry={() => router.back()} />
+        <ErrorState
+          message={
+            parsed
+              ? `${periodLabel(validKind!, key)} is not over yet — its recap arrives once it is`
+              : 'That is not a recap Radar can build'
+          }
+          onRetry={() => router.back()}
+        />
       </View>
     );
   }

@@ -7,7 +7,7 @@ import { fetchRecap, listRecaps, saveRecap, type StoredRecap } from '@/features/
 import { useRecapLeaderboard } from '@/features/recap/useRecapLeaderboard';
 import { useMovies } from '@/hooks/useMovies';
 import { buildMonthlyRecap, buildYearlyRecap } from '@/lib/recapBuild';
-import { availablePeriods, isValidPeriodKey, periodKey, type RecapKind } from '@/lib/recapPeriod';
+import { availablePeriods, isPeriodClosed, isValidPeriodKey, type RecapKind } from '@/lib/recapPeriod';
 import type { Recap } from '@/lib/recap';
 
 // Load a recap: stored payload first, freshly built and cached on a miss. The
@@ -45,15 +45,15 @@ export function useRecap(kind: RecapKind, key: string) {
   const queryClient = useQueryClient();
   const { movies, loading: moviesLoading } = useMovies();
   const leaderboard = useRecapLeaderboard(kind === 'month' ? key : null);
-  const isCurrent = key === periodKey(kind, new Date());
 
   const query = useQuery({
     queryKey: recapKey(uid, kind, key),
     queryFn: async (): Promise<Recap> => {
-      if (!isCurrent) {
-        const stored = await fetchRecap(uid!, kind, key);
-        if (stored) return stored;
-      }
+      // Every recap covers a period that has already ended, so a stored payload
+      // is always still true. Only a version bump or an explicit rebuild forces
+      // the work again.
+      const stored = await fetchRecap(uid!, kind, key);
+      if (stored) return stored;
       const input = {
         movies,
         score: personalScore,
@@ -68,8 +68,9 @@ export function useRecap(kind: RecapKind, key: string) {
     // The library and the leaderboard are inputs to the build, so waiting on them
     // is what stops a recap being cached with half a friend list in it. A key the
     // route could not parse never reaches the builder, which would otherwise
-    // derive a period from NaN and store it.
-    enabled: !!uid && isValidPeriodKey(kind, key) && !moviesLoading && !leaderboard.loading,
+    // derive a period from NaN and store it — and neither does a period that has
+    // not ended, whose numbers would still be moving.
+    enabled: !!uid && isValidPeriodKey(kind, key) && isPeriodClosed(kind, key) && !moviesLoading && !leaderboard.loading,
     // A built recap is a snapshot; nothing about it goes stale while it is open.
     staleTime: Infinity,
   });

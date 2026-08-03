@@ -1,6 +1,8 @@
 import {
   availablePeriods,
+  isPeriodClosed,
   isValidPeriodKey,
+  latestClosedPeriodKey,
   monthKey,
   periodDisplayName,
   periodLabel,
@@ -89,24 +91,61 @@ describe('period keys', () => {
   });
 });
 
+describe('isPeriodClosed', () => {
+  const now = new Date(2026, 7, 3, 11); // 3 August 2026
+
+  it('publishes a month only once it is over', () => {
+    expect(isPeriodClosed('month', '2026-07', now)).toBe(true);
+    expect(isPeriodClosed('month', '2026-08', now)).toBe(false);
+  });
+
+  it('publishes a year only once it is over', () => {
+    expect(isPeriodClosed('year', '2025', now)).toBe(true);
+    expect(isPeriodClosed('year', '2026', now)).toBe(false);
+  });
+
+  it('opens the moment the period ends', () => {
+    expect(isPeriodClosed('month', '2026-07', new Date(2026, 7, 1, 0, 0, 0))).toBe(true);
+    expect(isPeriodClosed('month', '2026-07', new Date(2026, 6, 31, 23, 59, 59))).toBe(false);
+  });
+
+  it('names the newest published period', () => {
+    expect(latestClosedPeriodKey('month', now)).toBe('2026-07');
+    expect(latestClosedPeriodKey('year', now)).toBe('2025');
+    expect(latestClosedPeriodKey('month', new Date(2026, 0, 9))).toBe('2025-12');
+  });
+});
+
 describe('availablePeriods', () => {
+  const now = new Date(2026, 7, 3, 11);
+  const movies = [
+    movie({ completedAt: '2026-07-10T12:00:00.000Z' }),
+    movie({ completedAt: '2025-02-02T12:00:00.000Z' }),
+    movie({ type: 'tv', completedAt: null, episodeWatchDates: { 's1e1': '2026-03-04T12:00:00.000Z' } }),
+  ];
+
   it('reads both completion dates and episode dates, newest first', () => {
-    const movies = [
-      movie({ completedAt: '2026-07-10T12:00:00.000Z' }),
-      movie({ completedAt: '2025-02-02T12:00:00.000Z' }),
-      movie({ type: 'tv', completedAt: null, episodeWatchDates: { 's1e1': '2026-03-04T12:00:00.000Z' } }),
-    ];
-    expect(availablePeriods(movies, 'month')).toEqual(['2026-07', '2026-03', '2025-02']);
-    expect(availablePeriods(movies, 'year')).toEqual(['2026', '2025']);
+    expect(availablePeriods(movies, 'month', now)).toEqual(['2026-07', '2026-03', '2025-02']);
+    expect(availablePeriods(movies, 'year', now)).toEqual(['2025']);
+  });
+
+  it('withholds the period that is still running', () => {
+    const withThisMonth = [...movies, movie({ completedAt: '2026-08-02T12:00:00.000Z' })];
+    expect(availablePeriods(withThisMonth, 'month', now)).not.toContain('2026-08');
+    expect(availablePeriods(withThisMonth, 'year', now)).not.toContain('2026');
   });
 
   it('ignores titles with no watch activity', () => {
-    expect(availablePeriods([movie({ watched: false, completedAt: null })], 'month')).toEqual([]);
+    expect(availablePeriods([movie({ watched: false, completedAt: null })], 'month', now)).toEqual([]);
   });
 });
 
 describe('retainedMonthKeys', () => {
-  it('is this month and last', () => {
-    expect(retainedMonthKeys(new Date(2026, 0, 20))).toEqual(['2026-01', '2025-12']);
+  it('is the two most recent finished months', () => {
+    expect(retainedMonthKeys(new Date(2026, 7, 3))).toEqual(['2026-07', '2026-06']);
+  });
+
+  it('steps back across the year boundary', () => {
+    expect(retainedMonthKeys(new Date(2026, 0, 20))).toEqual(['2025-12', '2025-11']);
   });
 });

@@ -87,6 +87,20 @@ export function monthName(index: number): string {
   return MONTH_NAMES[index] ?? '';
 }
 
+/**
+ * A recap only exists once its period is over. July's comes out on 1 August —
+ * a "month in review" published on the 3rd is a review of three days, and the
+ * numbers would move under the reader every time they opened it.
+ */
+export function isPeriodClosed(kind: RecapKind, key: RecapPeriodKey, now: Date = new Date()): boolean {
+  return now.getTime() >= periodRange(kind, key).end.getTime();
+}
+
+/** The newest period whose recap is out: last month, or last year. */
+export function latestClosedPeriodKey(kind: RecapKind, now: Date = new Date()): RecapPeriodKey {
+  return previousPeriodKey(kind, periodKey(kind, now));
+}
+
 /** Every timestamp that counts as watch activity, as local dates. */
 function watchDates(movie: Movie): Date[] {
   const dates: Date[] = [];
@@ -96,12 +110,11 @@ function watchDates(movie: Movie): Date[] {
 }
 
 /**
- * Periods a recap can actually be built for, newest first: the ones with watch
- * activity in them. A month with nothing in it gets no card rather than a card
- * full of zeros. The current period is always offered once it has any activity,
- * which is what makes a recap watchable before the month is over.
+ * Every period with watch activity in it, newest first — running ones included.
+ * Use this for counting (how many years someone has tracked), not for offering:
+ * `availablePeriods` is the list a user may open.
  */
-export function availablePeriods(movies: Movie[], kind: RecapKind): RecapPeriodKey[] {
+export function activityPeriods(movies: Movie[], kind: RecapKind): RecapPeriodKey[] {
   const keys = new Set<RecapPeriodKey>();
   for (const movie of movies) {
     for (const date of watchDates(movie)) keys.add(periodKey(kind, date));
@@ -110,11 +123,20 @@ export function availablePeriods(movies: Movie[], kind: RecapKind): RecapPeriodK
 }
 
 /**
- * Which month keys survive retention: the current month and the one before it.
- * Years are all kept, so this only ever narrows months — the archive is a
- * yearly record, and a stale monthly hype reel is not worth the row.
+ * Periods a recap can actually be built for, newest first: closed periods with
+ * watch activity in them. A month with nothing in it gets no card rather than a
+ * card full of zeros, and the month still running gets none until it ends.
+ */
+export function availablePeriods(movies: Movie[], kind: RecapKind, now: Date = new Date()): RecapPeriodKey[] {
+  return activityPeriods(movies, kind).filter((key) => isPeriodClosed(kind, key, now));
+}
+
+/**
+ * Which month keys survive retention: the two most recent finished months. Years
+ * are all kept, so this only ever narrows months — the archive is a yearly
+ * record, and a stale monthly hype reel is not worth the row.
  */
 export function retainedMonthKeys(now: Date = new Date()): RecapPeriodKey[] {
-  const current = monthKey(now);
-  return [current, previousPeriodKey('month', current)];
+  const latest = latestClosedPeriodKey('month', now);
+  return [latest, previousPeriodKey('month', latest)];
 }

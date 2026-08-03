@@ -9,14 +9,18 @@ import type { MonthlyRecap } from '@/lib/recap';
 type MonthFilmSlideProps = { recap: MonthlyRecap };
 
 /**
- * The verdict and the guilt pile. The share button belongs to the player, which
- * draws it over the card — see slideTypes.
+ * The month's verdict, then the rest of its best. Runners-up rather than an
+ * unwatched-watchlist row: the recap is about what you did watch, and the pile
+ * you ignored is already a section of the Library.
+ *
+ * The share button belongs to the player, which draws it over the card — see
+ * slideTypes.
  */
 export function MonthFilmSlide({ recap }: MonthFilmSlideProps) {
   const { width } = useWindowDimensions();
-  const { film } = recap;
-  // Four aging posters across the card's inner width, 10px gutters.
-  const aging = Math.floor((width - 52 - 30) / 4);
+  const { film, runnersUp } = recap;
+  // Four posters across the card's inner width, 10px gutters.
+  const poster = Math.floor((width - 52 - 30) / 4);
 
   return (
     <View className="gap-5">
@@ -44,21 +48,26 @@ export function MonthFilmSlide({ recap }: MonthFilmSlideProps) {
         </View>
       )}
 
-      {recap.aging.length > 0 && (
+      {runnersUp.length > 0 && (
         <View className="pt-4" style={{ borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,.1)' }}>
           <Text style={{ fontSize: 14, lineHeight: 22, color: RECAP.muted }}>
-            {recap.agingSince
-              ? `Sitting in your watchlist since ${recap.agingSince}:`
-              : 'Still sitting in your watchlist:'}
+            {runnersUp.length === 1 ? 'Also worth the evening:' : 'The rest of the month, in order:'}
           </Text>
           <View className="mt-3.5 flex-row gap-2.5">
-            {recap.aging.map((item) => (
-              <RecapPoster key={`${item.tmdbId}-${item.title}`} coverUrl={item.coverUrl} title={item.title} width={aging} radius={7} />
+            {runnersUp.map((item) => (
+              <View key={`${item.tmdbId}-${item.title}`} style={{ width: poster }}>
+                <RecapPoster coverUrl={item.coverUrl} title={item.title} width={poster} radius={7} />
+                <Text numberOfLines={2} className="mt-1.5" style={{ fontSize: 10, lineHeight: 12.5, fontWeight: '600', color: RECAP.muted }}>
+                  {item.title}
+                </Text>
+                {item.rating != null && (
+                  <Text style={{ fontSize: 9.5, fontWeight: '700', color: RECAP.star }}>{item.rating}★</Text>
+                )}
+              </View>
             ))}
           </View>
         </View>
       )}
-
     </View>
   );
 }

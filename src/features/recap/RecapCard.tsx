@@ -30,7 +30,7 @@ export function RecapCard({ monthKey, yearKey, hasArchive, onOpen, onOpenArchive
         </View>
         <View className="min-w-0 flex-1">
           <Text className="text-[14.5px] font-bold text-foreground">Radar Recap</Text>
-          <Text className="mt-0.5 text-[12px] text-muted-foreground">Your month and your year, as a story</Text>
+          <Text className="mt-0.5 text-[12px] text-muted-foreground">Out once the month or the year is over</Text>
         </View>
       </View>
 

@@ -7,7 +7,9 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Added
 
 - Radar Recap on Profile — your month as a four page story, your year as a nine page report
+- A recap arrives once its period ends: July's on 1 August, the year's on 1 January
 - The monthly recap covers hours watched, how you rank among friends, and the film of the month
+- The month closes on its best titles in order, not on what you left in the watchlist
 - The yearly report opens on an archive cover and closes on a share card you can send
 - Genres in the yearly report are a type wall, sized by how much you actually watched them
 - Directors get a podium, with bars scaled to the real gap between first and third

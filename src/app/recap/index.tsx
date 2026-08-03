@@ -58,7 +58,7 @@ export default function RecapArchiveScreen() {
             </Section>
 
             {visibleMonths.length > 0 && (
-              <Section title="Monthly recaps" note="Only this month and last month are kept">
+              <Section title="Monthly recaps" note="Only the last two finished months are kept">
                 {visibleMonths.map((key) => (
                   <RecapArchiveRow
                     key={key}
