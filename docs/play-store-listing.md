@@ -92,7 +92,7 @@ All built, in `store/` — gitignored, since every one of them is regenerable.
 | Feature graphic   | 1024×500 PNG/JPG, no transparency           | `store/feature-graphic.png` (+ `.svg` source) |
 | Phone screenshots | 2–8, long side ≤ 2× short side              | `store/screenshots/*.png` — 1080×2160         |
 | 7" tablet shots   | exactly 16:9 or 9:16, sides 320–3840 px     | `store/tablet/*.png` — 1215×2160              |
-| 10" tablet shots  | exactly 16:9 or 9:16, sides 1080–7680 px    | `store/tablet/*.png` — same files             |
+| 10" tablet shots  | exactly 16:9 or 9:16, sides 1080–7680 px    | `store/tablet10/*.png` — 1440×2560            |
 
 Capture from the connected device — note `adb exec-out screencap -p > file.png` corrupts
 the PNG under PowerShell, which reencodes the stream as text. Go via the device instead:
@@ -108,11 +108,25 @@ cropped to 1080×2160 by dropping the status bar and the home indicator; tablet 
 cropped phone shots **padded** left and right to 1215×2160 with `#09090B`, which is
 invisible against the app's own background and loses nothing.
 
-Padding rather than recapturing is the honest option here: `useIsDesktop()` in
-`src/hooks/useResponsive.ts` is `isWeb && width >= 1024`, so a native tablet gets the phone
-layout, not a tablet one. There is no distinct tablet UI to photograph. If a real
-large-screen layout is ever wanted, that is a code change — letting native wide viewports
-into the desktop shell — not an asset change.
+The 10" set is captured natively at 9:16 instead, by overriding the display:
+
+```sh
+adb shell wm size 1440x2560 && adb shell wm density 320
+adb shell am force-stop com.michaldakowicz.radar   # it must relayout
+# ... capture ...
+adb shell wm size reset && adb shell wm density reset
+```
+
+1440 px at 320 dpi is 720 dp wide, a genuine tablet width, and the framebuffer really is
+1440×2560 — so no padding and no upscaling. Reset the override afterwards or the phone stays
+letterboxed.
+
+Note what this does and does not prove: `useIsDesktop()` in `src/hooks/useResponsive.ts` is
+`isWeb && width >= 1024`, so even at 720 dp the native app keeps the phone shell — bottom
+tabs, no sidebar. The extra width buys real gains anyway (the Recap shelf fits its Archive
+tile, Recently logged shows eight posters), which is why the 10" set is worth capturing
+rather than padding. A true large-screen layout would be a code change, letting native wide
+viewports into the desktop shell, not an asset change.
 
 ## 4. Release notes (what's new)
 
