@@ -16,6 +16,15 @@ blocks verbatim; the character limits are Play's own.
 Version code 14 is the first code Play will see. Every later upload must be higher, so keep
 bumping `expo.android.versionCode` in `app.json` exactly as before.
 
+**"No deobfuscation file associated with this App Bundle" is expected.** R8 is off
+(`android.enableMinifyInReleaseBuilds` is unset), so nothing is obfuscated and release
+stack traces already carry real class names — there is no mapping file to upload. Play
+shows this on every non-minified bundle. Turning R8 on would shave single-digit MB off the
+bundle at most, because the size is native `.so` per ABI plus Hermes plus the JS bundle,
+not Java bytecode — and it risks release-only crashes wherever React Native or an Expo
+module resolves a class by reflection. Left off deliberately; revisit with a device test
+pass, not on a release day.
+
 ## 2. Store listing
 
 **App name** (30 chars max)
