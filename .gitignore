@@ -46,6 +46,9 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+# Play upload keystore + its passwords. Never committed, never regenerated casually —
+# Play ties the app to this key.
+credentials/
 *.p8
 *.p12
 *.key
