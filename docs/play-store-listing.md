@@ -178,12 +178,19 @@ from Play. Two ways out, and the choice is only offered while setting the app up
 
 Pick the default unless keeping the GitHub sideload channel upgradeable matters to you.
 
-## 8. Two blockers before you can submit
+**Either way, `public/.well-known/assetlinks.json` needs updating after the first upload.**
+It currently lists one SHA-256 fingerprint, the debug keystore's, so Android App Links only
+verify for sideloaded builds. Once the app exists in Play Console, copy the app signing
+certificate's SHA-256 from Setup → App integrity and add it to the
+`sha256_cert_fingerprints` array — the field takes a list, so both can sit there and both
+channels keep working. Then `npm run deploy:web` to publish it.
 
-1. **Privacy policy URL.** Play rejects any app without one, and the data safety answers
-   must match it. Radar already has Firebase Hosting, so the cheapest route is a
-   `/privacy` route in the web build and pointing Play at
-   `https://<hosting-domain>/privacy`.
+## 8. Blockers before you can submit
+
+1. ~~**Privacy policy URL.**~~ Done — `public/privacy.html`, served at `/privacy` via a
+   Firebase rewrite. It is a static file rather than an Expo Router route so no auth gate,
+   no JS and no app shell stands between Play's reviewer and the text. Keep the data safety
+   answers in §6 matching it; if one changes, change both.
 2. **Photo and video permissions.** `expo-image-picker` pulls in `READ_MEDIA_IMAGES`,
    `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO` and `RECORD_AUDIO`. Play requires a written
    justification for the media permissions, and `RECORD_AUDIO` on a watchlist app invites
