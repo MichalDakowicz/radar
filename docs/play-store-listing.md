@@ -111,7 +111,8 @@ First release on Google Play. Track your films and shows, log what you watch, fo
 
 | Question                    | Answer                                                                                                                                                                                                                                       |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Privacy policy              | **required** — a public URL. Not written yet, see §7                                                                                                                                                                                         |
+| Privacy policy              | `https://radar-watchlist.web.app/privacy`                                                                                                                                                                                                    |
+| Delete account URL          | `https://radar-watchlist.web.app/delete-account` — Data safety → Data deletion                                                                                                                                                               |
 | App access                  | All functionality requires an account → provide demo credentials                                                                                                                                                                             |
 | Ads                         | No ads                                                                                                                                                                                                                                       |
 | Content rating              | Complete the questionnaire; Radar is a catalogue app — no violence, no sex, no gambling. Answer "no" throughout, expect PEGI 3 / ESRB Everyone. User-generated content: **yes**, because friends see each other's libraries and profile text |
@@ -154,8 +155,10 @@ transit (HTTPS/TLS).
 Answers to the standing questions:
 
 - Is data encrypted in transit? **Yes**
-- Can users request deletion? **Yes** — say yes only once the in-app or web deletion route
-  actually exists and is documented in the privacy policy
+- Can users request deletion? **Yes**, via
+  `https://radar-watchlist.web.app/delete-account`. That page commits to deletion within 30
+  days of a verified email request — there is no in-app deletion flow, so honouring it means
+  deleting the rows in Supabase by hand
 - Do you collect data for advertising? **No**
 - Do you share data with third parties? **No**. TMDB is queried for metadata — that is a
   request out, not user data shared
