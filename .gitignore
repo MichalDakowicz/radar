@@ -25,6 +25,9 @@ dist-ssr
 
 plan.md
 feature_ideas.md
+# Play Console upload assets — screenshots and the 512 icon are regenerated from the
+# device and from assets/brand, so they are output, not source.
+store/
 .env
 .env.local
 .firebase
