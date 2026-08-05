@@ -82,22 +82,37 @@ Radar uses the TMDB API but is not endorsed or certified by TMDB.
 - Website: the Firebase Hosting URL for the web build
 - Phone: optional, leave blank
 
-## 3. Graphics you still need to make
+## 3. Graphics
 
-Play will not let the listing save without these. Only the icon exists today.
+All built, in `store/` — gitignored, since every one of them is regenerable.
 
-| Asset             | Spec                                             | Status                                                       |
-| ----------------- | ------------------------------------------------ | ------------------------------------------------------------ |
-| App icon          | 512×512 PNG, 32-bit, no alpha                    | derive from `assets/images/icon.png`                         |
-| Feature graphic   | 1024×500 PNG/JPG, no alpha                       | **missing** — needs designing                                |
-| Phone screenshots | 2–8, 16:9 or 9:16, min 1080 px on the short side | **missing** — capture Library, Browse, Stats, Recap, Friends |
-| 7" tablet shots   | optional unless you declare tablet support       | skip                                                         |
+| Asset             | Spec                                        | File                                          |
+| ----------------- | ------------------------------------------- | --------------------------------------------- |
+| App icon          | 512×512 PNG, 32-bit, opaque                 | `store/play-icon-512.png`                     |
+| Feature graphic   | 1024×500 PNG/JPG, no transparency           | `store/feature-graphic.png` (+ `.svg` source) |
+| Phone screenshots | 2–8, long side ≤ 2× short side              | `store/screenshots/*.png` — 1080×2160         |
+| 7" tablet shots   | exactly 16:9 or 9:16, sides 320–3840 px     | `store/tablet/*.png` — 1215×2160              |
+| 10" tablet shots  | exactly 16:9 or 9:16, sides 1080–7680 px    | `store/tablet/*.png` — same files             |
 
-Screenshots are easiest from the connected device:
+Capture from the connected device — note `adb exec-out screencap -p > file.png` corrupts
+the PNG under PowerShell, which reencodes the stream as text. Go via the device instead:
 
 ```sh
-adb exec-out screencap -p > screenshot.png
+adb shell screencap -p /sdcard/rs.png
+adb pull /sdcard/rs.png shot.png
 ```
+
+Then reshape. A raw 1080×2392 screenshot is 2.21:1, which Play rejects for phones (long
+side must be ≤ 2× the short side) and for tablets (must be exactly 9:16). Phone shots are
+cropped to 1080×2160 by dropping the status bar and the home indicator; tablet shots are the
+cropped phone shots **padded** left and right to 1215×2160 with `#09090B`, which is
+invisible against the app's own background and loses nothing.
+
+Padding rather than recapturing is the honest option here: `useIsDesktop()` in
+`src/hooks/useResponsive.ts` is `isWeb && width >= 1024`, so a native tablet gets the phone
+layout, not a tablet one. There is no distinct tablet UI to photograph. If a real
+large-screen layout is ever wanted, that is a code change — letting native wide viewports
+into the desktop shell — not an asset change.
 
 ## 4. Release notes (what's new)
 
