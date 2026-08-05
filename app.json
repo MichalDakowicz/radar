@@ -2,7 +2,7 @@
   "expo": {
     "name": "Radar",
     "slug": "radar",
-    "version": "2.8.0",
+    "version": "2.9.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "radar",
@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.michaldakowicz.radar",
-      "versionCode": 14,
+      "versionCode": 15,
       "googleServicesFile": "./google-services.json"
     },
     "web": {
@@ -53,7 +53,8 @@
           "color": "#3b82f6"
         }
       ],
-      "./plugins/withUploadSigning"
+      "./plugins/withUploadSigning",
+      "./plugins/withTrimmedMediaPermissions"
     ],
     "experiments": {
       "typedRoutes": false,

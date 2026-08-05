@@ -7,14 +7,16 @@ blocks verbatim; the character limits are Play's own.
 
 | Field        | Value                                                                           |
 | ------------ | ------------------------------------------------------------------------------- |
-| Bundle       | `android/app/build/outputs/bundle/release/radar-v2.8.0.aab`                     |
+| Bundle       | `android/app/build/outputs/bundle/release/radar-v2.9.0.aab`                     |
 | Package name | `com.michaldakowicz.radar`                                                      |
-| Version name | `2.8.0`                                                                         |
-| Version code | `14`                                                                            |
+| Version name | `2.9.0`                                                                         |
+| Version code | `15`                                                                            |
 | Signing      | Play App Signing, upload key `radar-upload` (`credentials/upload-keystore.jks`) |
 
-Version code 14 is the first code Play will see. Every later upload must be higher, so keep
-bumping `expo.android.versionCode` in `app.json` exactly as before.
+Every upload must carry a higher `expo.android.versionCode` than the last one Play saw, on
+any track — a code is burned the moment it is uploaded, even to a draft release. 14 went up
+as the first internal-testing build; 15 supersedes it because the permission trim below
+changes the manifest, so there is nothing left to promote from that first upload.
 
 **"No deobfuscation file associated with this App Bundle" is expected.** R8 is off
 (`android.enableMinifyInReleaseBuilds` is unset), so nothing is obfuscated and release
@@ -223,12 +225,19 @@ channels keep working. Then `npm run deploy:web` to publish it.
    Firebase rewrite. It is a static file rather than an Expo Router route so no auth gate,
    no JS and no app shell stands between Play's reviewer and the text. Keep the data safety
    answers in §6 matching it; if one changes, change both.
-2. **Photo and video permissions.** `expo-image-picker` pulls in `READ_MEDIA_IMAGES`,
-   `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO` and `RECORD_AUDIO`. Play requires a written
-   justification for the media permissions, and `RECORD_AUDIO` on a watchlist app invites
-   a rejection. Either strip the unused ones from the merged manifest with a
-   `tools:node="remove"` config plugin, or move avatar picking to the system photo picker
-   so no media permission is needed at all.
+2. ~~**Photo and video permissions.**~~ Done — do **not** fill in Play's justification
+   boxes. Radar's use is the "one-time or infrequent" case the policy tells you to serve
+   with the photo picker, so claiming a frequent-access need would be untrue and gets
+   rejected. Instead `plugins/withTrimmedMediaPermissions.js` removes `READ_MEDIA_IMAGES`,
+   `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO`, `READ_MEDIA_VISUAL_USER_SELECTED`, `RECORD_AUDIO`
+   and `CAMERA` from the merged manifest, and `EditProfileSheet.tsx` no longer calls
+   `requestMediaLibraryPermissionsAsync` — `launchImageLibraryAsync` is the system photo
+   picker and needs no permission. `READ_EXTERNAL_STORAGE`/`WRITE_EXTERNAL_STORAGE` stay at
+   `maxSdkVersion="32"`, which is what covers the versions predating the picker. With the
+   permissions gone the declaration section disappears from App content entirely.
+
+   Still declared and left alone: `SYSTEM_ALERT_WINDOW`, which React Native's own manifest
+   contributes. Removing it is a separate change that needs its own device pass.
 
 ## 9. Release track for a first ship
 

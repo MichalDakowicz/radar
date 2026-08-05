@@ -4,6 +4,11 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.9.0 — Unreleased
 
+### Changed
+
+- Picking a profile picture no longer asks for access to your photos, just the photo picker
+- Radar no longer requests camera, microphone or media access it never used
+
 ## 2.8.0 — 2026-08-03
 
 ### Added
