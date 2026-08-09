@@ -85,11 +85,22 @@ describe('rankedYears', () => {
     ]);
   });
 
-  it('breaks a tie on title so the order never shuffles', () => {
+  it('puts the more rewatched title first when the scores tie', () => {
     const result = rankedYears(
       [
-        movie({ id: 'z', title: 'Zodiac', ratings: { overall: 4 } }),
-        movie({ id: 'a', title: 'Arrival', ratings: { overall: 4 } }),
+        movie({ id: 'once', title: 'Arrival', ratings: { overall: 4 }, timesWatched: 1 }),
+        movie({ id: 'thrice', title: 'Zodiac', ratings: { overall: 4 }, timesWatched: 3 }),
+      ],
+      score,
+    );
+    expect(result[0].entries.map((e) => e.movie.id)).toEqual(['thrice', 'once']);
+  });
+
+  it('falls back to the title so the order never shuffles', () => {
+    const result = rankedYears(
+      [
+        movie({ id: 'z', title: 'Zodiac', ratings: { overall: 4 }, timesWatched: 2 }),
+        movie({ id: 'a', title: 'Arrival', ratings: { overall: 4 }, timesWatched: 2 }),
       ],
       score,
     );
