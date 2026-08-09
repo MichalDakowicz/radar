@@ -19,7 +19,7 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.michaldakowicz.radar",
-      "versionCode": 15,
+      "versionCode": 16,
       "googleServicesFile": "./google-services.json"
     },
     "web": {
