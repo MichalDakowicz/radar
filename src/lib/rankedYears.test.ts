@@ -96,6 +96,18 @@ describe('rankedYears', () => {
     expect(result[0].entries.map((e) => e.movie.id)).toEqual(['thrice', 'once']);
   });
 
+  it('counts a finished show as watched once even with no watch count on it', () => {
+    const result = rankedYears(
+      [
+        movie({ id: 'film', title: 'Obsession', ratings: { overall: 5 }, timesWatched: 1, voteAverage: 8.2 }),
+        // Episode-tracked series: times_watched never leaves 0.
+        movie({ id: 'show', title: 'Spider-Noir', type: 'tv', ratings: { overall: 5 }, timesWatched: 0, voteAverage: 8.4 }),
+      ],
+      score,
+    );
+    expect(result[0].entries.map((e) => e.movie.id)).toEqual(['show', 'film']);
+  });
+
   it('falls back to the TMDB average when score and rewatches both tie', () => {
     const result = rankedYears(
       [

@@ -22,6 +22,16 @@ export type RankedYear = {
 
 type ScoreFn = (movie: Movie) => number | null;
 
+/**
+ * Watches, floored at one for anything finished. A show tracked episode by
+ * episode never sets times_watched, so it sits on 0 while every film it is
+ * ranked against carries a 1 — read literally, that drops a finished series
+ * below every movie you saw once no matter how you rated it.
+ */
+function watchCount(movie: Movie): number {
+  return Math.max(movie.timesWatched ?? 0, movie.watched ? 1 : 0);
+}
+
 function finishedAt(movie: Movie): number {
   const parsed = Date.parse(movie.completedAt ?? '');
   return Number.isNaN(parsed) ? 0 : parsed;
@@ -68,7 +78,7 @@ export function rankedYears(movies: Movie[], score: ScoreFn): RankedYear[] {
         .sort(
           (a, b) =>
             b.score - a.score ||
-            (b.movie.timesWatched ?? 0) - (a.movie.timesWatched ?? 0) ||
+            watchCount(b.movie) - watchCount(a.movie) ||
             (b.movie.voteAverage ?? 0) - (a.movie.voteAverage ?? 0) ||
             finishedAt(b.movie) - finishedAt(a.movie) ||
             a.movie.title.localeCompare(b.movie.title),
