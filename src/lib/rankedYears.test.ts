@@ -96,11 +96,22 @@ describe('rankedYears', () => {
     expect(result[0].entries.map((e) => e.movie.id)).toEqual(['thrice', 'once']);
   });
 
-  it('falls back to the title so the order never shuffles', () => {
+  it('falls back to the TMDB average when score and rewatches both tie', () => {
     const result = rankedYears(
       [
-        movie({ id: 'z', title: 'Zodiac', ratings: { overall: 4 }, timesWatched: 2 }),
-        movie({ id: 'a', title: 'Arrival', ratings: { overall: 4 }, timesWatched: 2 }),
+        movie({ id: 'lower', title: 'Arrival', ratings: { overall: 4 }, timesWatched: 2, voteAverage: 6.9 }),
+        movie({ id: 'higher', title: 'Zodiac', ratings: { overall: 4 }, timesWatched: 2, voteAverage: 8.1 }),
+      ],
+      score,
+    );
+    expect(result[0].entries.map((e) => e.movie.id)).toEqual(['higher', 'lower']);
+  });
+
+  it('falls back to the title only when every stat ties', () => {
+    const result = rankedYears(
+      [
+        movie({ id: 'z', title: 'Zodiac', ratings: { overall: 4 }, timesWatched: 2, voteAverage: 7 }),
+        movie({ id: 'a', title: 'Arrival', ratings: { overall: 4 }, timesWatched: 2, voteAverage: 7 }),
       ],
       score,
     );

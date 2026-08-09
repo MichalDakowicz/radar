@@ -51,15 +51,18 @@ export function rankedYears(movies: Movie[], score: ScoreFn): RankedYear[] {
     .sort((a, b) => b[0] - a[0])
     .map(([year, entries]) => ({
       year,
-      // Rewatches break a tie before the title does: going back to something is
-      // the strongest thing you can say about it that a 1-5 score cannot. Title
-      // settles the rest, so two 4.5s watched once land in the same places every
-      // render rather than shuffling when a row updates.
+      // Your own score first, then rewatches - going back to something says more
+      // about it than a 1-5 score can hold - then the crowd's TMDB average, so a
+      // 1-5 scale that only has ten steps in it still resolves down to an order
+      // instead of falling back on the alphabet. Title is the last resort, and
+      // only keeps two genuinely identical rows from swapping places on a
+      // re-render.
       entries: entries
         .sort(
           (a, b) =>
             b.score - a.score ||
             (b.movie.timesWatched ?? 0) - (a.movie.timesWatched ?? 0) ||
+            (b.movie.voteAverage ?? 0) - (a.movie.voteAverage ?? 0) ||
             a.movie.title.localeCompare(b.movie.title),
         )
         .map((entry, index) => ({ ...entry, rank: index + 1 })),
