@@ -3,30 +3,30 @@
 Not a task list. Nothing here is implemented; this is what Play Console's **App
 optimisation: Low** verdict actually refers to in this project, what each fix is
 worth, and what it risks. Pick from it when there is time to test a release build
-properly — every item below changes the *release* variant only, which is the one
+properly — every item below changes the _release_ variant only, which is the one
 variant that never runs during day-to-day development.
 
 Baseline measured on **v2.9.0 (versionCode 16)**, AGP 8.12.0, Gradle 9.3.1,
 Expo SDK 57 / RN 0.86, Hermes on, new architecture on.
 
-| Artefact                     | Size   |
-| ---------------------------- | ------ |
-| `radar-v2.9.0.apk`           | 116 MB |
-| `radar-v2.9.0.aab`           | 78 MB  |
-| `classes*.dex` (5 files)     | ~49 MB uncompressed |
-| `assets/index.android.bundle`| 6.4 MB |
-| `lib/` — 4 ABIs shipped      | armeabi-v7a, arm64-v8a, x86, x86_64 |
+| Artefact                      | Size                                |
+| ----------------------------- | ----------------------------------- |
+| `radar-v2.9.0.apk`            | 116 MB                              |
+| `radar-v2.9.0.aab`            | 78 MB                               |
+| `classes*.dex` (5 files)      | ~49 MB uncompressed                 |
+| `assets/index.android.bundle` | 6.4 MB                              |
+| `lib/` — 4 ABIs shipped       | armeabi-v7a, arm64-v8a, x86, x86_64 |
 
 ---
 
 ## 1. What Play is actually complaining about
 
-| Play line                | Reads as | Cause in this repo |
-| ------------------------ | -------- | ------------------ |
-| Optimisation percentage  | `-`      | R8 never ran, so there is nothing to score |
-| Obfuscation percentage   | `1%`     | The 1% is libraries that shipped pre-obfuscated; our own code is untouched |
-| Shrinking percentage     | `-`      | `shrinkResources` is off, and it cannot be on while minify is off |
-| R8 configuration         | `-`      | Same root cause; the AGP 9.0 note is a separate, softer ask |
+| Play line               | Reads as | Cause in this repo                                                         |
+| ----------------------- | -------- | -------------------------------------------------------------------------- |
+| Optimisation percentage | `-`      | R8 never ran, so there is nothing to score                                 |
+| Obfuscation percentage  | `1%`     | The 1% is libraries that shipped pre-obfuscated; our own code is untouched |
+| Shrinking percentage    | `-`      | `shrinkResources` is off, and it cannot be on while minify is off          |
+| R8 configuration        | `-`      | Same root cause; the AGP 9.0 note is a separate, softer ask                |
 
 One root cause behind three of the four lines: **the release build does not run
 R8.** `android/app/build.gradle` (prebuild output) reads
@@ -86,7 +86,7 @@ in by libraries. Depends on proposal 2 — `shrinkResources` without `minifyEnab
 is a build error, which is why the Play line reads `-`.
 
 **Risk:** resources looked up by name (`getIdentifier`) get stripped. Worth
-turning on in the same experiment as R8 but flipping *separately* so a failure is
+turning on in the same experiment as R8 but flipping _separately_ so a failure is
 attributable, and worth checking the adaptive icon, splash, and notification icons
 specifically afterwards.
 
@@ -98,7 +98,7 @@ write our own keeps for what is ours and reflective. The current file is four
 lines and predates most of the stack — it does not mention view-shot, MMKV,
 notifications, task-manager, SVG, or Nitro modules.
 
-Keep this file lean and commented: every rule should say *why*, or the next
+Keep this file lean and commented: every rule should say _why_, or the next
 person cannot tell a load-bearing keep from a superstitious one.
 
 ## 5. Proposal — AGP 9.0 (the R8 configuration line)

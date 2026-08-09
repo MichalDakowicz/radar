@@ -87,9 +87,6 @@
     "preset": "jest-expo",
     "roots": [
       "<rootDir>/src"
-    ],
-    "modulePathIgnorePatterns": [
-      "<rootDir>/legacy/"
     ]
   },
   "private": true
