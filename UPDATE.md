@@ -8,6 +8,12 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - Profile ranks every film and show you rated by its release year, best first
 - The current year gets its own card, with the rest of the years one tap behind it
+- Settings can merge a title held twice into one entry, keeping every rating and watch
+
+### Fixed
+
+- A series finished by ticking its last episode now counts as watched everywhere
+- Stats no longer double-count a finished series against your hours
 
 ## 2.9.0 — 2026-08-09
 
