@@ -94,6 +94,13 @@ export function fromMovie(movie: Movie): EditForm {
 
 export type EditSaveResult = { remove: true } | { remove: false; updates: Partial<Movie> };
 
+/** True once every episode TMDB knows about is ticked off. */
+export function episodesComplete(form: EditForm): boolean {
+  if (form.type !== 'tv' || form.numberOfEpisodes <= 0) return false;
+  const ticked = Object.values(form.episodesWatched ?? {}).filter(Boolean).length;
+  return ticked >= form.numberOfEpisodes;
+}
+
 function statusLabel(status: QuickAddStatus): string {
   return status.watched ? 'Completed' : status.inProgress ? 'Watching' : 'Watchlist';
 }
@@ -105,7 +112,14 @@ function statusLabel(status: QuickAddStatus): string {
  * legacy applied only to movies (TV keeps its row even at "no status").
  */
 export function buildMoviePayload(form: EditForm, current: Movie): EditSaveResult {
-  const { status } = form;
+  // A series finished by ticking its last episode is watched, whether or not
+  // the status buttons were touched. Without this the row saves as "Watchlist,
+  // watched 0 times" and only *looks* finished, because the read boundary
+  // re-derives the flag on the way out (lib/movieStatus) - so the count every
+  // other surface reads stays at zero.
+  const status = episodesComplete(form)
+    ? { ...form.status, inWatchlist: false, inProgress: false, watched: true }
+    : form.status;
 
   if (form.type === 'movie' && !status.inWatchlist && !status.inProgress && !status.watched) {
     return { remove: true };

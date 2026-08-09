@@ -104,6 +104,24 @@ describe('computeStats', () => {
     expect(computeStats([])).toBeNull();
   });
 
+  it('bills a finished series once when it carries both ticks and a watch count', () => {
+    const episodes = { s1e1: true, s1e2: true, s1e3: true, s1e4: true };
+    const show = movie({
+      type: 'tv',
+      watched: true,
+      timesWatched: 1,
+      runtime: 30,
+      numberOfEpisodes: 4,
+      episodesWatched: episodes,
+    });
+
+    expect(computeStats([show])!.totalHours).toBe(2);
+    // A second pass is a real rewatch and doubles it.
+    expect(computeStats([{ ...show, timesWatched: 2 }])!.totalHours).toBe(4);
+    // Part-watched still counts only the episodes ticked off.
+    expect(computeStats([{ ...show, watched: false, timesWatched: 0, episodesWatched: { s1e1: true, s1e2: true } }])!.totalHours).toBe(1);
+  });
+
   it('aggregates status, type, genres, decades and ratings', () => {
     const movies = [
       movie({

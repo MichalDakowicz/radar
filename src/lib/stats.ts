@@ -164,14 +164,13 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
     if (t === 'movie') {
       if (movie.timesWatched > 0) totalRuntimeMinutes += runtime * movie.timesWatched;
     } else {
-      let minutes = 0;
       const watchedEps = Object.values(movie.episodesWatched || {}).filter(Boolean).length;
-      minutes += watchedEps * runtime;
-      if (movie.timesWatched > 0) {
-        const totalEps = movie.numberOfEpisodes || (movie.numberOfSeasons || 1) * 10;
-        minutes += movie.timesWatched * totalEps * runtime;
-      }
-      totalRuntimeMinutes += minutes;
+      const totalEps = movie.numberOfEpisodes || (movie.numberOfSeasons || 1) * 10;
+      // The larger of the two readings, never their sum: a finished series
+      // carries both a full set of ticked episodes *and* a watch count of one,
+      // and adding them would bill you twice for the same run. A rewatch
+      // (timesWatched 2) still outgrows the ticks and wins.
+      totalRuntimeMinutes += runtime * Math.max(watchedEps, movie.timesWatched * totalEps);
     }
 
     const overall = movie.ratings?.overall;
