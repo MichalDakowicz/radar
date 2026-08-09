@@ -25,6 +25,9 @@ dist-ssr
 
 plan.md
 feature_ideas.md
+# Play Console upload assets — screenshots and the 512 icon are regenerated from the
+# device and from assets/brand, so they are output, not source.
+store/
 .env
 .env.local
 .firebase
@@ -46,6 +49,9 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+# Play upload keystore + its passwords. Never committed, never regenerated casually —
+# Play ties the app to this key.
+credentials/
 *.p8
 *.p12
 *.key

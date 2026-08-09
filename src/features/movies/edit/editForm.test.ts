@@ -125,6 +125,45 @@ describe('fromMovie / buildMoviePayload round trip', () => {
     if (!result.remove) expect(result.updates.timesWatched).toBe(1);
   });
 
+  it('saves a fully ticked series as watched once, even with the status untouched', () => {
+    const show: Movie = { ...BASE_MOVIE, type: 'tv', numberOfEpisodes: 3 };
+    const form = fromMovie(show);
+    form.episodesWatched = { s1e1: true, s1e2: true, s1e3: true };
+
+    const result = buildMoviePayload(form, show);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.watched).toBe(true);
+      expect(result.updates.timesWatched).toBe(1);
+      expect(result.updates.status).toBe('Completed');
+      expect(result.updates.inWatchlist).toBe(false);
+      expect(result.updates.completedAt).toBeTruthy();
+    }
+  });
+
+  it('leaves a part-watched series alone', () => {
+    const show: Movie = { ...BASE_MOVIE, type: 'tv', numberOfEpisodes: 3 };
+    const form = fromMovie(show);
+    form.episodesWatched = { s1e1: true };
+
+    const result = buildMoviePayload(form, show);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.watched).toBe(false);
+      expect(result.updates.timesWatched).toBe(0);
+    }
+  });
+
+  it('keeps a rewatch count on a finished series rather than flattening it to one', () => {
+    const show: Movie = { ...BASE_MOVIE, type: 'tv', numberOfEpisodes: 2, watched: true, timesWatched: 3 };
+    const form = fromMovie(show);
+    form.episodesWatched = { s1e1: true, s1e2: true };
+
+    const result = buildMoviePayload(form, show);
+    expect(result.remove).toBe(false);
+    if (!result.remove) expect(result.updates.timesWatched).toBe(3);
+  });
+
   it('upgrades legacy flat-number season ratings to the object format', () => {
     const movie: Movie = { ...BASE_MOVIE, type: 'tv', ratings: { seasons: { '1': 3.5 } as never } };
     const form = fromMovie(movie);

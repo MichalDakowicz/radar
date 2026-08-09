@@ -6,11 +6,16 @@ import type { Movie } from '@/types/movie';
 // longest, TV current, TV longest) collapse into computeCurrentStreak /
 // computeLongestStreak here - same weekly-threshold rules, one implementation.
 
+/** Cast entries per title that count towards the actor ranking. */
+export const BILLED_CAST_DEPTH = 5;
+
 export const DEFAULT_STREAK_THRESHOLD = 2; // movies completed per week
 export const DEFAULT_TV_STREAK_THRESHOLD = 5; // episodes watched per week
 
 export type StatusSlice = { name: string; count: number; percent: number };
 export type DirectorSlice = { name: string; count: number; id?: number };
+/** A performer plus the headshot the first title they appeared in carried. */
+export type ActorSlice = DirectorSlice & { image?: string | null };
 export type GenreSlice = { name: string; count: number; percent: number; id?: number };
 export type DecadeSlice = { decade: string; count: number };
 
@@ -21,6 +26,7 @@ export type Stats = {
   avgRating: string;
   typeCounts: { movie: number; tv: number };
   topDirectors: DirectorSlice[];
+  topActors: ActorSlice[];
   topGenres: GenreSlice[];
   sortedDecades: DecadeSlice[];
   completionRate: number;
@@ -134,6 +140,9 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
   const typeCounts = { movie: 0, tv: 0 };
   const directorCounts: Record<string, number> = {};
   const directorIds: Record<string, number> = {};
+  const actorCounts: Record<string, number> = {};
+  const actorIds: Record<string, number> = {};
+  const actorImages: Record<string, string | null> = {};
   const genreCounts: Record<string, number> = {};
   const genreIds: Record<string, number> = {};
   const decadeCounts: Record<number, number> = {};
@@ -155,14 +164,13 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
     if (t === 'movie') {
       if (movie.timesWatched > 0) totalRuntimeMinutes += runtime * movie.timesWatched;
     } else {
-      let minutes = 0;
       const watchedEps = Object.values(movie.episodesWatched || {}).filter(Boolean).length;
-      minutes += watchedEps * runtime;
-      if (movie.timesWatched > 0) {
-        const totalEps = movie.numberOfEpisodes || (movie.numberOfSeasons || 1) * 10;
-        minutes += movie.timesWatched * totalEps * runtime;
-      }
-      totalRuntimeMinutes += minutes;
+      const totalEps = movie.numberOfEpisodes || (movie.numberOfSeasons || 1) * 10;
+      // The larger of the two readings, never their sum: a finished series
+      // carries both a full set of ticked episodes *and* a watch count of one,
+      // and adding them would bill you twice for the same run. A rewatch
+      // (timesWatched 2) still outgrows the ticks and wins.
+      totalRuntimeMinutes += runtime * Math.max(watchedEps, movie.timesWatched * totalEps);
     }
 
     const overall = movie.ratings?.overall;
@@ -179,6 +187,17 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
       if (!name) continue;
       directorCounts[name] = (directorCounts[name] || 0) + 1;
       if (c.id != null && directorIds[name] == null) directorIds[name] = c.id;
+    }
+
+    // Only the top billing counts. Everyone TMDB lists is "in" a film, so the
+    // whole cast list would rank whoever plays the most bit parts; the first
+    // five are the people a viewer would say they watched.
+    for (const actor of (movie.cast || []).slice(0, BILLED_CAST_DEPTH)) {
+      const name = actor?.name?.trim();
+      if (!name) continue;
+      actorCounts[name] = (actorCounts[name] || 0) + 1;
+      if (actor.id != null && actorIds[name] == null) actorIds[name] = actor.id;
+      if (actor.profileUrl && actorImages[name] == null) actorImages[name] = actor.profileUrl;
     }
 
     for (const g of movie.genres || []) {
@@ -207,6 +226,11 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([name, count]) => ({ name, count, id: directorIds[name] }));
+
+  const topActors: ActorSlice[] = Object.entries(actorCounts)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 10)
+    .map(([name, count]) => ({ name, count, id: actorIds[name], image: actorImages[name] ?? null }));
 
   const topGenres: GenreSlice[] = Object.entries(genreCounts)
     .sort((a, b) => b[1] - a[1])
@@ -249,6 +273,7 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
     avgRating: totalRatings > 0 ? (ratingSum / totalRatings).toFixed(1) : '0',
     typeCounts,
     topDirectors,
+    topActors,
     topGenres,
     sortedDecades,
     completionRate,

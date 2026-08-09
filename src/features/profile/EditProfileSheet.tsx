@@ -16,10 +16,12 @@ const MUTED = 'hsl(0 0% 63.9%)';
 // "stored directly in database" model - no storage bucket). The picker's native
 // editor gives the square crop (legacy react-easy-crop); expo-image-manipulator
 // downscales to 256px JPEG so the base64 payload stays small.
+//
+// No requestMediaLibraryPermissionsAsync() first: launchImageLibraryAsync is the Android
+// photo picker, which hands back the one chosen image without any read permission. Asking
+// would reintroduce READ_MEDIA_IMAGES, and Play's photo and video permissions policy wants
+// exactly this path for a one-off pick - see plugins/withTrimmedMediaPermissions.js.
 async function pickAndProcess(): Promise<string | null> {
-  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!perm.granted) return null;
-
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsEditing: true,

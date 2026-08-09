@@ -31,6 +31,12 @@ type ShelfSectionsProps = {
    * statement; a prompt above them would talk over it.
    */
   belowFavorites?: ReactNode;
+  /**
+   * Owner-only slot under the in-progress list — your own Profile hangs the recap
+   * rail here. Below rather than above, because what you are watching *now* is
+   * the live thing; a recap is a look back and can wait its turn.
+   */
+  belowInProgress?: ReactNode;
   collectionLabel?: string;
 };
 
@@ -49,6 +55,7 @@ export function ShelfSections({
   onOpenCollection,
   onEditFavorites,
   belowFavorites,
+  belowInProgress,
   collectionLabel = 'See full collection',
 }: ShelfSectionsProps) {
   return (
@@ -85,6 +92,8 @@ export function ShelfSections({
           ))}
         </View>
       )}
+
+      {belowInProgress}
 
       <View className="gap-3">
         <View className="flex-row items-baseline gap-2">

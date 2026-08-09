@@ -2,7 +2,48 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.8.0 — Unreleased
+## 2.10.0 — 2026-08-09
+
+### Added
+
+- Profile ranks every film and show you rated by its release year, best first
+- The current year gets its own card, with the rest of the years one tap behind it
+- Settings can merge a title held twice into one entry, keeping every rating and watch
+
+### Fixed
+
+- A series finished by ticking its last episode now counts as watched everywhere
+- Stats no longer double-count a finished series against your hours
+
+## 2.9.0 — 2026-08-09
+
+### Added
+
+- Recaps rank the actors you watched most, counted from the top billing of every title
+- The yearly report gives them a page of five faces, the monthly reel a page of three
+
+### Changed
+
+- Cast on a movie or show is a row of faces you scroll sideways, each with the role played
+- Picking a profile picture no longer asks for access to your photos, just the photo picker
+- Radar no longer requests camera, microphone or media access it never used
+
+## 2.8.0 — 2026-08-03
+
+### Added
+
+- Radar Recap — your month as a four page story, your year as a nine page report
+- A recap arrives once its period ends: July's on 1 August, the year's on 1 January
+- Your recaps sit on Profile as a shelf of cover tiles, under what you are watching
+- The monthly recap covers hours watched, how you rank among friends, and the film of the month
+- The month closes on its best titles in order, not on what you left in the watchlist
+- The yearly report opens on an archive cover and closes on a card you share as an image
+- Genres in the yearly report are a type wall, sized by how much you actually watched them
+- Directors get a podium, with bars scaled to the real gap between first and third
+- The year day by day, as a heatmap of films and episodes with your longest streak named
+- Tap right to move on, left to go back, hold to pause, swipe sideways, drag down to close
+- Going back holds the story where it is until you tap forward again
+- The archive shows every recap Radar still holds as its own shareable card
 
 ## 2.7.0 — 2026-08-02
 

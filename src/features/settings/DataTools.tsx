@@ -1,9 +1,11 @@
-import { CircleStop, Database, RefreshCw } from 'lucide-react-native';
+import { CircleStop, Copy, Database, RefreshCw } from 'lucide-react-native';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 import { useRefreshMetadata } from '@/features/settings/RefreshMetadataProvider';
+import { useDuplicateCleanup } from '@/features/settings/useDuplicateCleanup';
 import { relativeTime } from '@/lib/socialFeed';
 
 const MUTED = 'hsl(0 0% 63.9%)';
@@ -71,7 +73,10 @@ function ToolRow({
 
 export function DataTools({ onOpenImportExport }: { onOpenImportExport: () => void }) {
   const { refreshing, progress, pending, lastRunAt, stopping, refresh, stop } = useRefreshMetadata();
+  const { groups, extraRows, merging, merge } = useDuplicateCleanup();
+  const { show } = useToast();
   const [confirm, setConfirm] = useState(false);
+  const [confirmMerge, setConfirmMerge] = useState(false);
   const row = refreshRow({ refreshing, stopping, progress, pending, lastRunAt });
 
   function refreshIcon() {
@@ -89,11 +94,35 @@ export function DataTools({ onOpenImportExport }: { onOpenImportExport: () => vo
         onPress={refreshing ? stop : () => setConfirm(true)}
         disabled={stopping}
       />
+      {/* Hidden while the library is clean: a permanently empty row reads as a
+          feature you are failing to use. */}
+      {extraRows > 0 && (
+        <ToolRow
+          icon={merging ? <ActivityIndicator size="small" color={MUTED} /> : <Copy size={20} color={MUTED} />}
+          title={merging ? 'Merging…' : 'Merge duplicates'}
+          subtitle={`${extraRows} extra ${extraRows === 1 ? 'row' : 'rows'} across ${groups.length} ${groups.length === 1 ? 'title' : 'titles'}`}
+          onPress={() => setConfirmMerge(true)}
+          disabled={merging}
+        />
+      )}
+
       <ToolRow
         icon={<Database size={20} color={MUTED} />}
         title="Import / Export data"
         subtitle="Back up or restore your library as JSON"
         onPress={onOpenImportExport}
+      />
+
+      <ConfirmDialog
+        visible={confirmMerge}
+        title={`Merge ${extraRows} duplicate ${extraRows === 1 ? 'row' : 'rows'}?`}
+        description="Each title is left with one entry holding every rating, note, watch count and episode ticked off across its copies. The spare rows are deleted and cannot be restored."
+        confirmLabel="Merge"
+        onCancel={() => setConfirmMerge(false)}
+        onConfirm={() => {
+          setConfirmMerge(false);
+          void merge().then(({ merged }) => show(`Merged ${merged} duplicate ${merged === 1 ? 'row' : 'rows'}`));
+        }}
       />
 
       <ConfirmDialog

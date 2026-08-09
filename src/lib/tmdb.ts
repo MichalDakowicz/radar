@@ -1,5 +1,5 @@
 // Ported from the current app's src/services/tmdb.js (doc 09), typed.
-import type { MediaType, NamedRef, ProductionCompany } from '@/types/movie';
+import type { CastMember, MediaType, NamedRef, ProductionCompany } from '@/types/movie';
 
 const ACCESS_TOKEN = process.env.EXPO_PUBLIC_TMDB_ACCESS_TOKEN;
 
@@ -89,6 +89,20 @@ function posterUrl(path: string | null): string | null {
 
 function backdropUrl(path: string | null): string | null {
   return path ? `${IMAGE_ORIGINAL_URL}${path}` : null;
+}
+
+// Billing order is TMDB's own, so the first entries are the leads - both the
+// cast row and the recap's actor count rely on that ordering. Shows answer with
+// `aggregate_credits`, where a person carries a list of roles across seasons
+// rather than one character; the first is the one they are known for.
+function toCastMember(person: any): CastMember {
+  const character = person.character ?? person.roles?.[0]?.character ?? null;
+  return {
+    id: person.id,
+    name: person.name,
+    character: character || null,
+    profileUrl: posterUrl(person.profile_path ?? null),
+  };
 }
 
 function toMediaSummary(item: any): MediaSummary {
@@ -261,6 +275,9 @@ export async function searchBrowse(query: string): Promise<BrowseSearchResult[]>
   }
 }
 
+/** How deep the stored billing goes - the row scrolls, so it can afford 20. */
+const CAST_LIMIT = 20;
+
 export type MediaMetadata = {
   tmdbId: number;
   type: MediaType;
@@ -271,7 +288,7 @@ export type MediaMetadata = {
   overview: string;
   genres: NamedRef[];
   runtime: number;
-  cast: NamedRef[];
+  cast: CastMember[];
   availability: string[];
   number_of_seasons: number | null;
   number_of_episodes: number | null;
@@ -302,7 +319,7 @@ export async function fetchMediaMetadata(
     const data = await res.json();
 
     let directors: NamedRef[] = [];
-    let cast: NamedRef[] = [];
+    let cast: CastMember[] = [];
     let availability: string[] = [];
 
     const results = data['watch/providers']?.results || {};
@@ -316,11 +333,11 @@ export async function fetchMediaMetadata(
         data.credits?.crew
           ?.filter((person: any) => person.job === 'Director')
           .map((person: any) => ({ id: person.id, name: person.name })) || [];
-      cast = data.credits?.cast?.slice(0, 15).map((p: any) => ({ id: p.id, name: p.name })) || [];
+      cast = data.credits?.cast?.slice(0, CAST_LIMIT).map(toCastMember) || [];
     } else {
       directors = data.created_by?.map((p: any) => ({ id: p.id, name: p.name })) || [];
       const credits = data.aggregate_credits || data.credits;
-      cast = credits?.cast?.slice(0, 15).map((p: any) => ({ id: p.id, name: p.name })) || [];
+      cast = credits?.cast?.slice(0, CAST_LIMIT).map(toCastMember) || [];
     }
 
     let runtime = 0;
@@ -552,6 +569,27 @@ export async function fetchDirectorDetails(personId: number) {
 
 export async function fetchActorDetails(personId: number) {
   return fetchPersonDetails(personId, 'actor');
+}
+
+/**
+ * Headshots for a handful of people at once, keyed by id. A person TMDB has no
+ * photo for - or that the request failed on - comes back null rather than
+ * throwing: the caller draws a monogram instead, and one dead lookup must not
+ * cost the other four.
+ */
+export async function fetchPersonImages(personIds: number[]): Promise<Record<number, string | null>> {
+  const unique = [...new Set(personIds.filter((id) => !!id))];
+  const found = await Promise.all(
+    unique.map(async (id) => {
+      try {
+        const person = await fetchPersonDetails(id, 'actor');
+        return [id, person?.profileUrl ?? null] as const;
+      } catch {
+        return [id, null] as const;
+      }
+    }),
+  );
+  return Object.fromEntries(found);
 }
 
 export type CreditItem = {

@@ -63,12 +63,16 @@ export function useQuickAdd() {
   const { movies, addMovie, removeMovie } = useMovies();
   const [pendingTmdbId, setPendingTmdbId] = useState<number | null>(null);
 
-  const findByTmdbId = (tmdbId: number | null) => (tmdbId ? (movies.find((m) => m.tmdbId === tmdbId) ?? null) : null);
-  const isAdded = (tmdbId: number | null) => findByTmdbId(tmdbId) !== null;
+  // Type narrows the match where the caller knows it: TMDB numbers a film and a
+  // series independently, so id alone can call a show "already added" because a
+  // movie happens to carry the same number.
+  const findByTmdbId = (tmdbId: number | null, type?: MediaType) =>
+    tmdbId ? (movies.find((m) => m.tmdbId === tmdbId && (!type || m.type === type)) ?? null) : null;
+  const isAdded = (tmdbId: number | null, type?: MediaType) => findByTmdbId(tmdbId, type) !== null;
 
   // Browse's quick-add buttons: always defaults to Watchlist (doc 12's confirm).
   const add = async (tmdbId: number, type: MediaType, countryCode = 'US') => {
-    if (isAdded(tmdbId)) return;
+    if (isAdded(tmdbId, type)) return;
     setPendingTmdbId(tmdbId);
     try {
       const metadata = await fetchMediaMetadata(tmdbId, type, countryCode);
@@ -81,7 +85,7 @@ export function useQuickAdd() {
 
   // QuickAddSheet path: caller already picked a status via StatusPicker.
   const addWithStatus = async (meta: MediaMetadata, status: QuickAddStatus, ratings: Ratings = {}) => {
-    if (isAdded(meta.tmdbId)) return;
+    if (isAdded(meta.tmdbId, meta.type)) return;
     setPendingTmdbId(meta.tmdbId);
     try {
       await addMovie(metadataToPayload(meta, status, ratings));

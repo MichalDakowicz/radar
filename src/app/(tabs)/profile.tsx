@@ -16,6 +16,10 @@ import { FavoritesEditorSheet } from '@/features/profile/FavoritesEditorSheet';
 import { MyShelfHeader } from '@/features/profile/MyShelfHeader';
 import { RandomPickCard, type RandomPickScope } from '@/features/profile/RandomPickCard';
 import { RandomPickSheet } from '@/features/profile/RandomPickSheet';
+import { RankedYearsCards } from '@/features/profile/RankedYearsCards';
+import { useRankedYears } from '@/features/profile/useRankedYears';
+import { RecapRail } from '@/features/recap/RecapRail';
+import { useRecapIndex } from '@/features/recap/useRecap';
 import { ShelfSections } from '@/features/social/ShelfSections';
 import { useMovies } from '@/hooks/useMovies';
 import { useNavBarSpace } from '@/hooks/useNavBarSpace';
@@ -23,6 +27,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { MAX_W } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { isInWatchlist } from '@/lib/movieStatus';
+import { retainedMonthKeys, type RecapKind } from '@/lib/recapPeriod';
 import { MY_SERVICES_KEY, matchesServiceFilter } from '@/lib/serviceFilter';
 import { publicShelfUrl } from '@/lib/shelfLink';
 import { inProgressTitles, recentlyLogged, shelfStats } from '@/lib/shelfSummary';
@@ -64,6 +69,24 @@ function ProfileScreen() {
     [pickable, settings.ownedServices],
   );
   const pickPool = pickRequest?.scope === 'library' ? pickable : onMyServices;
+
+  // The rail leads with the newest month, then the newest year; the archive tile
+  // holds anything past that. Months outside the retained two are not offered at
+  // all — the database only keeps the last two finished ones
+  // (supabase/recaps.sql), so a third would never cache.
+  const { months, years } = useRecapIndex();
+  const railItems = useMemo(() => {
+    const retained = retainedMonthKeys();
+    const monthly = months.filter((key) => retained.includes(key)).map((key) => ({ kind: 'month' as const, key }));
+    const yearly = years.map((key) => ({ kind: 'year' as const, key }));
+    return [...monthly.slice(0, 1), ...yearly.slice(0, 1), ...monthly.slice(1), ...yearly.slice(1)];
+  }, [months, years]);
+  // Same cached library the shelf above is built from, re-cut by release year.
+  const { years: ranked, latest } = useRankedYears();
+  const rankedCount = ranked.length;
+
+  const openRecap = (kind: RecapKind, key: string) =>
+    router.push({ pathname: '/recap/[kind]/[key]', params: { kind, key } });
 
   // Presented from an effect, not from the press handler: the sheet starts its
   // spin the moment it opens, so the new pool has to be committed as a prop
@@ -131,6 +154,24 @@ function ProfileScreen() {
                   hasServices={settings.ownedServices.length > 0}
                   onPick={openPicker}
                 />
+              }
+              belowInProgress={
+                <>
+                  <RecapRail
+                    items={railItems}
+                    hasMore={railItems.length > 0}
+                    onOpen={openRecap}
+                    onOpenArchive={() => router.push('/recap')}
+                  />
+                  {/* Under the recaps on purpose: a recap is the period Radar
+                      wrote up for you, a ranking is the one you made. */}
+                  <RankedYearsCards
+                    latest={latest}
+                    yearCount={rankedCount}
+                    onOpenYear={(year) => router.push({ pathname: '/ranked/[year]', params: { year: String(year) } })}
+                    onOpenAll={() => router.push('/ranked')}
+                  />
+                </>
               }
               onOpenTitle={openTitle}
               // profiles.favorites is a snapshot, not an FK - a pinned title
