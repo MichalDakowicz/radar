@@ -16,6 +16,8 @@ import { FavoritesEditorSheet } from '@/features/profile/FavoritesEditorSheet';
 import { MyShelfHeader } from '@/features/profile/MyShelfHeader';
 import { RandomPickCard, type RandomPickScope } from '@/features/profile/RandomPickCard';
 import { RandomPickSheet } from '@/features/profile/RandomPickSheet';
+import { RankedYearsCards } from '@/features/profile/RankedYearsCards';
+import { useRankedYears } from '@/features/profile/useRankedYears';
 import { RecapRail } from '@/features/recap/RecapRail';
 import { useRecapIndex } from '@/features/recap/useRecap';
 import { ShelfSections } from '@/features/social/ShelfSections';
@@ -79,6 +81,10 @@ function ProfileScreen() {
     const yearly = years.map((key) => ({ kind: 'year' as const, key }));
     return [...monthly.slice(0, 1), ...yearly.slice(0, 1), ...monthly.slice(1), ...yearly.slice(1)];
   }, [months, years]);
+  // Same cached library the shelf above is built from, re-cut by release year.
+  const { years: ranked, latest } = useRankedYears();
+  const rankedCount = ranked.length;
+
   const openRecap = (kind: RecapKind, key: string) =>
     router.push({ pathname: '/recap/[kind]/[key]', params: { kind, key } });
 
@@ -150,12 +156,22 @@ function ProfileScreen() {
                 />
               }
               belowInProgress={
-                <RecapRail
-                  items={railItems}
-                  hasMore={railItems.length > 0}
-                  onOpen={openRecap}
-                  onOpenArchive={() => router.push('/recap')}
-                />
+                <>
+                  <RecapRail
+                    items={railItems}
+                    hasMore={railItems.length > 0}
+                    onOpen={openRecap}
+                    onOpenArchive={() => router.push('/recap')}
+                  />
+                  {/* Under the recaps on purpose: a recap is the period Radar
+                      wrote up for you, a ranking is the one you made. */}
+                  <RankedYearsCards
+                    latest={latest}
+                    yearCount={rankedCount}
+                    onOpenYear={(year) => router.push({ pathname: '/ranked/[year]', params: { year: String(year) } })}
+                    onOpenAll={() => router.push('/ranked')}
+                  />
+                </>
               }
               onOpenTitle={openTitle}
               // profiles.favorites is a snapshot, not an FK - a pinned title

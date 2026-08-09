@@ -4,6 +4,11 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.10.0 — Unreleased
 
+### Added
+
+- Profile ranks every film and show you rated by its release year, best first
+- The current year gets its own card, with the rest of the years one tap behind it
+
 ## 2.9.0 — 2026-08-09
 
 ### Added
