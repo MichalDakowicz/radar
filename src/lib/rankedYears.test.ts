@@ -107,6 +107,18 @@ describe('rankedYears', () => {
     expect(result[0].entries.map((e) => e.movie.id)).toEqual(['higher', 'lower']);
   });
 
+  it('puts the more recently finished title first when the stats tie', () => {
+    const tie = { ratings: { overall: 4 }, timesWatched: 1, voteAverage: 7 };
+    const result = rankedYears(
+      [
+        movie({ id: 'older', title: 'Arrival', ...tie, completedAt: '2026-01-02T00:00:00Z' }),
+        movie({ id: 'newer', title: 'Zodiac', ...tie, completedAt: '2026-06-02T00:00:00Z' }),
+      ],
+      score,
+    );
+    expect(result[0].entries.map((e) => e.movie.id)).toEqual(['newer', 'older']);
+  });
+
   it('falls back to the title only when every stat ties', () => {
     const result = rankedYears(
       [

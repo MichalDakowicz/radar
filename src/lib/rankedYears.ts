@@ -22,6 +22,11 @@ export type RankedYear = {
 
 type ScoreFn = (movie: Movie) => number | null;
 
+function finishedAt(movie: Movie): number {
+  const parsed = Date.parse(movie.completedAt ?? '');
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 export function releaseYear(movie: Movie): number | null {
   const year = Number(movie.releaseDate?.slice(0, 4));
   return Number.isFinite(year) && year > 1800 ? year : null;
@@ -54,15 +59,18 @@ export function rankedYears(movies: Movie[], score: ScoreFn): RankedYear[] {
       // Your own score first, then rewatches - going back to something says more
       // about it than a 1-5 score can hold - then the crowd's TMDB average, so a
       // 1-5 scale that only has ten steps in it still resolves down to an order
-      // instead of falling back on the alphabet. Title is the last resort, and
-      // only keeps two genuinely identical rows from swapping places on a
-      // re-render.
+      // instead of falling back on the alphabet - a title Radar has no TMDB
+      // average for yet (a 2026 release added before it had votes) reads as 0
+      // and sinks, which is the honest place for "unknown". The completion date
+      // is the last stat standing; title only keeps two identical rows from
+      // swapping places on a re-render.
       entries: entries
         .sort(
           (a, b) =>
             b.score - a.score ||
             (b.movie.timesWatched ?? 0) - (a.movie.timesWatched ?? 0) ||
             (b.movie.voteAverage ?? 0) - (a.movie.voteAverage ?? 0) ||
+            finishedAt(b.movie) - finishedAt(a.movie) ||
             a.movie.title.localeCompare(b.movie.title),
         )
         .map((entry, index) => ({ ...entry, rank: index + 1 })),
