@@ -2,6 +2,15 @@ export type MediaType = 'movie' | 'tv';
 
 export type NamedRef = { id?: number; name: string };
 
+// A billed performer. Stored inside movies.cast_members (jsonb), so the two
+// extra fields simply appear on rows written after this shipped - anything
+// older keeps rendering as a bare name until the metadata refresh reaches it.
+export type CastMember = NamedRef & {
+  /** Role as credited, null when TMDB billed the person without a character. */
+  character?: string | null;
+  profileUrl?: string | null;
+};
+
 export type Ratings = {
   story?: number;
   acting?: number;
@@ -23,7 +32,7 @@ export type Movie = {
   type: MediaType;
   title: string;
   director: NamedRef[];
-  cast: NamedRef[];
+  cast: CastMember[];
   genres: NamedRef[];
   releaseDate: string | null;
   coverUrl: string | null;

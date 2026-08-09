@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import { RecapPlayer } from '@/features/recap/RecapPlayer';
+import { YearActorsSlide } from '@/features/recap/slides/YearActorsSlide';
 import { YearCoverSlide } from '@/features/recap/slides/YearCoverSlide';
 import { YearDecadesSlide } from '@/features/recap/slides/YearDecadesSlide';
 import { YearDirectorsSlide } from '@/features/recap/slides/YearDirectorsSlide';
@@ -18,7 +19,7 @@ import type { YearlyRecap } from '@/lib/recap';
 type YearlyRecapDeckProps = { recap: YearlyRecap; username: string; onClose: () => void };
 
 /**
- * The annual report: nine pages, deadpan, opening on the archive cover and
+ * The annual report: ten pages, deadpan, opening on the archive cover and
  * closing on the share card rather than on a second certificate.
  */
 export function YearlyRecapDeck({ recap, username, onClose }: YearlyRecapDeckProps) {
@@ -32,6 +33,7 @@ export function YearlyRecapDeck({ recap, username, onClose }: YearlyRecapDeckPro
       { content: <YearHeatmapSlide recap={recap} /> },
       { content: <YearGenresSlide recap={recap} /> },
       { content: <YearDirectorsSlide recap={recap} /> },
+      { content: <YearActorsSlide recap={recap} /> },
       { content: <YearDecadesSlide recap={recap} /> },
       { content: <YearMasterpiecesSlide recap={recap} /> },
       { content: <YearRewatchSlide recap={recap} /> },

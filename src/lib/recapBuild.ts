@@ -1,5 +1,6 @@
 import { isWatched } from '@/lib/movieStatus';
 import {
+  faces,
   heatmapWeeks,
   initials,
   podium,
@@ -137,6 +138,7 @@ export function buildMonthlyRecap(key: string, input: BuildInput): MonthlyRecap 
     previous: previousStats ? { short: periodShortName('month', previousKey), hours: previousHours } : null,
     deltaPercent: previousHours > 0 ? Math.round(((hours - previousHours) / previousHours) * 100) : null,
     topGenre: stats ? (rank(stats.topGenres, 1)[0] ?? null) : null,
+    actors: faces(stats?.topActors ?? [], 3),
     film: finished[0] ? titleCard(finished[0], score) : null,
     // The month's other highlights, not its leftovers: the rest of what was
     // finished, best first, with the film of the month itself left out.
@@ -212,6 +214,7 @@ export function buildYearlyRecap(key: string, input: BuildInput): YearlyRecap {
     weeks: heatmapWeeks(year, stats?.dailyCompletions ?? {}, stats?.dailyEpisodes ?? {}),
     genres: typeWall(rank(stats?.topGenres ?? [], 8)),
     directors: podium(rank(stats?.topDirectors ?? [], 3)),
+    actors: faces(stats?.topActors ?? [], 5),
     decades: rank(
       (stats?.sortedDecades ?? []).map((d) => ({ name: d.decade, count: d.count })),
       12,

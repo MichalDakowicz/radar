@@ -18,7 +18,7 @@ export function YearDecadesSlide({ recap }: YearDecadesSlideProps) {
     <View className="gap-6">
       <View>
         <View className="mb-3.5">
-          <SlideLabel>05 — WHEN YOUR TASTE LIVES</SlideLabel>
+          <SlideLabel>06 — WHEN YOUR TASTE LIVES</SlideLabel>
         </View>
         <SlideHeadline>{recap.medianYear ? `Median release\nyear: ${recap.medianYear}.` : 'No release dates\nto go on.'}</SlideHeadline>
       </View>

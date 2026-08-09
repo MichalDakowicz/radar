@@ -4,8 +4,14 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.9.0 — Unreleased
 
+### Added
+
+- Recaps rank the actors you watched most, counted from the top billing of every title
+- The yearly report gives them a page of five faces, the monthly reel a page of three
+
 ### Changed
 
+- Cast on a movie or show is a row of faces you scroll sideways, each with the role played
 - Picking a profile picture no longer asks for access to your photos, just the photo picker
 - Radar no longer requests camera, microphone or media access it never used
 

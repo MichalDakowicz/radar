@@ -1,5 +1,5 @@
 import { migrateStatus } from './movieStatus';
-import type { Movie, NamedRef, ProductionCompany, Ratings } from '@/types/movie';
+import type { CastMember, Movie, NamedRef, ProductionCompany, Ratings } from '@/types/movie';
 
 // Raw shape of a row from public.movies (supabase/schema.sql).
 export type MovieRow = {
@@ -26,7 +26,7 @@ export type MovieRow = {
   url: string | null;
   availability: string[] | null;
   director: NamedRef[] | null;
-  cast_members: NamedRef[] | null;
+  cast_members: CastMember[] | null;
   genres: NamedRef[] | null;
   production_companies: ProductionCompany[] | null;
   ratings: Ratings | null;

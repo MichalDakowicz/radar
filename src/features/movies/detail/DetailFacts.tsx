@@ -5,7 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { GenreIcon } from '@/components/media/GenreIcon';
 import { ProgressBorder } from '@/components/ui/ProgressBorder';
 import { scoreToProgress } from '@/lib/progressBorder';
-import type { NamedRef, ProductionCompany } from '@/types/movie';
+import type { CastMember, NamedRef, ProductionCompany } from '@/types/movie';
 
 import { AvailabilityBadges } from './AvailabilityBadges';
 import { CastRow } from './CastRow';
@@ -77,7 +77,7 @@ export function DetailStats({
   );
 }
 
-export function DetailCast({ cast }: { cast: NamedRef[] }) {
+export function DetailCast({ cast }: { cast: CastMember[] }) {
   if (cast.length === 0) return null;
   return (
     <View className="gap-2">

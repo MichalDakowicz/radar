@@ -8,7 +8,7 @@ import { dateKey } from '@/lib/stats';
 // moved on. No Date objects, no undefined — jsonb round-trips neither.
 
 /** Schema version of the stored payload. Bump when a slide needs a new field. */
-export const RECAP_VERSION = 2;
+export const RECAP_VERSION = 3;
 
 export type PosterRef = {
   title: string;
@@ -32,6 +32,13 @@ export type TitleCard = PosterRef & {
 export type RankedItem = { name: string; count: number; ratio: number; id: number | null };
 
 export type PodiumEntry = RankedItem & { place: 1 | 2 | 3; initials: string };
+
+/**
+ * A ranked person with a headshot. `image` is null for anything added before
+ * cast photos were stored, which is why the initials travel with it — the card
+ * draws a monogram rather than a hole.
+ */
+export type FaceEntry = RankedItem & { initials: string; image: string | null };
 
 export type WallEntry = RankedItem & { fontSize: number; opacity: number };
 
@@ -61,6 +68,8 @@ export type MonthlyRecap = {
   /** Whole-percent change against `previous.hours`, null when there is nothing to compare. */
   deltaPercent: number | null;
   topGenre: RankedItem | null;
+  /** Top-billed faces of the month, most-watched first. Up to three. */
+  actors: FaceEntry[];
   film: TitleCard | null;
   /** The rest of the month's best, behind `film` — highest rated first. */
   runnersUp: RatedPoster[];
@@ -89,6 +98,8 @@ export type YearlyRecap = {
   weeks: HeatLevel[][];
   genres: WallEntry[];
   directors: PodiumEntry[];
+  /** The year's five most-watched leads, counted from each title's top billing. */
+  actors: FaceEntry[];
   decades: RankedItem[];
   medianYear: string | null;
   oldest: { title: string; year: string } | null;
@@ -150,6 +161,15 @@ export function typeWall(entries: RankedItem[], maxSize = 52, minSize = 14): Wal
     // own contrast finding about GenreTag rank="low").
     opacity: Number((0.55 + 0.45 * e.ratio).toFixed(2)),
   }));
+}
+
+/** Ranked people, each keeping the headshot the count was built from. */
+export function faces(
+  entries: { name: string; count: number; id?: number | null; image?: string | null }[],
+  limit: number,
+): FaceEntry[] {
+  const images = new Map(entries.map((e) => [e.name, e.image ?? null]));
+  return rank(entries, limit).map((e) => ({ ...e, initials: initials(e.name), image: images.get(e.name) ?? null }));
 }
 
 /** Top three in reading order 2 · 1 · 3, which is how a podium is looked at. */

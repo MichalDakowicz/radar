@@ -32,7 +32,7 @@ export function YearMasterpiecesSlide({ recap }: YearMasterpiecesSlideProps) {
   return <GridPage recap={recap} poster={Math.floor((inner - 22) / 3)} />;
 }
 
-function Header({ children, label = '06 — THE MASTERPIECES' }: { children: React.ReactNode; label?: string }) {
+function Header({ children, label = '07 — THE MASTERPIECES' }: { children: React.ReactNode; label?: string }) {
   return (
     <View>
       <View className="mb-3.5">
@@ -94,7 +94,7 @@ function NonePage({ recap, poster }: { recap: YearlyRecap; poster: number }) {
   const ceiling = recap.topRated[0];
   return (
     <View className="gap-5">
-      <Header label={ceiling ? '06 — THE CLOSEST YOU CAME' : '06 — UNSCORED'}>
+      <Header label={ceiling ? '07 — THE CLOSEST YOU CAME' : '07 — UNSCORED'}>
         <SlideHeadline>{ceiling ? `Nothing quite\nreached five.` : 'You rated\nnothing.'}</SlideHeadline>
         <View className="mt-2.5">
           <SlideBody>

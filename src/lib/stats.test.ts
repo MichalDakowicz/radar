@@ -140,6 +140,27 @@ describe('computeStats', () => {
     ]);
   });
 
+  it('counts only the top billing of each title towards the actor ranking', () => {
+    const lead = { id: 10, name: 'Lead', profileUrl: 'https://img/lead.jpg' };
+    const bitPart = { id: 99, name: 'Bit Part' };
+    const filler = (n: number) => ({ id: 100 + n, name: `Filler ${n}` });
+    const movies = [
+      movie({ cast: [lead, filler(1), filler(2), filler(3), filler(4), bitPart] }),
+      movie({ cast: [filler(5), lead, filler(6), filler(7), filler(8), bitPart] }),
+    ];
+
+    const stats = computeStats(movies, { now: new Date(2024, 2, 6) })!;
+
+    expect(stats.topActors[0]).toEqual({ name: 'Lead', count: 2, id: 10, image: 'https://img/lead.jpg' });
+    // Sixth-billed in both, so it never counts however often it appears.
+    expect(stats.topActors.find((a) => a.name === 'Bit Part')).toBeUndefined();
+  });
+
+  it('leaves the actor headshot null when nothing stored one', () => {
+    const stats = computeStats([movie({ cast: [{ id: 7, name: 'Unphotographed' }] })], { now: new Date(2024, 2, 6) })!;
+    expect(stats.topActors[0]).toEqual({ name: 'Unphotographed', count: 1, id: 7, image: null });
+  });
+
   it('buckets completions and episode watches by day', () => {
     const movies = [
       movie({ watched: true, completedAt: '2024-03-05T12:00:00.000Z' }),

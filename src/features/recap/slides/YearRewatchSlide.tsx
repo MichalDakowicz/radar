@@ -17,7 +17,7 @@ export function YearRewatchSlide({ recap }: YearRewatchSlideProps) {
       {rewatch ? (
         <View>
           <View className="mb-3.5">
-            <SlideLabel>07 — THE ONE YOU KEPT GOING BACK TO</SlideLabel>
+            <SlideLabel>08 — THE ONE YOU KEPT GOING BACK TO</SlideLabel>
           </View>
           <View className="flex-row items-center gap-4">
             <RecapPoster coverUrl={rewatch.coverUrl} title={rewatch.title} width={96} />
@@ -40,7 +40,7 @@ export function YearRewatchSlide({ recap }: YearRewatchSlideProps) {
       ) : (
         <View>
           <View className="mb-3.5">
-            <SlideLabel>07 — NO SECOND HELPINGS</SlideLabel>
+            <SlideLabel>08 — NO SECOND HELPINGS</SlideLabel>
           </View>
           <SlideBody size={15}>Nothing was watched twice this year. Once each, and on to the next.</SlideBody>
         </View>

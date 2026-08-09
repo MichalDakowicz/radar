@@ -1,5 +1,5 @@
 import type { QuickAddStatus } from '@/features/movies/add/useQuickAdd';
-import type { MediaType, Movie, NamedRef, Ratings } from '@/types/movie';
+import type { CastMember, MediaType, Movie, NamedRef, Ratings } from '@/types/movie';
 
 export type CategoryRatings = { story: number; acting: number; ending: number; enjoyment: number };
 export type SeasonRating = CategoryRatings & { overall: number };
@@ -11,7 +11,7 @@ export type EditForm = {
   imdbId: string | null;
   voteAverage: number;
   director: NamedRef[];
-  cast: NamedRef[];
+  cast: CastMember[];
   genres: NamedRef[];
   releaseDate: string;
   coverUrl: string;

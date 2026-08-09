@@ -1,4 +1,4 @@
-import { heatmapWeeks, initials, ordinalWord, plinthHeight, podium, rank, ratioOf, typeWall } from '@/lib/recap';
+import { faces, heatmapWeeks, initials, ordinalWord, plinthHeight, podium, rank, ratioOf, typeWall } from '@/lib/recap';
 
 describe('ratioOf', () => {
   it('is a share of the leader, clamped', () => {
@@ -60,6 +60,29 @@ describe('podium', () => {
   it('survives a one- and two-entry year', () => {
     expect(podium(rank([{ name: 'Solo', count: 3 }])).map((e) => e.place)).toEqual([1]);
     expect(podium([]).length).toBe(0);
+  });
+});
+
+describe('faces', () => {
+  it('ranks people, keeps their headshots and gives everyone a monogram', () => {
+    const ranked = faces(
+      [
+        { name: 'Tom Holland', count: 4, id: 1, image: 'https://img/th.jpg' },
+        { name: 'Zendaya', count: 6, id: 2, image: null },
+        { name: 'Jacob Batalon', count: 2, id: 3 },
+      ],
+      2,
+    );
+
+    expect(ranked.map((f) => f.name)).toEqual(['Zendaya', 'Tom Holland']);
+    expect(ranked.map((f) => f.ratio)).toEqual([1, 4 / 6]);
+    expect(ranked.map((f) => f.initials)).toEqual(['ZE', 'TH']);
+    // A face with no stored photo is null, not undefined - the payload is jsonb.
+    expect(ranked.map((f) => f.image)).toEqual([null, 'https://img/th.jpg']);
+  });
+
+  it('is empty for a period with no cast at all', () => {
+    expect(faces([], 5)).toEqual([]);
   });
 });
 

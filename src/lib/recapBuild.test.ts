@@ -118,6 +118,33 @@ describe('buildMonthlyRecap', () => {
     expect(recap.runnersUp[0].rating).toBeNull();
   });
 
+  it('names up to three faces of the month', () => {
+    const cast = [
+      movie({
+        title: 'July A',
+        completedAt: at(2026, 7, 3),
+        cast: [
+          { id: 1, name: 'Lead One', profileUrl: 'https://img/1.jpg' },
+          { id: 2, name: 'Lead Two' },
+          { id: 3, name: 'Lead Three' },
+          { id: 4, name: 'Lead Four' },
+        ],
+      }),
+      movie({ title: 'July B', completedAt: at(2026, 7, 4), cast: [{ id: 2, name: 'Lead Two' }] }),
+    ];
+    const recap = buildMonthlyRecap('2026-07', { movies: cast, score });
+    expect(recap.actors.map((a) => [a.name, a.count])).toEqual([
+      ['Lead Two', 2],
+      ['Lead Four', 1],
+      ['Lead One', 1],
+    ]);
+    expect(recap.actors[2].image).toBe('https://img/1.jpg');
+  });
+
+  it('has no faces when nothing watched carried a cast', () => {
+    expect(buildMonthlyRecap('2026-07', { movies, score }).actors).toEqual([]);
+  });
+
   it('snapshots the leaderboard it is handed', () => {
     const rows = [{ name: 'You', initials: 'YO', hours: 3, ratio: 1, isYou: true }];
     expect(buildMonthlyRecap('2026-07', { movies, score, leaderboard: rows }).leaderboard).toEqual(rows);
@@ -219,6 +246,23 @@ describe('buildYearlyRecap', () => {
 
   it('classifies the year', () => {
     expect(recap.classification.name).toBe('The Slow-Burn Completionist');
+  });
+
+  it('ranks five faces from each title\'s top billing', () => {
+    const billed = (n: number) => ({ id: n, name: `Actor ${n}` });
+    const withCast = [
+      movie({ title: 'One', completedAt: at(2026, 3, 1), cast: [billed(1), billed(2), billed(3), billed(4), billed(5), billed(6)] }),
+      movie({ title: 'Two', completedAt: at(2026, 3, 2), cast: [billed(2), billed(3), billed(7), billed(8), billed(9), billed(6)] }),
+      movie({ title: 'Three', completedAt: at(2026, 3, 3), cast: [billed(2)] }),
+    ];
+    const built = buildYearlyRecap('2026', { movies: withCast, score });
+
+    expect(built.actors.length).toBe(5);
+    expect(built.actors[0]).toMatchObject({ name: 'Actor 2', count: 3, ratio: 1, initials: 'A2' });
+    expect(built.actors[1]).toMatchObject({ name: 'Actor 3', count: 2 });
+    expect(built.actors[1].ratio).toBeCloseTo(2 / 3, 5);
+    // Sixth-billed in both films, so it never reaches the ranking.
+    expect(built.actors.some((a) => a.name === 'Actor 6')).toBe(false);
   });
 
   it('does not fall over on an empty year', () => {
