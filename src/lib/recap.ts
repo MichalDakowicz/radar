@@ -8,7 +8,7 @@ import { dateKey } from '@/lib/stats';
 // moved on. No Date objects, no undefined — jsonb round-trips neither.
 
 /** Schema version of the stored payload. Bump when a slide needs a new field. */
-export const RECAP_VERSION = 3;
+export const RECAP_VERSION = 4;
 
 export type PosterRef = {
   title: string;

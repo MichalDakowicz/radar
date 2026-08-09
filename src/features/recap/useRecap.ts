@@ -7,6 +7,7 @@ import { useRecapLeaderboard } from '@/features/recap/useRecapLeaderboard';
 import { useMovies } from '@/hooks/useMovies';
 import { personalScore } from '@/lib/personalScore';
 import { buildMonthlyRecap, buildYearlyRecap } from '@/lib/recapBuild';
+import { hydrateRecapFaces } from '@/lib/recapFaces';
 import { availablePeriods, isPeriodClosed, isValidPeriodKey, type RecapKind } from '@/lib/recapPeriod';
 import type { Recap } from '@/lib/recap';
 import type { Movie } from '@/types/movie';
@@ -76,7 +77,10 @@ export function useRecap(kind: RecapKind, key: string) {
         leaderboard: leaderboard.data.rows,
         sharedTitle: leaderboard.data.sharedTitle,
       };
-      const built = kind === 'month' ? buildMonthlyRecap(key, input) : buildYearlyRecap(key, input);
+      const counted = kind === 'month' ? buildMonthlyRecap(key, input) : buildYearlyRecap(key, input);
+      // Headshots are fetched before the payload is stored, so a recap is
+      // photographed once rather than every time it is opened.
+      const built = await hydrateRecapFaces(counted);
       await saveRecap(uid!, built);
       queryClient.invalidateQueries({ queryKey: indexKey(uid) });
       return built;

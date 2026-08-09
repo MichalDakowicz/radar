@@ -571,6 +571,27 @@ export async function fetchActorDetails(personId: number) {
   return fetchPersonDetails(personId, 'actor');
 }
 
+/**
+ * Headshots for a handful of people at once, keyed by id. A person TMDB has no
+ * photo for - or that the request failed on - comes back null rather than
+ * throwing: the caller draws a monogram instead, and one dead lookup must not
+ * cost the other four.
+ */
+export async function fetchPersonImages(personIds: number[]): Promise<Record<number, string | null>> {
+  const unique = [...new Set(personIds.filter((id) => !!id))];
+  const found = await Promise.all(
+    unique.map(async (id) => {
+      try {
+        const person = await fetchPersonDetails(id, 'actor');
+        return [id, person?.profileUrl ?? null] as const;
+      } catch {
+        return [id, null] as const;
+      }
+    }),
+  );
+  return Object.fromEntries(found);
+}
+
 export type CreditItem = {
   tmdbId: number;
   type: 'movie';
