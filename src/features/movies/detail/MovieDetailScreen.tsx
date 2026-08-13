@@ -154,9 +154,12 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
                 <EditEpisodesTab
                   tmdbId={form.tmdbId}
                   numberOfSeasons={form.numberOfSeasons}
+                  episodeWatchDates={form.episodeWatchDates}
                   episodesWatched={form.episodesWatched}
                   onToggleEpisode={editForm.toggleEpisodeWatched}
+                  onBumpEpisode={editForm.bumpEpisodeWatch}
                   onMarkSeasonComplete={editForm.markSeasonComplete}
+                  onRewatchSeason={editForm.rewatchSeason}
                 />
               )}
             </View>

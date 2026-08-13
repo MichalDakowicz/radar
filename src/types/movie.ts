@@ -64,9 +64,11 @@ export type Movie = {
   addedAt: string;
   updatedAt: string;
 
-  // TV episode tracking
+  // TV episode tracking. episodeWatchDates is the log and the source of truth -
+  // one stamp per watch, so a rewatched episode keeps every date. episodesWatched
+  // is its derived mirror (lib/episodes).
   episodesWatched: Record<string, boolean>;
-  episodeWatchDates: Record<string, string>;
+  episodeWatchDates: Record<string, string[]>;
   seasonEpisodeCounts: Record<string, number>;
 };
 

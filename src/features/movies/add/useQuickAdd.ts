@@ -6,13 +6,18 @@ import type { StatusFlags } from '@/lib/movieStatus';
 import { fetchMediaMetadata, type MediaMetadata } from '@/lib/tmdb';
 import type { MediaType, Movie, Ratings } from '@/types/movie';
 
-export type QuickAddStatus = StatusFlags & { timesWatched: number };
+export type QuickAddStatus = StatusFlags & {
+  timesWatched: number;
+  /** Of those watches, how many carry no date - invisible to every streak. */
+  undatedWatches: number;
+};
 
 export const DEFAULT_QUICK_ADD_STATUS: QuickAddStatus = {
   inWatchlist: true,
   inProgress: false,
   watched: false,
   timesWatched: 0,
+  undatedWatches: 0,
 };
 
 function statusLabel(status: StatusFlags): string {
@@ -51,7 +56,10 @@ function metadataToPayload(
     inProgress: status.inProgress,
     watched: status.watched,
     timesWatched: status.watched ? status.timesWatched || 1 : 0,
-    completedAt: status.watched ? new Date().toISOString() : null,
+    // "Watched it before" on the way in leaves the completion undated, so adding
+    // a title you saw years ago does not put a mark on today's streak. Adding one
+    // you watched tonight still does (lib/watchCounts).
+    completedAt: status.watched && status.undatedWatches < (status.timesWatched || 1) ? new Date().toISOString() : null,
     ratings,
   };
 }

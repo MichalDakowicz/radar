@@ -65,7 +65,7 @@ function shiftYears(iso: string, by: number): string {
 function newestActiveYear(movies: Movie[]): number | null {
   let newest: number | null = null;
   for (const movie of movies) {
-    const stamps = [movie.completedAt, ...Object.values(movie.episodeWatchDates || {})];
+    const stamps = [movie.completedAt, ...Object.values(movie.episodeWatchDates || {}).flat()];
     for (const stamp of stamps) {
       if (!stamp) continue;
       const year = new Date(stamp).getFullYear();
@@ -81,7 +81,7 @@ function shiftLibrary(movies: Movie[], by: number): Movie[] {
     ...movie,
     completedAt: movie.completedAt ? shiftYears(movie.completedAt, by) : null,
     episodeWatchDates: Object.fromEntries(
-      Object.entries(movie.episodeWatchDates || {}).map(([key, stamp]) => [key, shiftYears(stamp, by)]),
+      Object.entries(movie.episodeWatchDates || {}).map(([key, stamps]) => [key, stamps.map((s) => shiftYears(s, by))]),
     ),
   }));
 }

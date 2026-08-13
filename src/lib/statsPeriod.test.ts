@@ -80,7 +80,7 @@ describe('scopeMoviesToPeriod', () => {
       [
         show({
           episodesWatched: { 's1e1': true, 's1e2': true, 's1e3': true },
-          episodeWatchDates: { 's1e1': iso(2025, 12, 1), 's1e2': iso(2026, 7, 1), 's1e3': iso(2026, 7, 12) },
+          episodeWatchDates: { 's1e1': [iso(2025, 12, 1)], 's1e2': [iso(2026, 7, 1)], 's1e3': [iso(2026, 7, 12)] },
         }),
       ],
       periodStart('30d', NOW),
@@ -93,7 +93,7 @@ describe('scopeMoviesToPeriod', () => {
 
   it('drops a show with no episode watched in the window', () => {
     const scoped = scopeMoviesToPeriod(
-      [show({ episodesWatched: { 's1e1': true }, episodeWatchDates: { 's1e1': iso(2025, 3, 4) } })],
+      [show({ episodesWatched: { 's1e1': true }, episodeWatchDates: { 's1e1': [iso(2025, 3, 4)] } })],
       periodStart('year', NOW),
     );
     expect(scoped).toEqual([]);
@@ -105,7 +105,7 @@ describe('scopeMoviesToPeriod', () => {
         show({
           timesWatched: 4,
           episodesWatched: { 's1e1': true },
-          episodeWatchDates: { 's1e1': iso(2026, 7, 2) },
+          episodeWatchDates: { 's1e1': [iso(2026, 7, 2)] },
         }),
       ],
       periodStart('30d', NOW),
@@ -128,7 +128,7 @@ describe('scopeMoviesToPeriod', () => {
           watched: true,
           completedAt: iso(2025, 8, 1),
           episodesWatched: { 's2e1': true },
-          episodeWatchDates: { 's2e1': iso(2026, 7, 5) },
+          episodeWatchDates: { 's2e1': [iso(2026, 7, 5)] },
         }),
       ],
       periodStart('30d', NOW),
@@ -140,7 +140,7 @@ describe('scopeMoviesToPeriod', () => {
   it('does not mutate the input rows', () => {
     const original = show({
       episodesWatched: { 's1e1': true, 's1e2': true },
-      episodeWatchDates: { 's1e1': iso(2020, 1, 1), 's1e2': iso(2026, 7, 5) },
+      episodeWatchDates: { 's1e1': [iso(2020, 1, 1)], 's1e2': [iso(2026, 7, 5)] },
     });
     scopeMoviesToPeriod([original], periodStart('30d', NOW));
     expect(Object.keys(original.episodeWatchDates)).toEqual(['s1e1', 's1e2']);

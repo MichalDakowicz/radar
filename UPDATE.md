@@ -2,7 +2,26 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.12.0 — Unreleased
+## 2.12.0 — 2026-08-13
+
+### Added
+
+- Episodes count every watch, so a rewatched episode is logged again instead of staying ticked
+- A watched episode carries a − N + counter, and a season header can rewatch the whole season
+- Watch status can log a watch with no date, for something you saw before you tracked it
+- The TV calendar's day view can relog a watch, group them by time, or clear a whole day
+
+### Changed
+
+- A watch count is its dated watches plus the ones you only remember, and both count
+- An undated watch adds to your hours and watch count but never to a streak
+- Time watched counts every episode watch, so TV rewatches show up in your hours at last
+
+### Fixed
+
+- The evening streak warning only arrives when the week can still break your streak
+- It names how many more you need this week instead of just saying to log something
+- Rewatching a season asks first, so one stray tap no longer logs the whole season again
 
 ## 2.11.0 — 2026-08-13
 

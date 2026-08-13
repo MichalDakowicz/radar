@@ -1,3 +1,4 @@
+import { allEpisodeStamps } from '@/lib/episodes';
 import type { Movie } from '@/types/movie';
 
 // Period identity for a recap: which window it covers, how it is keyed in
@@ -105,7 +106,7 @@ export function latestClosedPeriodKey(kind: RecapKind, now: Date = new Date()): 
 function watchDates(movie: Movie): Date[] {
   const dates: Date[] = [];
   if (movie.completedAt) dates.push(new Date(movie.completedAt));
-  for (const timestamp of Object.values(movie.episodeWatchDates || {})) dates.push(new Date(timestamp));
+  for (const timestamp of allEpisodeStamps(movie)) dates.push(new Date(timestamp));
   return dates.filter((d) => Number.isFinite(d.getTime()));
 }
 

@@ -121,7 +121,7 @@ describe('availablePeriods', () => {
   const movies = [
     movie({ completedAt: '2026-07-10T12:00:00.000Z' }),
     movie({ completedAt: '2025-02-02T12:00:00.000Z' }),
-    movie({ type: 'tv', completedAt: null, episodeWatchDates: { 's1e1': '2026-03-04T12:00:00.000Z' } }),
+    movie({ type: 'tv', completedAt: null, episodeWatchDates: { 's1e1': ['2026-03-04T12:00:00.000Z'] } }),
   ];
 
   it('reads both completion dates and episode dates, newest first', () => {

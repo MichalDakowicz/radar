@@ -1,17 +1,21 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { LoadingState } from '@/components/ui/LoadingState';
 import { useSeasonDetails } from '@/hooks/useTmdb';
+import { episodeWatchCount, type EpisodeWatchLog } from '@/lib/episodes';
 
 import { EpisodeList } from './EpisodeList';
 
 type EditEpisodesTabProps = {
   tmdbId: number | null;
   numberOfSeasons: number;
+  episodeWatchDates: EpisodeWatchLog;
   episodesWatched: Record<string, boolean>;
   onToggleEpisode: (season: number, episodeNumber: number) => void;
+  onBumpEpisode: (season: number, episodeNumber: number, delta: number) => void;
   onMarkSeasonComplete: (season: number, episodeNumbers: number[]) => void;
+  onRewatchSeason: (season: number, episodeNumbers: number[]) => void;
 };
 
 // TV-only episode tracker (doc 03 Edit `EditEpisodesTab`) - season switcher +
@@ -19,13 +23,30 @@ type EditEpisodesTabProps = {
 export function EditEpisodesTab({
   tmdbId,
   numberOfSeasons,
+  episodeWatchDates,
   episodesWatched,
   onToggleEpisode,
+  onBumpEpisode,
   onMarkSeasonComplete,
+  onRewatchSeason,
 }: EditEpisodesTabProps) {
   const [season, setSeason] = useState(1);
   const { data: seasonData, isLoading } = useSeasonDetails(tmdbId, season);
   const seasons = Array.from({ length: numberOfSeasons || 1 }, (_, i) => i + 1);
+  const episodes = seasonData?.episodes as { episode_number: number }[] | undefined;
+
+  // Watch counts for the season on screen, so EpisodeList never touches the log
+  // shape itself.
+  const counts = useMemo(() => {
+    const out: Record<number, number> = {};
+    for (const episode of episodes ?? []) {
+      out[episode.episode_number] = episodeWatchCount(
+        { episodeWatchDates, episodesWatched },
+        `s${season}e${episode.episode_number}`,
+      );
+    }
+    return out;
+  }, [episodes, episodeWatchDates, episodesWatched, season]);
 
   return (
     <View className="gap-4">
@@ -48,9 +69,11 @@ export function EditEpisodesTab({
         <EpisodeList
           season={season}
           episodes={seasonData.episodes}
-          episodesWatched={episodesWatched}
+          counts={counts}
           onToggle={(episodeNumber) => onToggleEpisode(season, episodeNumber)}
+          onBump={(episodeNumber, delta) => onBumpEpisode(season, episodeNumber, delta)}
           onMarkSeasonComplete={() => onMarkSeasonComplete(season, seasonData.episodes.map((e: { episode_number: number }) => e.episode_number))}
+          onRewatchSeason={() => onRewatchSeason(season, seasonData.episodes.map((e: { episode_number: number }) => e.episode_number))}
         />
       ) : (
         <View className="items-center rounded-xl border border-dashed border-border py-12">

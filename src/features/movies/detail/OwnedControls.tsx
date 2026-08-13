@@ -2,7 +2,7 @@ import { Calculator, RefreshCw } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import { StatusPicker } from '@/components/media/StatusPicker';
-import type { EditForm } from '@/features/movies/edit/editForm';
+import { formDatedPasses, type EditForm } from '@/features/movies/edit/editForm';
 import { RatingSliderPrecise, RatingValue } from '@/features/movies/edit/RatingSlider';
 
 const MUTED = 'hsl(0 0% 63.9%)';
@@ -21,7 +21,12 @@ export function OwnedControls({ form, onChange, onAutoCalc }: OwnedControlsProps
     <>
       <View className="gap-3">
         <Text className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Watch status</Text>
-        <StatusPicker value={form.status} onChange={(status) => onChange({ status })} />
+        <StatusPicker
+          value={form.status}
+          onChange={(status) => onChange({ status })}
+          datedPasses={formDatedPasses(form)}
+          derived={form.type === 'tv'}
+        />
         {form.status.inProgress && (
           <View className="gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
             <Text className="text-xs font-semibold uppercase text-amber-500">Last watched position</Text>

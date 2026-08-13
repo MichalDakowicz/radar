@@ -1,5 +1,8 @@
-import { Check, CheckCircle } from 'lucide-react-native';
+import { Check, CheckCircle, Minus, Plus, RotateCcw } from 'lucide-react-native';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export type TmdbEpisode = {
   id: number;
@@ -12,31 +15,63 @@ export type TmdbEpisode = {
 type EpisodeListProps = {
   season: number;
   episodes: TmdbEpisode[];
-  episodesWatched: Record<string, boolean>;
+  /** Watches per episode number — 0 for never watched (lib/episodes). */
+  counts: Record<number, number>;
   onToggle: (episodeNumber: number) => void;
+  onBump: (episodeNumber: number, delta: number) => void;
   onMarkSeasonComplete: () => void;
+  onRewatchSeason: () => void;
 };
 
-// Per-season episode checklist + progress bar + "mark season complete"
-// (doc 03 `EpisodeList`, doc 03 Edit "episode tracker").
-export function EpisodeList({ season, episodes, episodesWatched, onToggle, onMarkSeasonComplete }: EpisodeListProps) {
-  const watchedCount = episodes.filter((e) => episodesWatched[`s${season}e${e.episode_number}`]).length;
+const MUTED = 'hsl(0 0% 63.9%)';
+
+// Per-season episode checklist + progress bar + season actions (doc 03
+// `EpisodeList`). A watched row carries a `- N +` stepper, so a rewatched
+// episode is logged again rather than being stuck at "watched".
+export function EpisodeList({
+  season,
+  episodes,
+  counts,
+  onToggle,
+  onBump,
+  onMarkSeasonComplete,
+  onRewatchSeason,
+}: EpisodeListProps) {
+  const watchedCount = episodes.filter((e) => (counts[e.episode_number] ?? 0) > 0).length;
   const progress = episodes.length > 0 ? Math.round((watchedCount / episodes.length) * 100) : 0;
+  const seasonComplete = episodes.length > 0 && watchedCount === episodes.length;
+  // One tap moves every episode in the season, and the change is only visible a
+  // row at a time - so it asks first rather than letting a mis-tap land a dozen
+  // stamps that have to be picked back out one by one.
+  const [confirmRewatch, setConfirmRewatch] = useState(false);
 
   return (
     <View className="gap-3">
-      <View className="flex-row items-center justify-between rounded-xl border border-border bg-secondary/40 p-4">
-        <View>
-          <Text className="text-xs font-semibold uppercase text-muted-foreground">Season {season} progress</Text>
-          <Text className="text-2xl font-bold text-foreground">{progress}%</Text>
+      <View className="gap-3 rounded-xl border border-border bg-secondary/40 p-4">
+        <View className="flex-row items-center justify-between">
+          <View>
+            <Text className="text-xs font-semibold uppercase text-muted-foreground">Season {season} progress</Text>
+            <Text className="text-2xl font-bold text-foreground">{progress}%</Text>
+          </View>
+          <View className="flex-row items-center gap-2">
+            {!seasonComplete && (
+              <Pressable
+                onPress={onMarkSeasonComplete}
+                className="flex-row items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5"
+              >
+                <CheckCircle size={14} color="hsl(217 91% 60%)" />
+                <Text className="text-xs font-medium text-primary">Mark complete</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => setConfirmRewatch(true)}
+              className="flex-row items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5"
+            >
+              <RotateCcw size={14} color={MUTED} />
+              <Text className="text-xs font-medium text-muted-foreground">Rewatch season</Text>
+            </Pressable>
+          </View>
         </View>
-        <Pressable
-          onPress={onMarkSeasonComplete}
-          className="flex-row items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5"
-        >
-          <CheckCircle size={14} color="hsl(217 91% 60%)" />
-          <Text className="text-xs font-medium text-primary">Mark complete</Text>
-        </Pressable>
       </View>
       <View className="h-2 overflow-hidden rounded-full bg-secondary">
         <View className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
@@ -44,7 +79,8 @@ export function EpisodeList({ season, episodes, episodesWatched, onToggle, onMar
 
       <View className="gap-2">
         {episodes.map((episode) => {
-          const isWatched = !!episodesWatched[`s${season}e${episode.episode_number}`];
+          const count = counts[episode.episode_number] ?? 0;
+          const isWatched = count > 0;
           return (
             <Pressable
               key={episode.id}
@@ -66,8 +102,21 @@ export function EpisodeList({ season, episodes, episodesWatched, onToggle, onMar
                   <Text numberOfLines={1} className={isWatched ? 'flex-1 font-medium text-green-500' : 'flex-1 font-medium text-foreground'}>
                     {episode.episode_number}. {episode.name}
                   </Text>
-                  {!!episode.air_date && <Text className="text-xs text-muted-foreground">{episode.air_date}</Text>}
+                  {isWatched ? (
+                    <View className="flex-row items-center gap-2 rounded-lg bg-black/30 p-1">
+                      <Pressable onPress={() => onBump(episode.episode_number, -1)} hitSlop={6} className="p-1">
+                        <Minus size={14} color={MUTED} />
+                      </Pressable>
+                      <Text className="w-5 text-center font-mono text-sm text-foreground">{count}</Text>
+                      <Pressable onPress={() => onBump(episode.episode_number, 1)} hitSlop={6} className="p-1">
+                        <Plus size={14} color={MUTED} />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    !!episode.air_date && <Text className="text-xs text-muted-foreground">{episode.air_date}</Text>
+                  )}
                 </View>
+                {isWatched && !!episode.air_date && <Text className="text-xs text-muted-foreground">{episode.air_date}</Text>}
                 {!!episode.overview && (
                   <Text numberOfLines={2} className="text-xs text-muted-foreground">
                     {episode.overview}
@@ -78,6 +127,18 @@ export function EpisodeList({ season, episodes, episodesWatched, onToggle, onMar
           );
         })}
       </View>
+
+      <ConfirmDialog
+        visible={confirmRewatch}
+        title={`Rewatch season ${season}?`}
+        description={`Logs another watch of all ${episodes.length} episodes, dated now. Use the − + on a row to correct a single episode.`}
+        confirmLabel="Log rewatch"
+        onConfirm={() => {
+          setConfirmRewatch(false);
+          onRewatchSeason();
+        }}
+        onCancel={() => setConfirmRewatch(false)}
+      />
     </View>
   );
 }

@@ -105,27 +105,40 @@ describe('findDuplicates', () => {
     expect(patch.completedAt).toBe('2023-01-01T00:00:00.000Z');
   });
 
-  it('unions the episodes ticked on each copy of a show', () => {
+  it('unions the episode watch logs on each copy of a show', () => {
     const groups = findDuplicates([
       movie({
         id: 'a',
         type: 'tv',
         inProgress: true,
         episodesWatched: { s1e1: true, s1e2: true },
-        episodeWatchDates: { s1e1: '2024-03-01T00:00:00.000Z' },
+        episodeWatchDates: { s1e1: ['2024-03-01T00:00:00.000Z'], s1e2: ['2024-03-02T00:00:00.000Z'] },
       }),
       movie({
         id: 'b',
         type: 'tv',
         episodesWatched: { s1e3: true },
-        episodeWatchDates: { s1e1: '2024-01-01T00:00:00.000Z', s1e3: '2024-04-01T00:00:00.000Z' },
+        episodeWatchDates: { s1e1: ['2024-01-01T00:00:00.000Z'], s1e3: ['2024-04-01T00:00:00.000Z'] },
       }),
     ]);
 
     expect(groups[0].keep.id).toBe('a');
     expect(groups[0].patch.episodesWatched).toEqual({ s1e1: true, s1e2: true, s1e3: true });
-    // Earliest date per episode survives, so the streak calendar keeps the truth.
-    expect(groups[0].patch.episodeWatchDates).toMatchObject({ s1e1: '2024-01-01T00:00:00.000Z' });
+    // Both dates survive: the same episode logged on two rows on two days is two
+    // real watches, and the duplicate is exactly how they got split up.
+    expect(groups[0].patch.episodeWatchDates).toEqual({
+      s1e1: ['2024-01-01T00:00:00.000Z', '2024-03-01T00:00:00.000Z'],
+      s1e2: ['2024-03-02T00:00:00.000Z'],
+      s1e3: ['2024-04-01T00:00:00.000Z'],
+    });
+  });
+
+  it('keeps a legacy tick that never carried a date', () => {
+    const groups = findDuplicates([
+      movie({ id: 'a', type: 'tv', inProgress: true, episodesWatched: { s1e1: true }, episodeWatchDates: {} }),
+      movie({ id: 'b', type: 'tv', episodesWatched: { s1e2: true }, episodeWatchDates: {} }),
+    ]);
+    expect(groups[0].patch.episodesWatched).toEqual({ s1e1: true, s1e2: true });
   });
 
   it('patches nothing when the copies are identical', () => {

@@ -1,4 +1,6 @@
 import type { QuickAddStatus } from '@/features/movies/add/useQuickAdd';
+import { mergeEpisodeMirror, showWatchCount, watchedEpisodeCount, type EpisodeWatchLog } from '@/lib/episodes';
+import { totalWatches, undatedWatches } from '@/lib/watchCounts';
 import type { CastMember, MediaType, Movie, NamedRef, Ratings } from '@/types/movie';
 
 export type CategoryRatings = { story: number; acting: number; ending: number; enjoyment: number };
@@ -19,6 +21,11 @@ export type EditForm = {
   runtime: number;
   availability: string[];
   status: QuickAddStatus;
+  /**
+   * The one date a film's completion carries, or a series' - held on the form so
+   * an undated watch can be saved without stamping today (lib/watchCounts).
+   */
+  completedAt: string | null;
   lastWatchedPosition: string;
   notes: string;
   overallRating: number;
@@ -27,7 +34,7 @@ export type EditForm = {
   numberOfSeasons: number;
   numberOfEpisodes: number;
   episodesWatched: Record<string, boolean>;
-  episodeWatchDates: Record<string, string>;
+  episodeWatchDates: EpisodeWatchLog;
 };
 
 const EMPTY_CATEGORY: CategoryRatings = { story: 0, acting: 0, ending: 0, enjoyment: 0 };
@@ -74,7 +81,9 @@ export function fromMovie(movie: Movie): EditForm {
       inProgress: movie.inProgress,
       watched: movie.watched,
       timesWatched: movie.timesWatched,
+      undatedWatches: undatedWatches(movie),
     },
+    completedAt: movie.completedAt,
     lastWatchedPosition: movie.lastWatchedPosition ?? '',
     notes: movie.notes,
     overallRating: movie.ratings.overall ?? 0,
@@ -94,11 +103,49 @@ export function fromMovie(movie: Movie): EditForm {
 
 export type EditSaveResult = { remove: true } | { remove: false; updates: Partial<Movie> };
 
-/** True once every episode TMDB knows about is ticked off. */
+/** True once every episode TMDB knows about has been watched at least once. */
 export function episodesComplete(form: EditForm): boolean {
   if (form.type !== 'tv' || form.numberOfEpisodes <= 0) return false;
-  const ticked = Object.values(form.episodesWatched ?? {}).filter(Boolean).length;
-  return ticked >= form.numberOfEpisodes;
+  return watchedEpisodeCount(form) >= form.numberOfEpisodes;
+}
+
+/**
+ * Complete watches this form has dates for: a series' from its episode log, a
+ * film's 0 or 1 from `completedAt`.
+ */
+export function formDatedPasses(form: EditForm): number {
+  return form.type === 'tv' ? showWatchCount(form) : form.completedAt ? 1 : 0;
+}
+
+/**
+ * What `timesWatched` should be saved as: the dated passes plus the watches the
+ * user only remembers (lib/watchCounts). A series' dated count is never typed in -
+ * it comes from the episode tracker - but an undated watch has no episodes and no
+ * days behind it, so it is only ever a number.
+ */
+/**
+ * What the undated count becomes when the episode log gains dated passes.
+ *
+ * Ticking episodes off usually *documents* a watch the row already claimed rather
+ * than adding one: a show carrying "watched 5×" with no episode data, walked
+ * through once with the tracker, is still five watches - one of them now dated.
+ * So a new dated pass absorbs an undated one.
+ *
+ * "Rewatch season" is the exception and passes absorb=false: that is the user
+ * saying they watched it *again*, which is a sixth watch, not the fifth being
+ * written down.
+ */
+export function absorbUndatedWatches(undated: number, datedBefore: number, datedAfter: number): number {
+  const gained = Math.max(0, datedAfter - datedBefore);
+  return Math.max(0, undated - gained);
+}
+
+export function derivedTimesWatched(form: EditForm, watched: boolean): number {
+  if (!watched) return 0;
+  const total = totalWatches(formDatedPasses(form), form.status.undatedWatches ?? 0);
+  // Watched with nothing behind it: an old row, or the Watched box ticked before
+  // anything was logged. One watch is what the tick means.
+  return total > 0 ? total : 1;
 }
 
 function statusLabel(status: QuickAddStatus): string {
@@ -125,12 +172,18 @@ export function buildMoviePayload(form: EditForm, current: Movie): EditSaveResul
     return { remove: true };
   }
 
-  // Only the save that *flips* a title to watched may stamp a completion date.
-  // A row that was already watched keeps whatever date it had, including none:
-  // dating it now would drop a mark on today in the streak calendar for a save
-  // that changed nothing about the watch (ticking Watchlist for a rewatch, say).
+  // The form owns the date now, so "watched, but not today" is expressible: the
+  // undated actions leave it null while still raising the count.
+  //
+  // A save that *flips* a title to watched with no date chosen still stamps today,
+  // which is the ordinary "just finished it" path. A row that was already watched
+  // keeps whatever date it had, including none - dating it now would drop a mark
+  // on today for a save that changed nothing about the watch (ticking Watchlist
+  // for a rewatch, say).
+  const flippedToWatched = status.watched && !current.watched;
+  const noUndatedWatch = (status.undatedWatches ?? 0) === 0;
   const completedAt = status.watched
-    ? (current.completedAt ?? (current.watched ? null : new Date().toISOString()))
+    ? (form.completedAt ?? (flippedToWatched && noUndatedWatch ? new Date().toISOString() : null))
     : null;
 
   const updates: Partial<Movie> = {
@@ -153,7 +206,7 @@ export function buildMoviePayload(form: EditForm, current: Movie): EditSaveResul
     inWatchlist: status.inWatchlist,
     inProgress: status.inProgress,
     watched: status.watched,
-    timesWatched: status.watched ? status.timesWatched || 1 : 0,
+    timesWatched: derivedTimesWatched(form, status.watched),
     completedAt,
     ratings:
       form.type === 'tv'
@@ -161,7 +214,9 @@ export function buildMoviePayload(form: EditForm, current: Movie): EditSaveResul
         : { ...form.ratings, overall: form.overallRating },
     numberOfSeasons: form.numberOfSeasons,
     numberOfEpisodes: form.numberOfEpisodes,
-    episodesWatched: form.episodesWatched,
+    // The log is written with its mirror, always: the friend shelf reads the
+    // mirror column straight out of Postgres and would otherwise go stale.
+    episodesWatched: mergeEpisodeMirror(form.episodesWatched, form.episodeWatchDates),
     episodeWatchDates: form.episodeWatchDates,
   };
 

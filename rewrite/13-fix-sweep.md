@@ -202,6 +202,12 @@ is exercised through `supabase/notifications-test.sql`.
 `supabase/notifications.sql` still has to be re-run in the SQL editor for the new
 columns and the new generator body to exist. Called out at hand-off, not automated.
 
+**Shipped in 2.12.0.** `shouldSyncStreak` now takes the whole computed state
+(`{ currentStreak, weekStart, needed }`) rather than a bare number, so a week
+rollover or a paid-off shortfall re-syncs on its own. `notifications-test.sql`
+gained a 6c block that fakes a *met* week and expects zero rows — the case the old
+generator got wrong.
+
 ---
 
 ## 4. Movies / TV shows filter is missing from the library filters
@@ -472,6 +478,86 @@ log/unlog (including unlog at 1 clearing the key), mirror generation. Updated:
 
 **Assumption.** The `s<season>e<episode>` key format is unchanged, and
 `seasonEpisodeCounts` keeps doing its "next episode" job untouched.
+
+#### Shipped in 2.12.0 — two departures from the plan above
+
+**A dateless legacy tick reads as one watch.** Rows written before this carry
+`episodes_watched` ticks with no stamp in the log (bulk imports, the old
+`markSeasonComplete`). Deriving counts from the log alone would have unwatched
+those episodes and taken the hours off, so every helper falls back to the mirror:
+`episodeWatchCount` is `stamps.length || (ticked ? 1 : 0)`. `mergeEpisodeMirror`
+is what keeps them through a save.
+
+**A show with no episode log keeps the count the user typed.** `showWatchCount` is
+0 for an untracked series, and writing that over someone's "watched 2×" would be a
+silent downgrade — Quick Add has no episode tracker at all.
+
+This turned out to be the bigger of the two: a series carrying `times_watched: 5`
+with no ticks, no stamps and a null `completed_at` — the shape a legacy library
+actually has — could not be migrated at all. There is nothing to convert, and
+writing fifty stamps to satisfy `showWatchCount` would invent the fifty days those
+watches fell on. §7 below is what replaced the strict rule.
+
+`duplicates.ts` also leaves `timesWatched` as the highest of the copies rather than
+re-deriving it: the merge is not an edit, and the next save through the edit screen
+recomputes it from the log the merge just unioned.
+
+---
+
+## 7. Undated watches: logging a watch that no streak can see
+
+Agreed 2026-08-13, after §6 shipped. Two reports, one cause.
+
+**Symptom.** "I watched this a while ago and never logged it, and logging it now
+moves my streak." And: "I added a film, watched it tonight, then remembered I'd
+seen it years ago — that is two watches, not two watches tonight." Plus §6's own
+fallout: a series at `times_watched: 5` with no episode data could not be carried
+into the log at all.
+
+**Root cause.** Every record of a watch carried a date, and every date feeds a
+streak — `dailyCompletions` reads `completedAt`, `dailyEpisodes` reads the episode
+log (`src/lib/stats.ts`). Marking something watched stamped today; "Rewatch season"
+stamped today once per episode. There was no way to say *that it happened* without
+also saying *when*.
+
+**Decision — `times_watched` is the total, the dated records are a subset.**
+
+```
+timesWatched = datedPasses + undatedWatches
+
+datedPasses    tv    -> showWatchCount(log): the fewest watches any episode has
+               movie -> completedAt ? 1 : 0
+undatedWatches       -> the remainder: watches with no day behind them
+```
+
+Undated watches count towards hours and towards the number on the card, and are
+invisible to every calendar and every streak, because there is no day to put them
+on. That is the entire point. This softens §6's "a series' counter is derived, not
+typed in" to "the *dated* half is derived" — §6 was too strict, and the 5× show is
+the proof.
+
+The alternative considered and rejected was a separate `undated_watches` column.
+It is cleaner in isolation but needs a schema change and a second field for every
+reader to honour, and `times_watched` already meant "how many times", so the
+reinterpretation costs nothing at rest. **No migration and no schema change:** an
+existing row's undated count falls out of the subtraction on read.
+
+**Absorbing.** Ticking episodes off usually *documents* a watch the row already
+claimed rather than adding one — a legacy "watched once, no episodes" show walked
+through the tracker is still one watch, now dated. So a newly dated pass absorbs an
+undated one (`absorbUndatedWatches`). "Rewatch season" is the exception and opts out
+with `absorb: false`: that is the user saying they watched it *again*.
+
+**Files.** new: `src/lib/watchCounts.ts` (+ `.test.ts`). Edited: `src/lib/stats.ts`
+(hours via `watchedMinutes`), `src/features/movies/edit/editForm.ts` (form carries
+`completedAt` and `undatedWatches`; `formDatedPasses`, `absorbUndatedWatches`),
+`useEditMovieForm.ts`, `src/components/media/StatusPicker.tsx` (the breakdown and
+the undated stepper), `OwnedControls.tsx`, `useQuickAdd.ts`, `QuickAddSheet.tsx`.
+
+**Test.** `watchCounts.test.ts` — dated/undated splits per type, the no-negative
+floor, and that a dated pass can never be billed twice. `editForm.test.ts` — a
+film's earlier watch saves undated while a film finished now still stamps today, an
+untracked show's legacy count survives the save, and the absorb rule.
 
 ---
 

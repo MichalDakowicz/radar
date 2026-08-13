@@ -363,7 +363,7 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
             <SelectedPreview summary={selected} metadata={metadata ?? undefined} isLoading={isLoadingMetadata} />
             <View className="gap-3">
               <SectionLabel>Watch status</SectionLabel>
-              <StatusPicker value={status} onChange={setStatus} />
+              <StatusPicker value={status} onChange={setStatus} datedPasses={status.watched ? 1 : 0} />
             </View>
             {status.watched && (
               <RatingSection overall={overallRating} onOverall={setOverallRating} categories={categories} onCategories={setCategories} />
@@ -392,7 +392,7 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
 
             <View className="gap-3">
               <SectionLabel>Watch status</SectionLabel>
-              <StatusPicker value={status} onChange={setStatus} />
+              <StatusPicker value={status} onChange={setStatus} datedPasses={status.watched ? 1 : 0} />
             </View>
 
             {status.watched && (

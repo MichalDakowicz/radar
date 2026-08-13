@@ -4,9 +4,18 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { useSeasonDetails } from '@/hooks/useTmdb';
+import {
+  episodeWatchCount,
+  episodeWatchLog,
+  logEpisodeWatch,
+  mergeEpisodeMirror,
+  normalizeEpisodeWatchDates,
+  unlogEpisodeWatch,
+} from '@/lib/episodes';
 import { dateKey } from '@/lib/stats';
 import { goBackOrHome } from '@/lib/utils';
 import type { Movie } from '@/types/movie';
@@ -44,24 +53,23 @@ function SeasonEpisodePicker({
     <View className="gap-2">
       {episodes.map((ep) => {
         const key = `s${season}e${ep.episode_number}`;
-        const alreadyWatched = !!show.episodesWatched?.[key];
+        // Watched episodes stay pickable: choosing one logs another watch on this
+        // day, which is how a rewatch reaches the streak and the recaps.
+        const watches = episodeWatchCount(show, key);
         const selected = selectedKeys.includes(key);
         return (
           <Pressable
             key={ep.id}
-            disabled={alreadyWatched}
             onPress={() => onToggle(key)}
-            className={`flex-row items-center gap-3 rounded-lg border p-3 ${
-              alreadyWatched ? 'border-border opacity-50' : selected ? 'border-primary bg-primary/10' : 'border-border'
-            }`}
+            className={`flex-row items-center gap-3 rounded-lg border p-3 ${selected ? 'border-primary bg-primary/10' : 'border-border'}`}
           >
             <View className={`h-5 w-5 items-center justify-center rounded border-2 ${selected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
               {selected && <Check size={12} color="#fff" />}
             </View>
             <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
               {ep.episode_number}. {ep.name}
-              {alreadyWatched ? '  · watched' : ''}
             </Text>
+            {watches > 0 && <Text className="text-xs text-muted-foreground">watched {watches}×</Text>}
           </Pressable>
         );
       })}
@@ -85,20 +93,32 @@ export default function ManageTVCompletions() {
   const [selectedSeason, setSelectedSeason] = useState(1);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   const tvShows = useMemo(() => movies.filter((m) => m.type === 'tv'), [movies]);
 
+  // One row per episode, carrying that day's stamps - not one row per stamp. An
+  // episode watched five times on one day was five rows reading exactly alike,
+  // so removing one of them looked like nothing had happened.
   const episodesOnThisDay = useMemo(() => {
-    const out: { show: Movie; key: string; season: string; episode: string }[] = [];
+    const out: { show: Movie; key: string; stamps: string[]; season: string; episode: string }[] = [];
     for (const show of tvShows) {
-      for (const [key, ts] of Object.entries(show.episodeWatchDates || {})) {
-        if (dateKey(ts) !== dateStr) continue;
+      for (const [key, stamps] of Object.entries(normalizeEpisodeWatchDates(show.episodeWatchDates))) {
+        const today = stamps.filter((stamp) => dateKey(stamp) === dateStr);
+        if (today.length === 0) continue;
         const match = key.match(/s(\d+)e(\d+)/i);
-        out.push({ show, key, season: match?.[1] ?? '?', episode: match?.[2] ?? '?' });
+        out.push({ show, key, stamps: today, season: match?.[1] ?? '?', episode: match?.[2] ?? '?' });
       }
     }
     return out;
   }, [tvShows, dateStr]);
+
+  /** Every watch logged on this day, across shows - what the header counts. */
+  const watchesOnThisDay = useMemo(
+    () => episodesOnThisDay.reduce((total, item) => total + item.stamps.length, 0),
+    [episodesOnThisDay],
+  );
 
   const isoForDate = () => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 12).toISOString();
 
@@ -110,12 +130,9 @@ export default function ManageTVCompletions() {
     setSaving(true);
     try {
       const iso = isoForDate();
-      const episodesWatched = { ...(selectedShow.episodesWatched || {}) };
-      const episodeWatchDates = { ...(selectedShow.episodeWatchDates || {}) };
-      for (const key of selectedKeys) {
-        episodesWatched[key] = true;
-        episodeWatchDates[key] = iso;
-      }
+      let episodeWatchDates = normalizeEpisodeWatchDates(selectedShow.episodeWatchDates);
+      for (const key of selectedKeys) episodeWatchDates = logEpisodeWatch(episodeWatchDates, key, iso);
+      const episodesWatched = mergeEpisodeMirror(selectedShow.episodesWatched, episodeWatchDates);
       await updateMovie(selectedShow.id, { episodesWatched, episodeWatchDates }, { silent: true });
       setSelectedKeys([]);
       setSelectedShow(null);
@@ -124,10 +141,54 @@ export default function ManageTVCompletions() {
     }
   };
 
-  const removeEpisode = async (show: Movie, key: string) => {
-    const episodeWatchDates = { ...(show.episodeWatchDates || {}) };
-    delete episodeWatchDates[key];
-    await updateMovie(show.id, { episodeWatchDates }, { silent: true });
+  /** Writes a log back, keeping the mirror truthful about what is left. */
+  const writeLog = async (show: Movie, episodeWatchDates: ReturnType<typeof normalizeEpisodeWatchDates>, dropped: string[]) => {
+    // Losing an episode's last stamp is the user unwatching it, so its tick goes
+    // too - every other episode keeps whatever the mirror already held.
+    const episodesWatched = mergeEpisodeMirror(show.episodesWatched, episodeWatchDates);
+    for (const key of dropped) {
+      if (!episodeWatchDates[key]) delete episodesWatched[key];
+    }
+    await updateMovie(show.id, { episodeWatchDates, episodesWatched }, { silent: true });
+  };
+
+  /** Drops one watch - the newest of the ones logged on this day. */
+  const removeOneWatch = async (show: Movie, key: string, stamps: string[]) => {
+    const newest = stamps[stamps.length - 1];
+    await writeLog(show, unlogEpisodeWatch(normalizeEpisodeWatchDates(show.episodeWatchDates), key, newest), [key]);
+  };
+
+  /** Drops every watch of one episode logged on this day, mis-taps included. */
+  const removeEpisodeDay = async (show: Movie, key: string, stamps: string[]) => {
+    let log = normalizeEpisodeWatchDates(show.episodeWatchDates);
+    for (const stamp of stamps) log = unlogEpisodeWatch(log, key, stamp);
+    await writeLog(show, log, [key]);
+  };
+
+  /**
+   * Clears the whole day. "Rewatch season" moves every episode at once, so a
+   * mis-tap lands dozens of stamps; undoing that one row at a time is not a fix.
+   */
+  const clearDay = async () => {
+    setClearing(true);
+    try {
+      const byShow = new Map<string, { show: Movie; items: typeof episodesOnThisDay }>();
+      for (const item of episodesOnThisDay) {
+        const bucket = byShow.get(item.show.id);
+        if (bucket) bucket.items.push(item);
+        else byShow.set(item.show.id, { show: item.show, items: [item] });
+      }
+      for (const { show, items } of byShow.values()) {
+        let log = normalizeEpisodeWatchDates(show.episodeWatchDates);
+        for (const item of items) {
+          for (const stamp of item.stamps) log = unlogEpisodeWatch(log, item.key, stamp);
+        }
+        await writeLog(show, log, items.map((i) => i.key));
+      }
+      setConfirmClear(false);
+    } finally {
+      setClearing(false);
+    }
   };
 
   const prettyDate = selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -148,7 +209,8 @@ export default function ManageTVCompletions() {
             <View className="mt-0.5 flex-row items-center gap-1.5">
               <Tv size={13} color="hsl(0 0% 63.9%)" />
               <Text className="text-sm text-muted-foreground">
-                {episodesOnThisDay.length} {episodesOnThisDay.length === 1 ? 'episode' : 'episodes'} watched
+                {watchesOnThisDay} {watchesOnThisDay === 1 ? 'episode' : 'episodes'} watched
+                {watchesOnThisDay > episodesOnThisDay.length ? ` · ${episodesOnThisDay.length} distinct` : ''}
               </Text>
             </View>
           </View>
@@ -162,23 +224,48 @@ export default function ManageTVCompletions() {
         {/* Episodes already on this day */}
         {episodesOnThisDay.length > 0 && (
           <View className="gap-3">
-            <Text className="text-lg font-bold text-foreground">Episodes Watched</Text>
+            <View className="flex-row items-center justify-between">
+              <Text className="text-lg font-bold text-foreground">Episodes Watched</Text>
+              <Pressable onPress={() => setConfirmClear(true)} className="rounded-md bg-red-500/20 px-3 py-1.5">
+                <Text className="text-xs font-medium text-red-400">Clear day</Text>
+              </Pressable>
+            </View>
             <View className="gap-2">
-              {episodesOnThisDay.map((item) => (
-                <View key={`${item.show.id}-${item.key}`} className="flex-row items-center justify-between rounded-lg border border-border bg-secondary/40 p-3">
-                  <View className="flex-1">
-                    <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
-                      {item.show.title}
-                    </Text>
-                    <Text className="text-xs text-muted-foreground">
-                      Season {item.season}, Episode {item.episode}
+              {episodesOnThisDay.map((item) => {
+                const total = episodeWatchLog(item.show, item.key).length;
+                return (
+                  <View key={`${item.show.id}-${item.key}`} className="gap-2 rounded-lg border border-border bg-secondary/40 p-3">
+                    <View className="flex-row items-center justify-between gap-3">
+                      <View className="flex-1">
+                        <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+                          {item.show.title}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">
+                          Season {item.season}, Episode {item.episode}
+                          {total > item.stamps.length ? ` · ${total} watches in all` : ''}
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center gap-2">
+                        <Pressable onPress={() => removeOneWatch(item.show, item.key, item.stamps)} className="rounded-md bg-red-500/20 px-3 py-1.5">
+                          <Text className="text-xs font-medium text-red-400">
+                            {item.stamps.length > 1 ? 'Remove one' : 'Remove'}
+                          </Text>
+                        </Pressable>
+                        {item.stamps.length > 1 && (
+                          <Pressable onPress={() => removeEpisodeDay(item.show, item.key, item.stamps)} className="rounded-md bg-red-500/20 px-3 py-1.5">
+                            <Text className="text-xs font-medium text-red-400">All {item.stamps.length}</Text>
+                          </Pressable>
+                        )}
+                      </View>
+                    </View>
+                    {/* The times, so a batch of taps reads as a batch rather than as
+                        a stack of rows that all say the same thing. */}
+                    <Text className="text-[11px] text-muted-foreground">
+                      {item.stamps.length} today · {item.stamps.map((s) => new Date(s).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })).join(', ')}
                     </Text>
                   </View>
-                  <Pressable onPress={() => removeEpisode(item.show, item.key)} className="rounded-md bg-red-500/20 px-3 py-1.5">
-                    <Text className="text-xs font-medium text-red-400">Remove</Text>
-                  </Pressable>
-                </View>
-              ))}
+                );
+              })}
             </View>
           </View>
         )}
@@ -246,6 +333,17 @@ export default function ManageTVCompletions() {
           )}
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={confirmClear}
+        title="Clear this day?"
+        description={`Removes all ${watchesOnThisDay} episode ${watchesOnThisDay === 1 ? 'watch' : 'watches'} logged on ${prettyDate}. Watches on other days are kept.`}
+        confirmLabel="Clear day"
+        destructive
+        loading={clearing}
+        onConfirm={clearDay}
+        onCancel={() => setConfirmClear(false)}
+      />
     </View>
   );
 }

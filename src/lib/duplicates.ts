@@ -7,6 +7,7 @@
 // written*. Manual rows (no tmdbId) are never touched; there is nothing to match
 // them on but a title, and two titles that read alike can be different films.
 
+import { mergeEpisodeMirror, normalizeEpisodeWatchDates, watchedEpisodeCount } from '@/lib/episodes';
 import type { Movie } from '@/types/movie';
 
 export type DuplicateGroup = {
@@ -19,7 +20,7 @@ export type DuplicateGroup = {
 };
 
 function ticked(movie: Movie): number {
-  return Object.values(movie.episodesWatched ?? {}).filter(Boolean).length;
+  return watchedEpisodeCount(movie);
 }
 
 /**
@@ -48,6 +49,35 @@ function mergePatch(keep: Movie, others: Movie[]): Partial<Movie> {
   const patch: Partial<Movie> = {};
   const all = [keep, ...others];
 
+  // Episode stamps are unioned rather than picked: watching seasons 1-2 on one
+  // row and 3 on the other is exactly how a duplicate splits a show, and the
+  // same episode logged on both rows on different days is two real watches.
+  const mergedLog = normalizeEpisodeWatchDates(keep.episodeWatchDates);
+  let episodesChanged = false;
+  for (const other of others) {
+    for (const [key, stamps] of Object.entries(normalizeEpisodeWatchDates(other.episodeWatchDates))) {
+      const union = [...new Set([...(mergedLog[key] ?? []), ...stamps])].sort(
+        (a, b) => Date.parse(a) - Date.parse(b),
+      );
+      if (union.length !== (mergedLog[key]?.length ?? 0)) {
+        mergedLog[key] = union;
+        episodesChanged = true;
+      }
+    }
+  }
+  // Legacy rows carry a tick with no date; unioning the mirrors too keeps those
+  // episodes watched instead of dropping them with the row they lived on.
+  const ticks: Record<string, boolean> = {};
+  for (const m of all) Object.assign(ticks, mergeEpisodeMirror(m.episodesWatched, {}));
+  const mirror = mergeEpisodeMirror(ticks, mergedLog);
+  if (episodesChanged || Object.keys(mirror).length !== Object.keys(keep.episodesWatched ?? {}).length) {
+    patch.episodeWatchDates = mergedLog;
+    patch.episodesWatched = mirror;
+  }
+
+  // Left as the highest of the copies, for shows too: the merge is not an edit,
+  // and the next save through the edit screen re-derives a series' count from
+  // the log this just unioned.
   const timesWatched = Math.max(...all.map((m) => m.timesWatched ?? 0));
   if (timesWatched !== keep.timesWatched) patch.timesWatched = timesWatched;
 
@@ -72,31 +102,6 @@ function mergePatch(keep: Movie, others: Movie[]): Partial<Movie> {
   if (!keep.notes) {
     const noted = others.find((m) => m.notes);
     if (noted) patch.notes = noted.notes;
-  }
-
-  // Episode ticks are unioned rather than picked: watching seasons 1-2 on one
-  // row and 3 on the other is exactly how a duplicate splits a show.
-  const episodesWatched = { ...keep.episodesWatched };
-  const episodeWatchDates = { ...keep.episodeWatchDates };
-  let episodesChanged = false;
-  for (const other of others) {
-    for (const [key, value] of Object.entries(other.episodesWatched ?? {})) {
-      if (value && !episodesWatched[key]) {
-        episodesWatched[key] = true;
-        episodesChanged = true;
-      }
-    }
-    for (const [key, stamp] of Object.entries(other.episodeWatchDates ?? {})) {
-      const merged = earlier(episodeWatchDates[key] ?? null, stamp);
-      if (merged && merged !== episodeWatchDates[key]) {
-        episodeWatchDates[key] = merged;
-        episodesChanged = true;
-      }
-    }
-  }
-  if (episodesChanged) {
-    patch.episodesWatched = episodesWatched;
-    patch.episodeWatchDates = episodeWatchDates;
   }
 
   return patch;
