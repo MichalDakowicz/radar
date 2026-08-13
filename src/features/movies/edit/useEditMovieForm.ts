@@ -6,6 +6,7 @@ import {
   clearEpisodeWatches,
   episodeWatchCount,
   logEpisodeWatch,
+  showWatchCount,
   unlogEpisodeWatch,
   type EpisodeWatchLog,
 } from '@/lib/episodes';
@@ -14,7 +15,7 @@ import { fetchMediaMetadata, searchMedia } from '@/lib/tmdb';
 import { goBackOrHome } from '@/lib/utils';
 import type { Movie } from '@/types/movie';
 
-import { buildMoviePayload, fromMovie, recalcOverall, recalcSeasonsAverage, type EditForm } from './editForm';
+import { absorbUndatedWatches, buildMoviePayload, fromMovie, recalcOverall, recalcSeasonsAverage, type EditForm } from './editForm';
 
 /**
  * All the useState + save/delete logic for the Edit screen (doc 03
@@ -111,12 +112,29 @@ export function useEditMovieForm(movie: Movie | undefined) {
    * A key kept in the mirror without a stamp is a legacy tick that never had a
    * date - it is dropped here only when the user actually unwatches it.
    */
-  const applyLog = (log: EpisodeWatchLog, unwatched: string[] = []) => {
+  const applyLog = (log: EpisodeWatchLog, opts: { unwatched?: string[]; absorb?: boolean } = {}) => {
     if (!form) return;
     const episodesWatched = { ...form.episodesWatched };
-    for (const key of unwatched) delete episodesWatched[key];
+    for (const key of opts.unwatched ?? []) delete episodesWatched[key];
     for (const key of Object.keys(log)) episodesWatched[key] = true;
-    update({ episodeWatchDates: log, episodesWatched });
+
+    // A newly dated pass normally writes down a watch the row already claimed
+    // rather than adding one, so it absorbs an undated watch (editForm). Only
+    // "watched it again" opts out.
+    const undatedWatches =
+      opts.absorb === false
+        ? form.status.undatedWatches
+        : absorbUndatedWatches(
+            form.status.undatedWatches,
+            showWatchCount(form),
+            showWatchCount({ ...form, episodeWatchDates: log, episodesWatched }),
+          );
+
+    update({
+      episodeWatchDates: log,
+      episodesWatched,
+      status: { ...form.status, undatedWatches },
+    });
   };
 
   // Mirrors the movie Watched box: the row toggles the episode, the stepper
@@ -124,7 +142,7 @@ export function useEditMovieForm(movie: Movie | undefined) {
   const toggleEpisodeWatched = (season: number, episodeNumber: number) => {
     if (!form) return;
     const key = episodeKey(season, episodeNumber);
-    if (episodeWatchCount(form, key) > 0) applyLog(clearEpisodeWatches(form.episodeWatchDates, key), [key]);
+    if (episodeWatchCount(form, key) > 0) applyLog(clearEpisodeWatches(form.episodeWatchDates, key), { unwatched: [key] });
     else applyLog(logEpisodeWatch(form.episodeWatchDates, key, new Date().toISOString()));
   };
 
@@ -137,7 +155,7 @@ export function useEditMovieForm(movie: Movie | undefined) {
       return;
     }
     const count = episodeWatchCount(form, key);
-    if (count <= 1) applyLog(clearEpisodeWatches(form.episodeWatchDates, key), [key]);
+    if (count <= 1) applyLog(clearEpisodeWatches(form.episodeWatchDates, key), { unwatched: [key] });
     else applyLog(unlogEpisodeWatch(form.episodeWatchDates, key));
   };
 
@@ -163,7 +181,9 @@ export function useEditMovieForm(movie: Movie | undefined) {
     const now = new Date().toISOString();
     let log = form.episodeWatchDates;
     for (const num of episodeNumbers) log = logEpisodeWatch(log, episodeKey(season, num), now);
-    applyLog(log);
+    // Watched it *again*, so this is an extra watch rather than a record of one
+    // already counted - it must not absorb an undated watch.
+    applyLog(log, { absorb: false });
   };
 
   const save = async () => {

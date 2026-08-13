@@ -150,19 +150,34 @@ describe('computeStats', () => {
     expect(computeStats([show])!.totalHours).toBe(10);
   });
 
-  // The log wins the moment there is one, so the two readings cannot be summed.
-  it('ignores the legacy count once episodes are tracked', () => {
+  // A dated pass is already in the log, so undatedWatches subtracts exactly those
+  // out and the two readings can never be billed twice over.
+  it('bills a dated pass once, never alongside the count it came from', () => {
+    const twice = movie({
+      type: 'tv',
+      watched: true,
+      timesWatched: 2,
+      runtime: 60,
+      numberOfEpisodes: 2,
+      episodeWatchDates: { s1e1: [ISO, ISO_LATER], s1e2: [ISO, ISO_LATER] },
+      episodesWatched: { s1e1: true, s1e2: true },
+    });
+    expect(computeStats([twice])!.totalHours).toBe(4); // 4 episode watches, not 4 + 2 passes
+  });
+
+  // Two of the five passes dated, three only remembered: all five bill.
+  it('bills dated passes from the log and undated ones from the count', () => {
     const show = movie({
       type: 'tv',
       watched: true,
       timesWatched: 5,
-      runtime: 12,
-      numberOfEpisodes: 10,
-      episodeWatchDates: { s1e1: [ISO], s1e2: [ISO] },
+      runtime: 60,
+      numberOfEpisodes: 2,
+      episodeWatchDates: { s1e1: [ISO, ISO_LATER], s1e2: [ISO, ISO_LATER] },
       episodesWatched: { s1e1: true, s1e2: true },
     });
-    expect(computeStats([show])!.totalHours).toBe(0); // 24 min rounds to 0 hours
-    expect(computeStats([{ ...show, runtime: 60 }])!.totalHours).toBe(2);
+    // 4 logged episode watches + 3 undated passes * 2 episodes = 10 hours
+    expect(computeStats([show])!.totalHours).toBe(10);
   });
 
   it('aggregates status, type, genres, decades and ratings', () => {

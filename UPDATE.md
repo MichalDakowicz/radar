@@ -8,14 +8,14 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - Episodes count every watch, so a rewatched episode is logged again instead of staying ticked
 - A watched episode carries a − N + counter, and a season header can rewatch the whole season
-- The day view behind the TV calendar can log an episode you already watched
-- That day view groups an episode's watches with their times, and can clear a whole day
+- Watch status can log a watch with no date, for something you saw before you tracked it
+- The TV calendar's day view can relog a watch, group them by time, or clear a whole day
 
 ### Changed
 
-- A show's watch count is read from its episodes instead of typed into the status box
-- Time watched counts every episode watch, so TV rewatches finally show up in your hours
-- A show watched several times with no episodes tracked still counts all of those hours
+- A watch count is its dated watches plus the ones you only remember, and both count
+- An undated watch adds to your hours and watch count but never to a streak
+- Time watched counts every episode watch, so TV rewatches show up in your hours at last
 
 ### Fixed
 

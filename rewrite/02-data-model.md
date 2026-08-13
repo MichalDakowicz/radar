@@ -111,9 +111,21 @@ all tracking fields as optional and normalize on read.
 | `episodeWatchDates`   | `{ "s1e1": [<iso>, <iso>] }` | The watch log and the source of truth: one stamp per watch, so a rewatched episode keeps every date. `count(key) = dates.length`, `watched(key) = count > 0`. Pre-2.12.0 rows hold one bare stamp (or epoch ms) per key and are coerced on read by `src/lib/episodes.ts`. |
 | `seasonEpisodeCounts` | `{ "<season>": <count> }`    | Cached episode counts per season so "next episode" logic can roll to S(n+1)E1. |
 
-A series' `timesWatched` is derived, not typed in: it is the minimum watch count
-across every episode TMDB lists (`showWatchCount`), so all 62 episodes at 2 means
-the show was watched twice and any episode at 0 means it is not finished.
+`timesWatched` is the **total** watches, and the dated records are a subset of it
+(`src/lib/watchCounts.ts`):
+
+```
+timesWatched = datedPasses + undatedWatches
+datedPasses    tv -> showWatchCount(log)      movie -> completedAt ? 1 : 0
+```
+
+A series' dated count is the minimum watch count across every episode TMDB lists
+(`showWatchCount`), so all 62 episodes at 2 means two dated passes and any episode
+at 0 means no complete dated pass. The remainder is `undatedWatches` — watches with
+no day behind them, which count towards hours and the watch count and are invisible
+to every calendar and streak. That is how "I saw it years ago and never logged it"
+is recorded without moving a streak, and how a pre-2.12.0 row carrying
+`times_watched: 5` with no episode data keeps its five.
 
 Season details themselves are fetched on demand from TMDB
 (`fetchSeasonDetails(tmdbId, season)`), not stored.

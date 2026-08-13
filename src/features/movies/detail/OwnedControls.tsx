@@ -2,9 +2,8 @@ import { Calculator, RefreshCw } from 'lucide-react-native';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import { StatusPicker } from '@/components/media/StatusPicker';
-import { derivedTimesWatched, type EditForm } from '@/features/movies/edit/editForm';
+import { formDatedPasses, type EditForm } from '@/features/movies/edit/editForm';
 import { RatingSliderPrecise, RatingValue } from '@/features/movies/edit/RatingSlider';
-import { watchedEpisodeCount } from '@/lib/episodes';
 
 const MUTED = 'hsl(0 0% 63.9%)';
 
@@ -18,10 +17,6 @@ type OwnedControlsProps = {
 // where they are in the title and what they thought of it. Everything else on
 // the screen is read-only catalogue data.
 export function OwnedControls({ form, onChange, onAutoCalc }: OwnedControlsProps) {
-  // Only a show with a tracked episode has a count to derive; an untracked one
-  // keeps the stepper, because there is no log to read instead.
-  const tracked = form.type === 'tv' && watchedEpisodeCount(form) > 0;
-
   return (
     <>
       <View className="gap-3">
@@ -29,7 +24,8 @@ export function OwnedControls({ form, onChange, onAutoCalc }: OwnedControlsProps
         <StatusPicker
           value={form.status}
           onChange={(status) => onChange({ status })}
-          derivedCount={tracked ? derivedTimesWatched(form, form.status.watched) : null}
+          datedPasses={formDatedPasses(form)}
+          derived={form.type === 'tv'}
         />
         {form.status.inProgress && (
           <View className="gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">

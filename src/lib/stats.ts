@@ -1,5 +1,6 @@
-import { allEpisodeStamps, totalEpisodeWatches } from '@/lib/episodes';
+import { allEpisodeStamps } from '@/lib/episodes';
 import { isWatched } from '@/lib/movieStatus';
+import { watchedMinutes } from '@/lib/watchCounts';
 import type { Movie } from '@/types/movie';
 
 // Pure stats derivation ported from legacy pages/Stats.jsx's 550-line useMemo.
@@ -161,27 +162,9 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
     if (movie.inProgress) statusCounts.Watching++;
     if (movie.watched || isWatched(movie)) statusCounts.Completed++;
 
-    // Runtime: movies scale by times watched; TV by every episode watch logged.
-    const runtime = movie.runtime || 0;
-    if (t === 'movie') {
-      if (movie.timesWatched > 0) totalRuntimeMinutes += runtime * movie.timesWatched;
-    } else {
-      // The log is the reading whenever there is one: a rewatch is simply more
-      // watches, and timesWatched is derived from the same log for a tracked
-      // series, so adding the two would bill the run twice.
-      const logged = totalEpisodeWatches(movie);
-      if (logged > 0) {
-        totalRuntimeMinutes += runtime * logged;
-      } else if (movie.timesWatched > 0) {
-        // Nothing tracked, so timesWatched is the only record this show was ever
-        // watched - and a show finished five times with no episode dates cannot
-        // be converted into a log without inventing the days those watches fell
-        // on. Bill the count instead of dropping the hours to zero. Same rule as
-        // derivedTimesWatched in features/movies/edit/editForm.
-        const totalEps = movie.numberOfEpisodes || (movie.numberOfSeasons || 1) * 10;
-        totalRuntimeMinutes += runtime * movie.timesWatched * totalEps;
-      }
-    }
+    // Films scale by their watch count; series bill every episode watch logged,
+    // plus a full pass for each watch that never carried a date (lib/watchCounts).
+    totalRuntimeMinutes += watchedMinutes(movie);
 
     const overall = movie.ratings?.overall;
     if (overall && overall > 0) {
