@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { SlideBody } from '@/features/recap/parts/SlideBody';
 import { SlideHeadline } from '@/features/recap/parts/SlideHeadline';
 import { SlideLabel } from '@/features/recap/parts/SlideLabel';
-import { RECAP } from '@/features/recap/recapTheme';
+import { leading, RECAP } from '@/features/recap/recapTheme';
 import type { YearlyRecap } from '@/lib/recap';
 
 type YearGenresSlideProps = { recap: YearlyRecap };
@@ -33,7 +33,7 @@ export function YearGenresSlide({ recap }: YearGenresSlideProps) {
             key={genre.name}
             style={{
               fontSize: genre.fontSize,
-              lineHeight: genre.fontSize * 1.06,
+              lineHeight: leading(genre.fontSize, genre.fontSize * 1.06),
               fontWeight: '700',
               letterSpacing: -genre.fontSize * 0.035,
               color: `rgba(250,250,250,${genre.opacity})`,

@@ -24,7 +24,11 @@ export function YearDecadesSlide({ recap }: YearDecadesSlideProps) {
       </View>
 
       <View>
-        <View className="flex-row items-end justify-between" style={{ gap: 7, height: TRACK + 46 }}>
+        {/* No fixed height: the columns are a bar of a known height between two
+            small labels, so they already align at the foot. Pinning the row to
+            TRACK + 46 left ~2 px of slack, which the count on top lost the
+            moment the system font scale went above 1. */}
+        <View className="flex-row items-end justify-between" style={{ gap: 7 }}>
           {recap.decades.map((decade) => (
             <DecadeColumn key={decade.name} decade={decade} peak={peak} />
           ))}

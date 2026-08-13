@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { SlideLabel } from '@/features/recap/parts/SlideLabel';
-import { RECAP } from '@/features/recap/recapTheme';
+import { leading, RECAP } from '@/features/recap/recapTheme';
 import type { YearlyRecap } from '@/lib/recap';
 
 type YearTotalsSlideProps = { recap: YearlyRecap };
@@ -56,7 +56,7 @@ function Total({ label, value, suffix }: { label: string; value: string; suffix?
       <Text style={{ fontSize: 10, fontWeight: '600', letterSpacing: 1, textTransform: 'uppercase', color: RECAP.muted }}>
         {label}
       </Text>
-      <Text style={{ fontSize: 38, lineHeight: 40, fontWeight: '700', letterSpacing: -1.1, color: RECAP.ink }}>
+      <Text style={{ fontSize: 38, lineHeight: leading(38, 40), fontWeight: '700', letterSpacing: -1.1, color: RECAP.ink }}>
         {value}
         {suffix && <Text style={{ fontSize: 17, fontWeight: '500', color: RECAP.muted }}>{suffix}</Text>}
       </Text>
@@ -71,7 +71,7 @@ function Split({ label, count, color, valueColor }: { label: string; count: numb
         <View style={{ width: 9, height: 9, borderRadius: 99, backgroundColor: color }} />
         <Text style={{ fontSize: 12.5, fontWeight: '600', color: RECAP.muted }}>{label}</Text>
       </View>
-      <Text style={{ fontSize: 34, lineHeight: 36, fontWeight: '300', letterSpacing: -0.7, color: valueColor ?? RECAP.ink }}>
+      <Text style={{ fontSize: 34, lineHeight: leading(34, 36), fontWeight: '300', letterSpacing: -0.7, color: valueColor ?? RECAP.ink }}>
         {count}
       </Text>
     </View>

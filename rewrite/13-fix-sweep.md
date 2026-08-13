@@ -292,6 +292,43 @@ auditable rather than "tidied some text".
 **Test.** Presentational only — no pure logic to unit test. Verified on device across a
 month recap and a year recap, plus a share-card export.
 
+#### Findings — leading, not clipping containers
+
+The sweep found one cause behind every cropped slide, and it is not `overflow-hidden`
+or `numberOfLines`. Android lays a line out in exactly the `lineHeight` it is given, and
+when that is shorter than the font's own ascent + descent (~1.18 em for Roboto) it takes
+the shortfall **off the top of the line** — so a display line loses the caps of its
+glyphs. The recap design leads its display type tight on purpose, and 11 of those
+leadings were under the floor:
+
+| Surface | Leading was | Ratio |
+| --- | --- | --- |
+| `parts/SlideHeadline` | `size × 1.02` — every slide's headline | 1.02 |
+| `MonthCoverSlide` month name / year | 64 and 68 on 74 | 0.87 / 0.92 |
+| `MonthHoursSlide` hours number | 92 on 100 | 0.92 |
+| `YearCoverSlide` "Annual Report" / year | 42 on 44, 92 on 112 | 0.95 / 0.82 |
+| `YearTotalsSlide` total / split | 40 on 38, 36 on 34 | 1.05 / 1.06 |
+| `YearRewatchSlide` title / classification | 26 on 24, 32 on 30 | 1.08 / 1.07 |
+| `MonthFilmSlide` film title | 28 on 26 | 1.08 |
+| `YearMasterpiecesSlide` title | 27 on 24 | 1.13 |
+| `YearGenresSlide` genre words | `size × 1.06` | 1.06 |
+| `ShareCard` headline (the exported image) | 42 on 46 | 0.91 |
+
+**Fixed** with `leading(size, wanted)` in `recapTheme.ts` — the design's number, raised
+to the floor when it is under it — so the rule lives in one place instead of 11 magic
+numbers. The composition is kept by `leadingPull()`, a negative margin giving back
+exactly the height the floor added; applied on the four big numbers (20–40 px of slack)
+and skipped under ~40 px type where the slack is a few px.
+
+`YearDecadesSlide` also pinned its column row to `TRACK + 46` = 216 px for ~214 px of
+content, so the count above each bar dropped out the moment Android's font scale went
+above 1. The fixed height is gone — the columns align at the foot on their own.
+
+**Not at fault.** `numberOfLines` on names and titles (`LeaderRow`, `RecapTile`,
+`YearDirectorsSlide`, `ShareCard` cells) truncates with an ellipsis, which is the
+intended behaviour for a long name, not a crop. The `overflow-hidden` uses are all on
+progress tracks and rounded posters.
+
 ---
 
 ## 6. Episodes get watch counts; a rewatched episode can be logged again

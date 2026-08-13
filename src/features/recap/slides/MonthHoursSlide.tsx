@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
-import { MONO, RECAP } from '@/features/recap/recapTheme';
+import { leading, leadingPull, MONO, RECAP } from '@/features/recap/recapTheme';
 import { ratioOf, type MonthlyRecap } from '@/lib/recap';
 
 type MonthHoursSlideProps = { recap: MonthlyRecap };
@@ -20,7 +20,16 @@ export function MonthHoursSlide({ recap }: MonthHoursSlideProps) {
           You gave {recap.display.charAt(0) + recap.display.slice(1).toLowerCase()}
         </Text>
         <View className="mt-0.5 flex-row items-baseline gap-2">
-          <Text style={{ fontSize: 100, lineHeight: 92, fontWeight: '700', letterSpacing: -5, color: RECAP.ink }}>
+          <Text
+            style={{
+              fontSize: 100,
+              lineHeight: leading(100, 92),
+              marginTop: leadingPull(100, 92),
+              fontWeight: '700',
+              letterSpacing: -5,
+              color: RECAP.ink,
+            }}
+          >
             {recap.hours}
           </Text>
           <Text style={{ fontSize: 26, fontWeight: '600', color: RECAP.muted }}>hrs</Text>

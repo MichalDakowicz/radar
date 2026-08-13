@@ -8,6 +8,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - Confirmation popups sit above the floating nav bar instead of behind it
 - Search boxes in the library filters no longer clip the text you type
+- Recap headlines and big numbers keep their tops instead of being cut off
 
 ## 2.10.0 — 2026-08-09
 

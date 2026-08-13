@@ -31,6 +31,32 @@ export const HEAT_COLORS: readonly string[] = [
   RECAP.tv,
 ] as const;
 
+/**
+ * Smallest line height a recap Text may set, as a multiple of its font size.
+ *
+ * Android lays a line out in exactly the `lineHeight` it is given and, when that
+ * is shorter than the font's own ascent + descent (~1.18em for Roboto), it takes
+ * the missing space off the *top* — which slices the caps off a display line.
+ * The design's tight leading is what caused the cropped recap text, so no slide
+ * sets a leading under this floor.
+ */
+export const MIN_LEADING = 1.18;
+
+/** The design's wanted line height, raised to whatever the font actually needs. */
+export function leading(size: number, wanted: number): number {
+  return Math.max(wanted, size * MIN_LEADING);
+}
+
+/**
+ * Negative margin that gives back the height `leading()` had to add, so a
+ * display line keeps the design's tight composition without the glyphs being
+ * cut. Worth applying on the big numbers, where the difference is 20-40 px;
+ * below ~40 px type the slack is a few px and not worth the complication.
+ */
+export function leadingPull(size: number, wanted: number): number {
+  return wanted - leading(size, wanted);
+}
+
 /** The label face — monospace, matching the design's ui-monospace runs. */
 export const MONO = Platform.select({ android: 'monospace', ios: 'Menlo', default: 'monospace' });
 
