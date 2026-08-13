@@ -9,6 +9,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 - Episodes count every watch, so a rewatched episode is logged again instead of staying ticked
 - A watched episode carries a − N + counter, and a season header can rewatch the whole season
 - The day view behind the TV calendar can log an episode you already watched
+- That day view groups an episode's watches with their times, and can clear a whole day
 
 ### Changed
 
@@ -19,6 +20,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - The evening streak warning only arrives when the week can still break your streak
 - It names how many more you need this week instead of just saying to log something
+- Rewatching a season asks first, so one stray tap no longer logs the whole season again
 
 ## 2.11.0 — 2026-08-13
 

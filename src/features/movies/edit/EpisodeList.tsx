@@ -1,5 +1,8 @@
 import { Check, CheckCircle, Minus, Plus, RotateCcw } from 'lucide-react-native';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 export type TmdbEpisode = {
   id: number;
@@ -37,6 +40,10 @@ export function EpisodeList({
   const watchedCount = episodes.filter((e) => (counts[e.episode_number] ?? 0) > 0).length;
   const progress = episodes.length > 0 ? Math.round((watchedCount / episodes.length) * 100) : 0;
   const seasonComplete = episodes.length > 0 && watchedCount === episodes.length;
+  // One tap moves every episode in the season, and the change is only visible a
+  // row at a time - so it asks first rather than letting a mis-tap land a dozen
+  // stamps that have to be picked back out one by one.
+  const [confirmRewatch, setConfirmRewatch] = useState(false);
 
   return (
     <View className="gap-3">
@@ -57,7 +64,7 @@ export function EpisodeList({
               </Pressable>
             )}
             <Pressable
-              onPress={onRewatchSeason}
+              onPress={() => setConfirmRewatch(true)}
               className="flex-row items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5"
             >
               <RotateCcw size={14} color={MUTED} />
@@ -120,6 +127,18 @@ export function EpisodeList({
           );
         })}
       </View>
+
+      <ConfirmDialog
+        visible={confirmRewatch}
+        title={`Rewatch season ${season}?`}
+        description={`Logs another watch of all ${episodes.length} episodes, dated now. Use the − + on a row to correct a single episode.`}
+        confirmLabel="Log rewatch"
+        onConfirm={() => {
+          setConfirmRewatch(false);
+          onRewatchSeason();
+        }}
+        onCancel={() => setConfirmRewatch(false)}
+      />
     </View>
   );
 }
