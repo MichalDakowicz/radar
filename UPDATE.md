@@ -15,6 +15,11 @@ Written per `UPDATE-schema.md`. Newest version first.
 - A show's watch count is read from its episodes instead of typed into the status box
 - Time watched counts every episode watch, so TV rewatches finally show up in your hours
 
+### Fixed
+
+- The evening streak warning only arrives when the week can still break your streak
+- It names how many more you need this week instead of just saying to log something
+
 ## 2.11.0 — 2026-08-13
 
 ### Added

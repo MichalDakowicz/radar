@@ -32,6 +32,10 @@ export type UserSettings = {
   /** Client-computed streak snapshot the streak-risk generator reads. */
   currentStreak: number;
   streakUpdatedAt: string | null;
+  /** Monday of the week the shortfall below was measured in, `YYYY-MM-DD`. */
+  streakWeekStart: string | null;
+  /** Completions still owed this week to keep the streak. 0 = nothing to warn about. */
+  streakWeekNeeded: number;
 };
 
 export type UserSettingsRow = {
@@ -56,6 +60,8 @@ export type UserSettingsRow = {
   timezone: string | null;
   current_streak: number | null;
   streak_updated_at: string | null;
+  streak_week_start: string | null;
+  streak_week_needed: number | null;
 };
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -80,6 +86,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   timezone: 'UTC',
   currentStreak: 0,
   streakUpdatedAt: null,
+  streakWeekStart: null,
+  streakWeekNeeded: 0,
 };
 
 // Every column added after the initial deploy is nullable on the way in, so a
@@ -117,6 +125,8 @@ export function normalizeSettings(row: UserSettingsRow): UserSettings {
     timezone: row.timezone || 'UTC',
     currentStreak: num(row.current_streak, 0),
     streakUpdatedAt: row.streak_updated_at ?? null,
+    streakWeekStart: row.streak_week_start ?? null,
+    streakWeekNeeded: num(row.streak_week_needed, 0),
   };
 }
 
@@ -142,6 +152,8 @@ const TO_COLUMN: Record<keyof UserSettings, keyof UserSettingsRow> = {
   timezone: 'timezone',
   currentStreak: 'current_streak',
   streakUpdatedAt: 'streak_updated_at',
+  streakWeekStart: 'streak_week_start',
+  streakWeekNeeded: 'streak_week_needed',
 };
 
 /** A patch, keyed by column. Unknown keys are dropped rather than sent. */

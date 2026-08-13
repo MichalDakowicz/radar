@@ -79,7 +79,7 @@ select s.notify_enabled, s.notify_friend_requests, s.notify_friend_activity,
        s.notify_social, s.notify_releases, s.notify_release_lead_days,
        s.notify_streaks, s.notify_nudges,
        s.notify_quiet_start, s.notify_quiet_end, s.timezone,
-       s.current_streak, s.streak_updated_at,
+       s.current_streak, s.streak_updated_at, s.streak_week_start, s.streak_week_needed,
        private.local_hour(s.timezone) as local_hour,
        private.in_quiet_hours(s.notify_quiet_start, s.notify_quiet_end, s.timezone) as quiet_now
   from public.user_settings s
@@ -296,16 +296,19 @@ begin
   raise warning 'release generator wrote % row(s) using tz %', made, fake_tz;
 end $test$;
 
--- 6b. STREAKS — needs current_streak >= 2, a snapshot under 36h old, and
---     nothing logged today. Fakes the first two; if you have logged something
---     today it will correctly write nothing, which is the rule working.
+-- 6b. STREAKS — needs current_streak >= 2, a snapshot under 36h old, this week
+--     still short of the threshold (streak_week_needed > 0, measured in the
+--     current week), and nothing logged today. Fakes everything but the last;
+--     if you have logged something today it will correctly write nothing, which
+--     is the rule working.
 do $test$
 declare
-  me uuid; real_tz text; fake_tz text; real_streak int; real_at timestamptz; made int;
+  me uuid; real_tz text; fake_tz text; real_streak int; real_at timestamptz;
+  real_week date; real_needed int; made int;
 begin
   select user_id into me from public.zz_test_user;
-  select timezone, current_streak, streak_updated_at
-    into real_tz, real_streak, real_at
+  select timezone, current_streak, streak_updated_at, streak_week_start, streak_week_needed
+    into real_tz, real_streak, real_at, real_week, real_needed
     from public.user_settings where user_id = me;
 
   select name into fake_tz from pg_timezone_names
@@ -313,16 +316,52 @@ begin
 
   update public.user_settings
      set timezone = fake_tz, current_streak = greatest(real_streak, 5),
-         streak_updated_at = now()
+         streak_updated_at = now(),
+         streak_week_start = date_trunc('week', private.local_date(fake_tz))::date,
+         streak_week_needed = 2
    where user_id = me;
 
   made := private.generate_streak_notifications();
 
   update public.user_settings
-     set timezone = real_tz, current_streak = real_streak, streak_updated_at = real_at
+     set timezone = real_tz, current_streak = real_streak, streak_updated_at = real_at,
+         streak_week_start = real_week, streak_week_needed = real_needed
    where user_id = me;
 
   raise warning 'streak generator wrote % row(s)', made;
+end $test$;
+
+-- 6c. STREAKS, SAFE WEEK — the same setup with the week already met. Should
+--     write nothing: a quiet evening in a week that has cleared its threshold is
+--     not a streak at risk, and warning on it is the daily-nag bug.
+do $test$
+declare
+  me uuid; real_tz text; fake_tz text; real_streak int; real_at timestamptz;
+  real_week date; real_needed int; made int;
+begin
+  select user_id into me from public.zz_test_user;
+  select timezone, current_streak, streak_updated_at, streak_week_start, streak_week_needed
+    into real_tz, real_streak, real_at, real_week, real_needed
+    from public.user_settings where user_id = me;
+
+  select name into fake_tz from pg_timezone_names
+   where extract(hour from now() at time zone name) = 20 and name like '%/%' limit 1;
+
+  update public.user_settings
+     set timezone = fake_tz, current_streak = greatest(real_streak, 5),
+         streak_updated_at = now(),
+         streak_week_start = date_trunc('week', private.local_date(fake_tz))::date,
+         streak_week_needed = 0
+   where user_id = me;
+
+  made := private.generate_streak_notifications();
+
+  update public.user_settings
+     set timezone = real_tz, current_streak = real_streak, streak_updated_at = real_at,
+         streak_week_start = real_week, streak_week_needed = real_needed
+   where user_id = me;
+
+  raise warning 'safe-week streak generator wrote % row(s) — expected 0', made;
 end $test$;
 
 -- 6c. NUDGES — needs no completed/rating/started activity in three days, and a

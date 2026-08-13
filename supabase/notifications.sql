@@ -79,7 +79,13 @@ alter table public.user_settings
   -- that is not worth re-deriving in SQL), so it snapshots the answer here on
   -- every library load and the generator only decides whether to warn.
   add column if not exists current_streak          int not null default 0,
-  add column if not exists streak_updated_at       timestamptz;
+  add column if not exists streak_updated_at       timestamptz,
+  -- The week that snapshot was measured in, and what it still owes. A streak is
+  -- weekly-threshold based, so an empty day is not risk while the week already
+  -- meets the threshold — without these the generator warns every quiet evening.
+  -- Monday-anchored, matching weekStart() in src/lib/stats.ts.
+  add column if not exists streak_week_start       date,
+  add column if not exists streak_week_needed      int not null default 0;
 
 do $$
 begin
@@ -548,8 +554,15 @@ end $$;
 
 /**
  * "Your streak ends tonight." Fires at 20:00 local when the client's snapshot
- * says a streak is running and nothing has been logged today. The snapshot has
- * to be recent — a week-old one describes a streak that is already long gone.
+ * says a streak is running, this week is still short of the threshold, and
+ * nothing has been logged today. The snapshot has to be recent — a week-old one
+ * describes a streak that is already long gone.
+ *
+ * The week test is the whole point: a streak survives an empty day as long as
+ * its week meets the user's threshold (src/lib/stats.ts), so "nothing today" on
+ * its own is not risk and warning on it turns this into a daily nag. Four films
+ * on Monday with a threshold of two makes the rest of the week safe, and a safe
+ * streak gets no warning.
  */
 create or replace function private.generate_streak_notifications()
 returns integer
@@ -562,13 +575,18 @@ declare
   sent int := 0;
 begin
   for r in
-    select s.user_id, s.current_streak, s.timezone, private.local_date(s.timezone) as today
+    select s.user_id, s.current_streak, s.streak_week_needed, s.timezone,
+           private.local_date(s.timezone) as today
       from public.user_settings s
      where s.notify_enabled
        and s.notify_streaks
        and s.current_streak >= 2
        and s.streak_updated_at is not null
        and s.streak_updated_at > now() - interval '36 hours'
+       -- Short of the threshold, in *this* week. A snapshot left over from last
+       -- week says nothing about tonight, so it is skipped rather than trusted.
+       and s.streak_week_needed > 0
+       and s.streak_week_start = date_trunc('week', private.local_date(s.timezone))::date
        and private.local_hour(s.timezone) = 20
        and not exists (
          select 1 from public.activity a
@@ -582,9 +600,12 @@ begin
       r.user_id,
       'streak_risk',
       r.current_streak::text || '-day streak on the line',
-      'Log something before midnight to keep it alive',
+      case when r.streak_week_needed = 1
+           then 'One more this week to keep it alive'
+           else r.streak_week_needed::text || ' more this week to keep it alive'
+      end,
       'streak_risk:' || r.today::text,
-      jsonb_build_object('streak', r.current_streak)
+      jsonb_build_object('streak', r.current_streak, 'needed', r.streak_week_needed)
     ) is not null then
       sent := sent + 1;
     end if;

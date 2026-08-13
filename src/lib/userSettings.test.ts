@@ -23,6 +23,8 @@ const FULL: UserSettingsRow = {
   timezone: 'Europe/Warsaw',
   current_streak: 12,
   streak_updated_at: '2026-08-02T10:00:00Z',
+  streak_week_start: '2026-07-27',
+  streak_week_needed: 2,
 };
 
 /** What the same row looks like before notifications.sql has been run. */
@@ -54,6 +56,8 @@ describe('normalizeSettings', () => {
       timezone: 'Europe/Warsaw',
       currentStreak: 12,
       streakUpdatedAt: '2026-08-02T10:00:00Z',
+      streakWeekStart: '2026-07-27',
+      streakWeekNeeded: 2,
     });
   });
 
@@ -71,6 +75,14 @@ describe('normalizeSettings', () => {
     expect(settings.notifyFriendActivity).toBe(DEFAULT_SETTINGS.notifyFriendActivity);
     expect(settings.notifyReleaseLeadDays).toBe(DEFAULT_SETTINGS.notifyReleaseLeadDays);
     expect(settings.timezone).toBe('UTC');
+  });
+
+  // The week snapshot columns arrive with the same release as the fixed streak
+  // warning; a row written before it has no week to warn about, not a zero one.
+  it('reads a row with no week snapshot as owing nothing', () => {
+    const settings = normalizeSettings({ ...FULL, streak_week_start: null, streak_week_needed: null });
+    expect(settings.streakWeekStart).toBeNull();
+    expect(settings.streakWeekNeeded).toBe(0);
   });
 
   it('keeps a deliberate false rather than treating it as absent', () => {
