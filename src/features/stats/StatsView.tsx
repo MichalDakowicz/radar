@@ -15,6 +15,7 @@ import { ThinProgressBar } from '@/components/stats/ThinProgressBar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useStats } from '@/features/stats/useStats';
 import { useNavBarSpace } from '@/hooks/useNavBarSpace';
+import type { LibraryFacet } from '@/lib/libraryFacetView';
 import { periodShortLabel, periodStart, scopeMoviesToPeriod, type StatsPeriodId } from '@/lib/statsPeriod';
 import type { ActivityEvent, Movie } from '@/types/movie';
 
@@ -35,6 +36,11 @@ type StatsViewProps = {
   onOpenMovie?: (movie: Movie) => void;
   onManageMovies?: (date: string) => void;
   onManageTV?: (date: string) => void;
+  // Drill-down into the titles behind a stat (doc 13 §2). Own screen only: the
+  // filtered view reads the signed-in user's library, which is the wrong library
+  // to open from somebody else's shelf, so the shelf omits this and every stat
+  // stays inert (director / genre keep their TMDB tap-through).
+  onOpenFacet?: (facet: LibraryFacet, value: string, tmdbId?: number) => void;
   // Own screen passes the user's configured weekly streak thresholds (Phase 9);
   // the public shelf omits them (user_settings is owner-only) so streaks use
   // the defaults.
@@ -55,6 +61,7 @@ export function StatsView({
   onOpenMovie,
   onManageMovies,
   onManageTV,
+  onOpenFacet,
   streakThreshold,
   tvStreakThreshold,
   period = 'all',
@@ -107,19 +114,26 @@ export function StatsView({
 
       {/* Overview grid */}
       <View className="my-6 flex-row flex-wrap gap-x-4 gap-y-8 border-y border-border/50 px-4 py-8">
-        <View className="w-[47%]">
+        {/* Total Items and Completed narrow the library; Time Watched, Avg
+            Rating, Completion and the streaks map to no filter, so they stay
+            plain numbers rather than leading somewhere arbitrary. */}
+        <Pressable className="w-[47%]" disabled={!onOpenFacet} onPress={() => onOpenFacet?.('all', 'all')}>
           <QuickStat value={stats.totalMovies} label="Total Items" icon={<Film size={16} color={MUTED} />} />
-        </View>
+        </Pressable>
         <View className="w-[47%]">
           <QuickStat value={`${stats.totalHours}h`} label="Time Watched" icon={<Clock size={16} color={MUTED} />} />
         </View>
-        <View className="w-[47%]">
+        <Pressable className="w-[47%]" disabled={!onOpenFacet} onPress={() => onOpenFacet?.('status', 'completed')}>
           <QuickStat value={stats.watchedCount} label="Completed" icon={<CheckCircle2 size={16} color={MUTED} />} />
-        </View>
+        </Pressable>
         <Pressable
           className="w-[47%]"
-          disabled={!topGenreId}
-          onPress={() => topGenreId && router.push({ pathname: '/genre/[id]', params: { id: String(topGenreId) } })}
+          // 'N/A' when nothing carries a genre - nothing to drill into either.
+          disabled={!stats.topGenres[0] || (!onOpenFacet && !topGenreId)}
+          onPress={() => {
+            if (onOpenFacet) onOpenFacet('genre', topGenre, topGenreId);
+            else if (topGenreId) router.push({ pathname: '/genre/[id]', params: { id: String(topGenreId) } });
+          }}
         >
           <QuickStat value={topGenre} label="Top Genre" icon={<Trophy size={16} color={MUTED} />} />
         </Pressable>
@@ -184,7 +198,14 @@ export function StatsView({
         <Text className="mb-6 text-2xl font-bold tracking-tight text-foreground">Status Breakdown</Text>
         <View className="gap-6">
           {stats.sortedStatus.slice(0, 3).map((s) => (
-            <ThinProgressBar key={s.name} label={s.name} value={s.count} max={stats.totalMovies} />
+            <ThinProgressBar
+              key={s.name}
+              label={s.name}
+              value={s.count}
+              max={stats.totalMovies}
+              // 'Watchlist' / 'Watching' / 'Completed' are the facet values verbatim.
+              onPress={onOpenFacet ? () => onOpenFacet('status', s.name.toLowerCase()) : undefined}
+            />
           ))}
         </View>
       </View>
@@ -192,14 +213,22 @@ export function StatsView({
       {/* Content mix */}
       <View className="mb-12 px-4">
         <Text className="mb-6 text-2xl font-bold tracking-tight text-foreground">Content Mix</Text>
-        <ContentMix movieCount={stats.typeCounts.movie} tvCount={stats.typeCounts.tv} total={stats.totalMovies} />
+        <ContentMix
+          movieCount={stats.typeCounts.movie}
+          tvCount={stats.typeCounts.tv}
+          total={stats.totalMovies}
+          onPressType={onOpenFacet ? (type) => onOpenFacet('type', type) : undefined}
+        />
       </View>
 
       {/* Release eras */}
       {stats.sortedDecades.length > 0 && (
         <View className="mb-12 px-4">
           <Text className="mb-6 text-2xl font-bold tracking-tight text-foreground">Release Eras</Text>
-          <DecadeBars decades={stats.sortedDecades} />
+          <DecadeBars
+            decades={stats.sortedDecades}
+            onPressDecade={onOpenFacet ? (decade) => onOpenFacet('decade', decade) : undefined}
+          />
         </View>
       )}
 
@@ -209,7 +238,14 @@ export function StatsView({
           <Text className="mb-6 text-2xl font-bold tracking-tight text-foreground">Most Watched Directors</Text>
           <View>
             {stats.topDirectors.map((d) => (
-              <DirectorItem key={d.name} name={d.name} count={d.count} max={maxDirector} directorId={d.id} />
+              <DirectorItem
+                key={d.name}
+                name={d.name}
+                count={d.count}
+                max={maxDirector}
+                directorId={d.id}
+                onPress={onOpenFacet ? (name, id) => onOpenFacet('director', name, id) : undefined}
+              />
             ))}
           </View>
         </View>
@@ -221,7 +257,14 @@ export function StatsView({
           <Text className="mb-6 text-2xl font-bold tracking-tight text-foreground">Favorite Genres</Text>
           <View className="flex-row flex-wrap gap-3">
             {stats.topGenres.map((g, i) => (
-              <GenreTag key={g.name} name={g.name} count={g.count} rank={genreRank(i)} genreId={g.id} />
+              <GenreTag
+                key={g.name}
+                name={g.name}
+                count={g.count}
+                rank={genreRank(i)}
+                genreId={g.id}
+                onPress={onOpenFacet ? (name, id) => onOpenFacet('genre', name, id) : undefined}
+              />
             ))}
           </View>
         </View>

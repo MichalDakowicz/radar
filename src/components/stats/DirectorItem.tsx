@@ -12,9 +12,11 @@ type DirectorItemProps = {
   count: number;
   max: number;
   directorId?: number;
+  /** Own-stats screen: drill into the titles behind the row instead of TMDB. */
+  onPress?: (name: string, directorId?: number) => void;
 };
 
-export function DirectorItem({ name, count, max, directorId }: DirectorItemProps) {
+export function DirectorItem({ name, count, max, directorId, onPress }: DirectorItemProps) {
   const router = useRouter();
   const { data } = useDirectorDetails(directorId ?? null);
   const profileUrl = data?.profileUrl ?? null;
@@ -28,11 +30,12 @@ export function DirectorItem({ name, count, max, directorId }: DirectorItemProps
   const percent = max > 0 ? (count / max) * 100 : 0;
 
   const goToDirector = () => {
-    if (directorId) router.push({ pathname: '/director/[id]', params: { id: String(directorId) } });
+    if (onPress) onPress(name, directorId);
+    else if (directorId) router.push({ pathname: '/director/[id]', params: { id: String(directorId) } });
   };
 
   return (
-    <Pressable onPress={goToDirector} disabled={!directorId} className="flex-row items-center gap-4 py-3">
+    <Pressable onPress={goToDirector} disabled={!onPress && !directorId} className="flex-row items-center gap-4 py-3">
       <View className="h-12 w-12 overflow-hidden rounded-full border border-border bg-secondary">
         {profileUrl ? (
           <Image source={{ uri: profileUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />

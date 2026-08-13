@@ -7,6 +7,8 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Added
 
 - Library filters can narrow to movies only or TV shows only
+- Tapping a director, genre, era, type or status in Stats lists your own titles behind it
+- That view keeps a button through to the full director or genre page on TMDB
 
 ## 2.10.1 — 2026-08-13
 

@@ -12,6 +12,8 @@ type GenreTagProps = {
   count: number;
   rank: GenreRank;
   genreId?: number;
+  /** Own-stats screen: drill into the titles behind the chip instead of TMDB. */
+  onPress?: (name: string, genreId?: number) => void;
 };
 
 const RANK_STYLES: Record<GenreRank, string> = {
@@ -28,16 +30,17 @@ const RANK_TEXT: Record<GenreRank, string> = {
   low: 'text-muted-foreground/60',
 };
 
-export function GenreTag({ name, count, rank, genreId }: GenreTagProps) {
+export function GenreTag({ name, count, rank, genreId, onPress }: GenreTagProps) {
   const router = useRouter();
   const goToGenre = () => {
-    if (genreId) router.push({ pathname: '/genre/[id]', params: { id: String(genreId) } });
+    if (onPress) onPress(name, genreId);
+    else if (genreId) router.push({ pathname: '/genre/[id]', params: { id: String(genreId) } });
   };
 
   return (
     <Pressable
       onPress={goToGenre}
-      disabled={!genreId}
+      disabled={!onPress && !genreId}
       className={`flex-row items-center gap-2 rounded-full border px-4 py-2.5 ${RANK_STYLES[rank]}`}
     >
       <GenreIcon genre={name} size={14} />
