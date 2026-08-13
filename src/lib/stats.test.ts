@@ -138,6 +138,33 @@ describe('computeStats', () => {
     ).toBe(2);
   });
 
+  // A show finished five times before per-episode tracking existed has no dates
+  // to convert into a log, so the count is the only record of those hours.
+  it('bills an untracked series by its legacy watch count', () => {
+    const show = movie({ type: 'tv', watched: true, timesWatched: 5, runtime: 12, numberOfEpisodes: 10 });
+    expect(computeStats([show])!.totalHours).toBe(10); // 12min * 10 eps * 5 passes
+  });
+
+  it('guesses ten episodes a season when the count is unknown', () => {
+    const show = movie({ type: 'tv', watched: true, timesWatched: 1, runtime: 30, numberOfSeasons: 2 });
+    expect(computeStats([show])!.totalHours).toBe(10);
+  });
+
+  // The log wins the moment there is one, so the two readings cannot be summed.
+  it('ignores the legacy count once episodes are tracked', () => {
+    const show = movie({
+      type: 'tv',
+      watched: true,
+      timesWatched: 5,
+      runtime: 12,
+      numberOfEpisodes: 10,
+      episodeWatchDates: { s1e1: [ISO], s1e2: [ISO] },
+      episodesWatched: { s1e1: true, s1e2: true },
+    });
+    expect(computeStats([show])!.totalHours).toBe(0); // 24 min rounds to 0 hours
+    expect(computeStats([{ ...show, runtime: 60 }])!.totalHours).toBe(2);
+  });
+
   it('aggregates status, type, genres, decades and ratings', () => {
     const movies = [
       movie({

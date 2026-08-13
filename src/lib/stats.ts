@@ -166,10 +166,21 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
     if (t === 'movie') {
       if (movie.timesWatched > 0) totalRuntimeMinutes += runtime * movie.timesWatched;
     } else {
-      // The episode log is the only reading now (lib/episodes), so a rewatch is
-      // simply more watches. timesWatched is derived from the same log for a
-      // series, and adding it here would bill the run twice.
-      totalRuntimeMinutes += runtime * totalEpisodeWatches(movie);
+      // The log is the reading whenever there is one: a rewatch is simply more
+      // watches, and timesWatched is derived from the same log for a tracked
+      // series, so adding the two would bill the run twice.
+      const logged = totalEpisodeWatches(movie);
+      if (logged > 0) {
+        totalRuntimeMinutes += runtime * logged;
+      } else if (movie.timesWatched > 0) {
+        // Nothing tracked, so timesWatched is the only record this show was ever
+        // watched - and a show finished five times with no episode dates cannot
+        // be converted into a log without inventing the days those watches fell
+        // on. Bill the count instead of dropping the hours to zero. Same rule as
+        // derivedTimesWatched in features/movies/edit/editForm.
+        const totalEps = movie.numberOfEpisodes || (movie.numberOfSeasons || 1) * 10;
+        totalRuntimeMinutes += runtime * movie.timesWatched * totalEps;
+      }
     }
 
     const overall = movie.ratings?.overall;

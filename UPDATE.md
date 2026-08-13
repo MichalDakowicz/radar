@@ -15,6 +15,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - A show's watch count is read from its episodes instead of typed into the status box
 - Time watched counts every episode watch, so TV rewatches finally show up in your hours
+- A show watched several times with no episodes tracked still counts all of those hours
 
 ### Fixed
 
