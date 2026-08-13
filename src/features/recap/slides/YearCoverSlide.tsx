@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 
-import { MONO, RECAP } from '@/features/recap/recapTheme';
+import { leading, MONO, RECAP } from '@/features/recap/recapTheme';
 import type { YearlyRecap } from '@/lib/recap';
 
 type YearCoverSlideProps = { recap: YearlyRecap; username: string };
@@ -23,12 +23,27 @@ export function YearCoverSlide({ recap, username }: YearCoverSlideProps) {
           which is where it sits on the printed page the cover is imitating. */}
       <View className="flex-1 justify-end pb-8">
         <Text style={{ fontSize: 15, color: RECAP.muted, letterSpacing: 0.3 }}>The</Text>
-        <Text className="mt-1" style={{ fontSize: 44, lineHeight: 42, fontWeight: '700', letterSpacing: -1.5, color: RECAP.ink }}>
+        <Text
+          style={{
+            fontSize: 44,
+            lineHeight: leading(44, 42),
+            marginTop: 4,
+            fontWeight: '700',
+            letterSpacing: -1.5,
+            color: RECAP.ink,
+          }}
+        >
           Annual{'\n'}Report
         </Text>
         <Text
-          className="mt-3.5"
-          style={{ fontSize: 112, lineHeight: 92, fontWeight: '300', letterSpacing: -6, color: 'rgba(250,250,250,.86)' }}
+          style={{
+            fontSize: 112,
+            lineHeight: leading(112, 92),
+            marginTop: 14,
+            fontWeight: '300',
+            letterSpacing: -6,
+            color: 'rgba(250,250,250,.86)',
+          }}
         >
           {recap.key}
         </Text>

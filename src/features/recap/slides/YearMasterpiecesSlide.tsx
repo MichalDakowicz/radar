@@ -4,7 +4,7 @@ import { RecapPoster } from '@/features/recap/parts/RecapPoster';
 import { SlideBody } from '@/features/recap/parts/SlideBody';
 import { SlideHeadline } from '@/features/recap/parts/SlideHeadline';
 import { SlideLabel } from '@/features/recap/parts/SlideLabel';
-import { RECAP } from '@/features/recap/recapTheme';
+import { leading, RECAP } from '@/features/recap/recapTheme';
 import type { YearlyRecap } from '@/lib/recap';
 
 type YearMasterpiecesSlideProps = { recap: YearlyRecap };
@@ -60,7 +60,7 @@ function SinglePage({ recap, width }: { recap: YearlyRecap; width: number }) {
         <RecapPoster coverUrl={only.coverUrl} title={only.title} width={width} radius={12} />
         <Text
           className="mt-4 text-center"
-          style={{ fontSize: 24, lineHeight: 27, fontWeight: '700', letterSpacing: -0.7, color: RECAP.ink }}
+          style={{ fontSize: 24, lineHeight: leading(24, 27), fontWeight: '700', letterSpacing: -0.7, color: RECAP.ink }}
         >
           {only.title}
         </Text>

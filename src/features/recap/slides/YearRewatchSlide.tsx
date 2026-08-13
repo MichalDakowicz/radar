@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 import { RecapPoster } from '@/features/recap/parts/RecapPoster';
 import { SlideBody } from '@/features/recap/parts/SlideBody';
 import { SlideLabel } from '@/features/recap/parts/SlideLabel';
-import { MONO, RECAP } from '@/features/recap/recapTheme';
+import { leading, MONO, RECAP } from '@/features/recap/recapTheme';
 import type { YearlyRecap } from '@/lib/recap';
 
 type YearRewatchSlideProps = { recap: YearlyRecap };
@@ -22,7 +22,7 @@ export function YearRewatchSlide({ recap }: YearRewatchSlideProps) {
           <View className="flex-row items-center gap-4">
             <RecapPoster coverUrl={rewatch.coverUrl} title={rewatch.title} width={96} />
             <View className="min-w-0 flex-1">
-              <Text style={{ fontSize: 24, lineHeight: 26, fontWeight: '700', letterSpacing: -0.6, color: RECAP.ink }}>
+              <Text style={{ fontSize: 24, lineHeight: leading(24, 26), fontWeight: '700', letterSpacing: -0.6, color: RECAP.ink }}>
                 {rewatch.title}
               </Text>
               <Text className="mt-1.5" style={{ fontSize: 12.5, color: RECAP.muted }}>
@@ -53,7 +53,7 @@ export function YearRewatchSlide({ recap }: YearRewatchSlideProps) {
         >
           YOUR CLASSIFICATION
         </Text>
-        <Text style={{ fontSize: 30, lineHeight: 32, fontWeight: '700', letterSpacing: -0.9, color: RECAP.tvSoft }}>
+        <Text style={{ fontSize: 30, lineHeight: leading(30, 32), fontWeight: '700', letterSpacing: -0.9, color: RECAP.tvSoft }}>
           {classification.name}
         </Text>
         <View className="mt-3">

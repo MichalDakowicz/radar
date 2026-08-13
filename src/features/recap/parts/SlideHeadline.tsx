@@ -1,6 +1,6 @@
 import { Text } from 'react-native';
 
-import { RECAP } from '@/features/recap/recapTheme';
+import { leading, RECAP } from '@/features/recap/recapTheme';
 
 type SlideHeadlineProps = {
   children: string;
@@ -17,7 +17,7 @@ export function SlideHeadline({ children, size = 34, color = RECAP.ink }: SlideH
     <Text
       style={{
         fontSize: size,
-        lineHeight: size * 1.02,
+        lineHeight: leading(size, size * 1.02),
         fontWeight: '700',
         letterSpacing: -size * 0.03,
         color,

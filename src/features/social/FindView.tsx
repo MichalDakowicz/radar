@@ -48,7 +48,7 @@ export function FindView({ friendIds, sentIds, onSendRequest }: FindViewProps) {
           placeholderTextColor="hsl(0 0% 63.9%)"
           autoCapitalize="none"
           aria-label="Search people"
-          className="h-11 flex-1 text-sm text-foreground"
+          className="h-11 flex-1 text-foreground"
         />
       </View>
 

@@ -2,7 +2,7 @@ import { Text, View, useWindowDimensions } from 'react-native';
 
 import { RecapPoster } from '@/features/recap/parts/RecapPoster';
 import { SlideLabel } from '@/features/recap/parts/SlideLabel';
-import { RECAP } from '@/features/recap/recapTheme';
+import { leading, RECAP } from '@/features/recap/recapTheme';
 import { StarRow } from '@/features/social/StarRow';
 import type { MonthlyRecap } from '@/lib/recap';
 
@@ -32,7 +32,7 @@ export function MonthFilmSlide({ recap }: MonthFilmSlideProps) {
           <View className="flex-row items-end gap-4">
             <RecapPoster coverUrl={film.coverUrl} title={film.title} width={112} />
             <View className="min-w-0 flex-1">
-              <Text style={{ fontSize: 26, lineHeight: 28, fontWeight: '700', letterSpacing: -0.65, color: RECAP.ink }}>
+              <Text style={{ fontSize: 26, lineHeight: leading(26, 28), fontWeight: '700', letterSpacing: -0.65, color: RECAP.ink }}>
                 {film.title}
               </Text>
               <Text className="mt-1.5" style={{ fontSize: 12.5, lineHeight: 18, color: RECAP.muted }}>

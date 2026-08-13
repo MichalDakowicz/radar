@@ -53,7 +53,7 @@ export function CommentThread({ comments, composing, onSubmit }: CommentThreadPr
             placeholderTextColor="hsl(0 0% 45%)"
             aria-label="Add a comment"
             maxLength={500}
-            className="h-10 flex-1 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground"
+            className="h-10 flex-1 rounded-lg border border-border bg-secondary px-3 text-foreground"
           />
           <Pressable
             onPress={submit}

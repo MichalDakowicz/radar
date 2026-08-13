@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { SlideLabel } from '@/features/recap/parts/SlideLabel';
-import { RECAP } from '@/features/recap/recapTheme';
+import { leading, RECAP } from '@/features/recap/recapTheme';
 import type { MonthlyRecap } from '@/lib/recap';
 
 type MonthCoverSlideProps = { recap: MonthlyRecap };
@@ -13,12 +13,28 @@ export function MonthCoverSlide({ recap }: MonthCoverSlideProps) {
       <View className="mb-5">
         <SlideLabel>YOUR MONTH IN RADAR</SlideLabel>
       </View>
-      <Text style={{ fontSize: 74, lineHeight: 64, fontWeight: '700', letterSpacing: -3.3, color: RECAP.ink }}>
+      <Text
+        style={{
+          fontSize: 74,
+          lineHeight: leading(74, 64),
+          fontWeight: '700',
+          letterSpacing: -3.3,
+          color: RECAP.ink,
+        }}
+      >
         {recap.display}
       </Text>
       {/* The design outlines the year; React Native has no text stroke, so it
           drops to a ghosted fill at the same weight. */}
-      <Text style={{ fontSize: 74, lineHeight: 68, fontWeight: '300', letterSpacing: -3.3, color: 'rgba(255,255,255,.3)' }}>
+      <Text
+        style={{
+          fontSize: 74,
+          lineHeight: leading(74, 68),
+          fontWeight: '300',
+          letterSpacing: -3.3,
+          color: 'rgba(255,255,255,.3)',
+        }}
+      >
         {recap.year}
       </Text>
 
