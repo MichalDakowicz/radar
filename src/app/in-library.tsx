@@ -70,7 +70,6 @@ export default function InLibraryScreen() {
               title={facetTitle(resolved, value)}
               summary={summary}
               onOpenExternal={openExternal}
-              externalLabel={resolved === 'director' ? 'Open director page' : 'Open genre page'}
             />
           }
           ListEmptyComponent={
