@@ -21,8 +21,18 @@ function ToolbarGroup({ children }: { children: React.ReactNode }) {
 // the Filters / Group / Grid-List pill-groups on the right. Random pick moved
 // to the global Header. Icon-only pill buttons so the row fits phone widths.
 export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters }: LibraryToolbarProps) {
-  const { statusFilter, selectedServices, selectedGenres, selectedDirectors, selectedYears, viewMode, sortDir, setViewMode, toggleSortDir } =
-    useLibraryPrefs();
+  const {
+    statusFilter,
+    typeFilter,
+    selectedServices,
+    selectedGenres,
+    selectedDirectors,
+    selectedYears,
+    viewMode,
+    sortDir,
+    setViewMode,
+    toggleSortDir,
+  } = useLibraryPrefs();
   const isDesktop = useIsDesktop();
   const searchRef = useSearchFocusRegistration();
 
@@ -30,6 +40,7 @@ export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters }: L
   // filter are on, which is what the user has to undo.
   const activeFilterCount =
     (statusFilter !== 'all' ? 1 : 0) +
+    (typeFilter !== 'all' ? 1 : 0) +
     (selectedServices.length > 0 ? 1 : 0) +
     (selectedGenres.length > 0 ? 1 : 0) +
     (selectedDirectors.length > 0 ? 1 : 0) +

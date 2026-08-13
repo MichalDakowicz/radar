@@ -7,7 +7,13 @@ import { FacetFilterRow } from '@/features/library/FacetFilterRow';
 import { useMovies } from '@/hooks/useMovies';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { libraryFacets } from '@/lib/libraryFacets';
-import { type SortBy, type StatusFilter, useLibraryPrefs } from '@/store/libraryPrefs';
+import { type SortBy, type StatusFilter, type TypeFilter, useLibraryPrefs } from '@/store/libraryPrefs';
+
+const TYPE_OPTIONS: { value: TypeFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'movie', label: 'Movies' },
+  { value: 'tv', label: 'TV Shows' },
+];
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -68,6 +74,8 @@ export const LibraryFilterSheet = forwardRef<BottomSheetModal>(function LibraryF
   const {
     statusFilter,
     setStatusFilter,
+    typeFilter,
+    setTypeFilter,
     selectedServices,
     toggleService,
     selectedGenres,
@@ -99,6 +107,12 @@ export const LibraryFilterSheet = forwardRef<BottomSheetModal>(function LibraryF
             <Text className="text-sm text-muted-foreground">Clear All</Text>
           </Pressable>
         </View>
+
+        <FilterRow title="Type">
+          {TYPE_OPTIONS.map((o) => (
+            <FilterChip key={o.value} value={o.value} label={o.label} active={typeFilter === o.value} onPress={setTypeFilter} />
+          ))}
+        </FilterRow>
 
         <FilterRow title="Status">
           {STATUS_OPTIONS.map((o) => (

@@ -4,6 +4,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.11.0 — Unreleased
 
+### Added
+
+- Library filters can narrow to movies only or TV shows only
+
 ## 2.10.1 — 2026-08-13
 
 ### Fixed
