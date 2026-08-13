@@ -202,6 +202,12 @@ is exercised through `supabase/notifications-test.sql`.
 `supabase/notifications.sql` still has to be re-run in the SQL editor for the new
 columns and the new generator body to exist. Called out at hand-off, not automated.
 
+**Shipped in 2.12.0.** `shouldSyncStreak` now takes the whole computed state
+(`{ currentStreak, weekStart, needed }`) rather than a bare number, so a week
+rollover or a paid-off shortfall re-syncs on its own. `notifications-test.sql`
+gained a 6c block that fakes a *met* week and expects zero rows — the case the old
+generator got wrong.
+
 ---
 
 ## 4. Movies / TV shows filter is missing from the library filters
@@ -472,6 +478,26 @@ log/unlog (including unlog at 1 clearing the key), mirror generation. Updated:
 
 **Assumption.** The `s<season>e<episode>` key format is unchanged, and
 `seasonEpisodeCounts` keeps doing its "next episode" job untouched.
+
+#### Shipped in 2.12.0 — two departures from the plan above
+
+**A dateless legacy tick reads as one watch.** Rows written before this carry
+`episodes_watched` ticks with no stamp in the log (bulk imports, the old
+`markSeasonComplete`). Deriving counts from the log alone would have unwatched
+those episodes and taken the hours off, so every helper falls back to the mirror:
+`episodeWatchCount` is `stamps.length || (ticked ? 1 : 0)`. `mergeEpisodeMirror`
+is what keeps them through a save.
+
+**A show with no episode log keeps the count the user typed.** `showWatchCount` is
+0 for an untracked series, and writing that over someone's "watched 2×" would be a
+silent downgrade — Quick Add has no episode tracker at all. So
+`derivedTimesWatched` only takes over once at least one episode is tracked, and
+`StatusPicker` correspondingly keeps its stepper for an untracked show and shows
+the read-only derived count for a tracked one.
+
+`duplicates.ts` also leaves `timesWatched` as the highest of the copies rather than
+re-deriving it: the merge is not an edit, and the next save through the edit screen
+recomputes it from the log the merge just unioned.
 
 ---
 
