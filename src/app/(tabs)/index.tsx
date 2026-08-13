@@ -40,6 +40,7 @@ function LibraryScreen() {
     viewMode,
     gridSize,
     statusFilter,
+    typeFilter,
     selectedServices,
     selectedGenres,
     selectedDirectors,
@@ -54,6 +55,7 @@ function LibraryScreen() {
     movies,
     searchQuery,
     statusFilter,
+    typeFilter,
     selectedServices,
     selectedGenres,
     selectedDirectors,
@@ -69,7 +71,7 @@ function LibraryScreen() {
   // goes back to the top instead of leaving the user parked at an offset that
   // now points into the middle of a different result set.
   const listRef = useScrollToTopOnChange<FlashListRef<Movie>>(
-    [searchQuery, statusFilter, sortBy, sortDir, selectedServices, selectedGenres, selectedDirectors, selectedYears]
+    [searchQuery, statusFilter, typeFilter, sortBy, sortDir, selectedServices, selectedGenres, selectedDirectors, selectedYears]
       .map((part) => (Array.isArray(part) ? part.join(',') : part))
       .join('|'),
   );

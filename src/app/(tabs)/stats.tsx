@@ -58,6 +58,12 @@ function StatsScreen() {
           onOpenMovie={openMovie}
           onManageMovies={(date) => router.push({ pathname: '/manage-completions', params: { date } })}
           onManageTV={(date) => router.push({ pathname: '/manage-tv-completions', params: { date } })}
+          onOpenFacet={(facet, value, tmdbId) =>
+            router.push({
+              pathname: '/in-library',
+              params: { facet, value, ...(tmdbId != null ? { tmdbId: String(tmdbId) } : {}) },
+            })
+          }
         />
       </ContentShell>
     </View>

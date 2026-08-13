@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 
-import { matchesDirectorFilter, matchesGenreFilter, matchesYearFilter } from '@/lib/libraryFacets';
+import { matchesDirectorFilter, matchesGenreFilter, matchesTypeFilter, matchesYearFilter } from '@/lib/libraryFacets';
 import { movieMatchesSearchQuery } from '@/lib/librarySearch';
 import { compareMovies } from '@/lib/librarySort';
 import { isInProgress, isInWatchlist, isRewatch, isWatched } from '@/lib/movieStatus';
 import { effectiveServiceSelection, matchesServiceFilter } from '@/lib/serviceFilter';
 import { selectComingSoon } from '@/lib/upcoming';
-import type { SortBy, SortDir, StatusFilter } from '@/store/libraryPrefs';
+import type { SortBy, SortDir, StatusFilter, TypeFilter } from '@/store/libraryPrefs';
 import type { Movie } from '@/types/movie';
 
 function matchesStatusFilter(movie: Movie, filter: StatusFilter): boolean {
@@ -37,6 +37,7 @@ export type LibraryFilterInput = {
   movies: Movie[];
   searchQuery: string;
   statusFilter: StatusFilter;
+  typeFilter: TypeFilter;
   selectedServices: string[];
   selectedGenres: string[];
   selectedDirectors: string[];
@@ -57,6 +58,7 @@ export function useLibraryFilters({
   movies,
   searchQuery,
   statusFilter,
+  typeFilter,
   selectedServices,
   selectedGenres,
   selectedDirectors,
@@ -99,12 +101,13 @@ export function useLibraryFilters({
     let result = movies;
     if (searchQuery.trim()) result = result.filter((m) => movieMatchesSearchQuery(m, searchQuery));
     result = result.filter((m) => matchesStatusFilter(m, statusFilter));
+    result = result.filter((m) => matchesTypeFilter(m, typeFilter));
     result = result.filter((m) => matchesServiceFilter(m, serviceSelection, ownedServices));
     result = result.filter((m) => matchesGenreFilter(m, selectedGenres));
     result = result.filter((m) => matchesDirectorFilter(m, selectedDirectors));
     result = result.filter((m) => matchesYearFilter(m, selectedYears));
     return [...result].sort((a, b) => compareMovies(a, b, sortBy, sortDir));
-  }, [movies, searchQuery, statusFilter, serviceSelection, ownedServices, selectedGenres, selectedDirectors, selectedYears, sortBy, sortDir]);
+  }, [movies, searchQuery, statusFilter, typeFilter, serviceSelection, ownedServices, selectedGenres, selectedDirectors, selectedYears, sortBy, sortDir]);
 
   const sectionIds = useMemo(() => {
     const ids = new Set<string>();

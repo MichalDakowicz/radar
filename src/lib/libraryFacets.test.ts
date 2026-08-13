@@ -3,6 +3,7 @@ import {
   libraryFacets,
   matchesDirectorFilter,
   matchesGenreFilter,
+  matchesTypeFilter,
   matchesYearFilter,
   movieDirectors,
   movieGenres,
@@ -125,6 +126,33 @@ describe('facet matching', () => {
     const undated = movie('x', { releaseDate: null });
     expect(matchesYearFilter(undated, ['2024'])).toBe(false);
     expect(matchesYearFilter(undated, [])).toBe(true);
+  });
+});
+
+describe('matchesTypeFilter', () => {
+  const film = movie('a');
+  const show = movie('b', { type: 'tv' });
+  const untyped = movie('c', { type: undefined as never });
+
+  it("passes everything on 'all'", () => {
+    expect(matchesTypeFilter(film, 'all')).toBe(true);
+    expect(matchesTypeFilter(show, 'all')).toBe(true);
+    expect(matchesTypeFilter(untyped, 'all')).toBe(true);
+  });
+
+  it('narrows to movies', () => {
+    expect(matchesTypeFilter(film, 'movie')).toBe(true);
+    expect(matchesTypeFilter(show, 'movie')).toBe(false);
+  });
+
+  it('narrows to shows', () => {
+    expect(matchesTypeFilter(show, 'tv')).toBe(true);
+    expect(matchesTypeFilter(film, 'tv')).toBe(false);
+  });
+
+  it('treats a title with no type as a movie', () => {
+    expect(matchesTypeFilter(untyped, 'movie')).toBe(true);
+    expect(matchesTypeFilter(untyped, 'tv')).toBe(false);
   });
 });
 

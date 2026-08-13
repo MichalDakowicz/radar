@@ -12,6 +12,7 @@ export type ViewMode = 'grid' | 'list';
 export type { GridSize };
 export type SortBy = 'title' | 'dateAdded' | 'releaseDate' | 'rating' | 'director' | 'runtime';
 export type StatusFilter = 'all' | 'watchlist' | 'watching' | 'completed' | 'rewatch';
+export type TypeFilter = 'all' | 'movie' | 'tv';
 export type { SortDir };
 
 type LibraryPrefsState = {
@@ -20,6 +21,7 @@ type LibraryPrefsState = {
   sortBy: SortBy;
   sortDir: SortDir;
   statusFilter: StatusFilter;
+  typeFilter: TypeFilter;
   selectedServices: string[];
   selectedGenres: string[];
   selectedDirectors: string[];
@@ -31,6 +33,7 @@ type LibraryPrefsState = {
   setSortBy: (sortBy: SortBy) => void;
   toggleSortDir: () => void;
   setStatusFilter: (statusFilter: StatusFilter) => void;
+  setTypeFilter: (typeFilter: TypeFilter) => void;
   toggleService: (service: string) => void;
   toggleGenre: (genre: string) => void;
   toggleDirector: (director: string) => void;
@@ -50,6 +53,7 @@ export const useLibraryPrefs = create<LibraryPrefsState>()(
       sortBy: 'dateAdded',
       sortDir: SORT_DEFAULT_DIR.dateAdded,
       statusFilter: 'all',
+      typeFilter: 'all',
       selectedServices: [],
       selectedGenres: [],
       selectedDirectors: [],
@@ -63,21 +67,31 @@ export const useLibraryPrefs = create<LibraryPrefsState>()(
       setSortBy: (sortBy) => set({ sortBy, sortDir: SORT_DEFAULT_DIR[sortBy] }),
       toggleSortDir: () => set((state) => ({ sortDir: state.sortDir === 'asc' ? 'desc' : 'asc' })),
       setStatusFilter: (statusFilter) => set({ statusFilter }),
+      setTypeFilter: (typeFilter) => set({ typeFilter }),
       toggleService: (service) => set((state) => ({ selectedServices: toggleIn(state.selectedServices, service) })),
       toggleGenre: (genre) => set((state) => ({ selectedGenres: toggleIn(state.selectedGenres, genre) })),
       toggleDirector: (director) => set((state) => ({ selectedDirectors: toggleIn(state.selectedDirectors, director) })),
       toggleYear: (year) => set((state) => ({ selectedYears: toggleIn(state.selectedYears, year) })),
       resetFilters: () =>
-        set({ statusFilter: 'all', selectedServices: [], selectedGenres: [], selectedDirectors: [], selectedYears: [] }),
+        set({
+          statusFilter: 'all',
+          typeFilter: 'all',
+          selectedServices: [],
+          selectedGenres: [],
+          selectedDirectors: [],
+          selectedYears: [],
+        }),
     }),
     {
       name: 'library-prefs',
       storage: createJSONStorage(() => mmkvStorage),
-      version: 3,
+      version: 4,
       // Older installs stored a reorderMode, a groupBy and a 'custom' sort that
       // no longer exist, and no sortDir at all. 'custom' fell back to
       // newest-added, so date added descending leaves the library in the order
       // it was showing rather than silently reshuffling or inverting it.
+      // v4 added typeFilter, which defaults to 'all' so an existing install
+      // opens on the same unnarrowed library it was left showing.
       migrate: (persisted) => {
         // sortBy is widened, not intersected: an intersection with the current
         // Partial<LibraryPrefsState> would drop the retired 'custom' value.
@@ -89,7 +103,7 @@ export const useLibraryPrefs = create<LibraryPrefsState>()(
         const { reorderMode: _reorderMode, groupBy: _groupBy, ...rest } = stored;
         const sortBy: SortBy = !rest.sortBy || rest.sortBy === 'custom' ? 'dateAdded' : rest.sortBy;
         const sortDir = rest.sortBy === sortBy && rest.sortDir ? rest.sortDir : SORT_DEFAULT_DIR[sortBy];
-        return { ...rest, sortBy, sortDir };
+        return { ...rest, sortBy, sortDir, typeFilter: rest.typeFilter ?? 'all' };
       },
     },
   ),

@@ -78,6 +78,15 @@ export function matchesYearFilter(movie: Movie, selected: string[]): boolean {
   return matchesAny(year ? [year] : [], selected);
 }
 
+/**
+ * Movies-only / shows-only. Anything not explicitly 'tv' is a movie, which is
+ * how `computeStats` buckets types - a row with no type set is a movie.
+ */
+export function matchesTypeFilter(movie: Movie, filter: 'all' | 'movie' | 'tv'): boolean {
+  if (filter === 'all') return true;
+  return (movie.type === 'tv' ? 'tv' : 'movie') === filter;
+}
+
 /** Case-insensitive contains, for narrowing a long facet list in the sheet. */
 export function filterFacets(facets: Facet[], query: string): Facet[] {
   const trimmed = query.trim().toLowerCase();
