@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { SlideLabel } from '@/features/recap/parts/SlideLabel';
-import { leading, leadingPull, RECAP } from '@/features/recap/recapTheme';
+import { leading, RECAP } from '@/features/recap/recapTheme';
 import type { MonthlyRecap } from '@/lib/recap';
 
 type MonthCoverSlideProps = { recap: MonthlyRecap };
@@ -17,7 +17,6 @@ export function MonthCoverSlide({ recap }: MonthCoverSlideProps) {
         style={{
           fontSize: 74,
           lineHeight: leading(74, 64),
-          marginTop: leadingPull(74, 64),
           fontWeight: '700',
           letterSpacing: -3.3,
           color: RECAP.ink,
@@ -31,7 +30,6 @@ export function MonthCoverSlide({ recap }: MonthCoverSlideProps) {
         style={{
           fontSize: 74,
           lineHeight: leading(74, 68),
-          marginTop: leadingPull(74, 68),
           fontWeight: '300',
           letterSpacing: -3.3,
           color: 'rgba(255,255,255,.3)',

@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native';
 
-import { leading, leadingPull, MONO, RECAP } from '@/features/recap/recapTheme';
+import { leading, MONO, RECAP } from '@/features/recap/recapTheme';
 import type { YearlyRecap } from '@/lib/recap';
 
 type YearCoverSlideProps = { recap: YearlyRecap; username: string };
@@ -27,7 +27,7 @@ export function YearCoverSlide({ recap, username }: YearCoverSlideProps) {
           style={{
             fontSize: 44,
             lineHeight: leading(44, 42),
-            marginTop: 4 + leadingPull(44, 42),
+            marginTop: 4,
             fontWeight: '700',
             letterSpacing: -1.5,
             color: RECAP.ink,
@@ -39,7 +39,7 @@ export function YearCoverSlide({ recap, username }: YearCoverSlideProps) {
           style={{
             fontSize: 112,
             lineHeight: leading(112, 92),
-            marginTop: 14 + leadingPull(112, 92),
+            marginTop: 14,
             fontWeight: '300',
             letterSpacing: -6,
             color: 'rgba(250,250,250,.86)',

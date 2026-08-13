@@ -316,9 +316,13 @@ leadings were under the floor:
 
 **Fixed** with `leading(size, wanted)` in `recapTheme.ts` — the design's number, raised
 to the floor when it is under it — so the rule lives in one place instead of 11 magic
-numbers. The composition is kept by `leadingPull()`, a negative margin giving back
-exactly the height the floor added; applied on the four big numbers (20–40 px of slack)
-and skipped under ~40 px type where the slack is a few px.
+numbers. Lines now stand a little taller than the design drew them.
+
+A first attempt also clawed that height back with a negative margin (`leadingPull`), on
+the theory that the glyphs had only been cropped, not moved. On device the big numbers
+then overlapped the label above them: the crop had been *hiding* the overlap, and giving
+the caps back their pixels while pulling the box up puts them straight under the line
+above. The negative margin is gone — the extra height is the room the glyphs need.
 
 `YearDecadesSlide` also pinned its column row to `TRACK + 46` = 216 px for ~214 px of
 content, so the count above each bar dropped out the moment Android's font scale went

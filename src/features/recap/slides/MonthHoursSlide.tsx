@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 
-import { leading, leadingPull, MONO, RECAP } from '@/features/recap/recapTheme';
+import { leading, MONO, RECAP } from '@/features/recap/recapTheme';
 import { ratioOf, type MonthlyRecap } from '@/lib/recap';
 
 type MonthHoursSlideProps = { recap: MonthlyRecap };
@@ -24,7 +24,6 @@ export function MonthHoursSlide({ recap }: MonthHoursSlideProps) {
             style={{
               fontSize: 100,
               lineHeight: leading(100, 92),
-              marginTop: leadingPull(100, 92),
               fontWeight: '700',
               letterSpacing: -5,
               color: RECAP.ink,

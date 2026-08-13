@@ -3,7 +3,7 @@ import { Text, View } from 'react-native';
 
 import { RecapBrandMark } from '@/features/recap/parts/RecapBrandMark';
 import { RecapPoster } from '@/features/recap/parts/RecapPoster';
-import { leading, leadingPull, MONO, RECAP } from '@/features/recap/recapTheme';
+import { leading, MONO, RECAP } from '@/features/recap/recapTheme';
 import type { ShareCardData } from '@/lib/recapShare';
 
 type ShareCardProps = { data: ShareCardData; width: number };
@@ -69,7 +69,7 @@ export function ShareCard({ data, width }: ShareCardProps) {
         </View>
         <Text
           style={{
-            marginTop: 24 * s + leadingPull(46 * s, 42 * s),
+            marginTop: 24 * s,
             fontSize: 46 * s,
             lineHeight: leading(46 * s, 42 * s),
             fontWeight: '700',
