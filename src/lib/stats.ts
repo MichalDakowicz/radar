@@ -1,3 +1,4 @@
+import { allEpisodeStamps, totalEpisodeWatches } from '@/lib/episodes';
 import { isWatched } from '@/lib/movieStatus';
 import type { Movie } from '@/types/movie';
 
@@ -57,7 +58,8 @@ export function weekStart(input: Date): Date {
   return d;
 }
 
-function countInWeek(daily: Record<string, number>, start: Date): number {
+/** How much activity a Monday-anchored week holds. */
+export function countInWeek(daily: Record<string, number>, start: Date): number {
   let count = 0;
   for (let i = 0; i < 7; i++) {
     const d = new Date(start);
@@ -159,18 +161,15 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
     if (movie.inProgress) statusCounts.Watching++;
     if (movie.watched || isWatched(movie)) statusCounts.Completed++;
 
-    // Runtime: movies scale by times watched; TV by watched episodes + full rewatches.
+    // Runtime: movies scale by times watched; TV by every episode watch logged.
     const runtime = movie.runtime || 0;
     if (t === 'movie') {
       if (movie.timesWatched > 0) totalRuntimeMinutes += runtime * movie.timesWatched;
     } else {
-      const watchedEps = Object.values(movie.episodesWatched || {}).filter(Boolean).length;
-      const totalEps = movie.numberOfEpisodes || (movie.numberOfSeasons || 1) * 10;
-      // The larger of the two readings, never their sum: a finished series
-      // carries both a full set of ticked episodes *and* a watch count of one,
-      // and adding them would bill you twice for the same run. A rewatch
-      // (timesWatched 2) still outgrows the ticks and wins.
-      totalRuntimeMinutes += runtime * Math.max(watchedEps, movie.timesWatched * totalEps);
+      // The episode log is the only reading now (lib/episodes), so a rewatch is
+      // simply more watches. timesWatched is derived from the same log for a
+      // series, and adding it here would bill the run twice.
+      totalRuntimeMinutes += runtime * totalEpisodeWatches(movie);
     }
 
     const overall = movie.ratings?.overall;
@@ -259,8 +258,10 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
 
   const dailyEpisodes: Record<string, number> = {};
   for (const m of movies) {
-    if (m.type !== 'tv' || !m.episodeWatchDates) continue;
-    for (const ts of Object.values(m.episodeWatchDates)) {
+    if (m.type !== 'tv') continue;
+    // Every stamp, not one per episode: an episode watched again marks the day
+    // it was watched again.
+    for (const ts of allEpisodeStamps(m)) {
       const key = dateKey(ts);
       dailyEpisodes[key] = (dailyEpisodes[key] || 0) + 1;
     }

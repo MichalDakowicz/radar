@@ -107,9 +107,13 @@ all tracking fields as optional and normalize on read.
 
 | Field                 | Shape                        | Notes                                                                          |
 | --------------------- | ---------------------------- | ------------------------------------------------------------------------------ |
-| `episodesWatched`     | `{ "s<season>e<ep>": true }` | Key format `s1e1`.                                                             |
-| `episodeWatchDates`   | `{ "s1e1": <ms> }`           | Timestamp per watched episode (TV streak calendar + ManageTVCompletions).      |
+| `episodesWatched`     | `{ "s<season>e<ep>": true }` | Key format `s1e1`. Derived mirror of the log below — the friend-shelf query reads this column directly. |
+| `episodeWatchDates`   | `{ "s1e1": [<iso>, <iso>] }` | The watch log and the source of truth: one stamp per watch, so a rewatched episode keeps every date. `count(key) = dates.length`, `watched(key) = count > 0`. Pre-2.12.0 rows hold one bare stamp (or epoch ms) per key and are coerced on read by `src/lib/episodes.ts`. |
 | `seasonEpisodeCounts` | `{ "<season>": <count> }`    | Cached episode counts per season so "next episode" logic can roll to S(n+1)E1. |
+
+A series' `timesWatched` is derived, not typed in: it is the minimum watch count
+across every episode TMDB lists (`showWatchCount`), so all 62 episodes at 2 means
+the show was watched twice and any episode at 0 means it is not finished.
 
 Season details themselves are fetched on demand from TMDB
 (`fetchSeasonDetails(tmdbId, season)`), not stored.

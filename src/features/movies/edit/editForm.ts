@@ -1,4 +1,5 @@
 import type { QuickAddStatus } from '@/features/movies/add/useQuickAdd';
+import { mergeEpisodeMirror, showWatchCount, watchedEpisodeCount, type EpisodeWatchLog } from '@/lib/episodes';
 import type { CastMember, MediaType, Movie, NamedRef, Ratings } from '@/types/movie';
 
 export type CategoryRatings = { story: number; acting: number; ending: number; enjoyment: number };
@@ -27,7 +28,7 @@ export type EditForm = {
   numberOfSeasons: number;
   numberOfEpisodes: number;
   episodesWatched: Record<string, boolean>;
-  episodeWatchDates: Record<string, string>;
+  episodeWatchDates: EpisodeWatchLog;
 };
 
 const EMPTY_CATEGORY: CategoryRatings = { story: 0, acting: 0, ending: 0, enjoyment: 0 };
@@ -94,11 +95,23 @@ export function fromMovie(movie: Movie): EditForm {
 
 export type EditSaveResult = { remove: true } | { remove: false; updates: Partial<Movie> };
 
-/** True once every episode TMDB knows about is ticked off. */
+/** True once every episode TMDB knows about has been watched at least once. */
 export function episodesComplete(form: EditForm): boolean {
   if (form.type !== 'tv' || form.numberOfEpisodes <= 0) return false;
-  const ticked = Object.values(form.episodesWatched ?? {}).filter(Boolean).length;
-  return ticked >= form.numberOfEpisodes;
+  return watchedEpisodeCount(form) >= form.numberOfEpisodes;
+}
+
+/**
+ * The watch count a series carries: the fewest times any of its episodes has
+ * been watched (lib/episodes `showWatchCount`), never a number typed into the
+ * status box. A show whose episodes are untracked keeps whatever the user set,
+ * because there is no log to contradict them.
+ */
+export function derivedTimesWatched(form: EditForm, watched: boolean): number {
+  if (form.type !== 'tv') return watched ? form.status.timesWatched || 1 : 0;
+  if (watchedEpisodeCount(form) === 0) return watched ? form.status.timesWatched || 1 : 0;
+  const derived = showWatchCount(form);
+  return watched ? Math.max(1, derived) : derived;
 }
 
 function statusLabel(status: QuickAddStatus): string {
@@ -153,7 +166,7 @@ export function buildMoviePayload(form: EditForm, current: Movie): EditSaveResul
     inWatchlist: status.inWatchlist,
     inProgress: status.inProgress,
     watched: status.watched,
-    timesWatched: status.watched ? status.timesWatched || 1 : 0,
+    timesWatched: derivedTimesWatched(form, status.watched),
     completedAt,
     ratings:
       form.type === 'tv'
@@ -161,7 +174,9 @@ export function buildMoviePayload(form: EditForm, current: Movie): EditSaveResul
         : { ...form.ratings, overall: form.overallRating },
     numberOfSeasons: form.numberOfSeasons,
     numberOfEpisodes: form.numberOfEpisodes,
-    episodesWatched: form.episodesWatched,
+    // The log is written with its mirror, always: the friend shelf reads the
+    // mirror column straight out of Postgres and would otherwise go stale.
+    episodesWatched: mergeEpisodeMirror(form.episodesWatched, form.episodeWatchDates),
     episodeWatchDates: form.episodeWatchDates,
   };
 

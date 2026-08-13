@@ -6,6 +6,8 @@
 //   (the "want to rewatch" case, doc 06 #3).
 // - Default new item: inWatchlist=true, inProgress=false, watched=false.
 
+import { watchedEpisodeCount } from './episodes';
+
 export type StatusFlags = {
   inWatchlist: boolean;
   inProgress: boolean;
@@ -24,6 +26,7 @@ export type MigratableMovie = {
   number_of_episodes?: number;
   numberOfEpisodes?: number | null;
   episodesWatched?: Record<string, boolean>;
+  episodeWatchDates?: Record<string, string[] | string | number>;
 };
 
 export function migrateStatus(movie: MigratableMovie, force = false): StatusFlags {
@@ -63,9 +66,7 @@ export function migrateStatus(movie: MigratableMovie, force = false): StatusFlag
 
       if (movie.type === 'tv' && !watched) {
         const totalEpisodes = movie.number_of_episodes || movie.numberOfEpisodes || 0;
-        const watchedEpisodes = movie.episodesWatched
-          ? Object.values(movie.episodesWatched).filter(Boolean).length
-          : 0;
+        const watchedEpisodes = watchedEpisodeCount(movie);
 
         if (totalEpisodes > 0 && watchedEpisodes >= totalEpisodes) {
           watched = true;
@@ -165,7 +166,8 @@ export function watchProgressPercent(movie: MigratableMovie): number {
   if (isWatched(movie) && !isInProgress(movie)) return 100;
   if (movie.type === 'tv') {
     const total = movie.numberOfEpisodes || movie.number_of_episodes || 0;
-    const watched = movie.episodesWatched ? Object.values(movie.episodesWatched).filter(Boolean).length : 0;
+    // Distinct episodes, not total watches: a rewatch is not extra progress.
+    const watched = watchedEpisodeCount(movie);
     if (total > 0) return Math.min(100, Math.round((watched / total) * 100));
   }
   return 0;

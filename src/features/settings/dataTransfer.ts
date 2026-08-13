@@ -1,3 +1,4 @@
+import { mergeEpisodeMirror, normalizeEpisodeWatchDates } from '@/lib/episodes';
 import type { MediaType, Movie } from '@/types/movie';
 
 // Stable import/export format (doc 03 Settings "Import/Export JSON (stable
@@ -51,7 +52,17 @@ function coerceItem(item: Record<string, unknown>, index: number, errors: string
     errors.push(`Item ${index + 1}: missing title, skipped`);
     return null;
   }
-  return { ...item, title, type: coerceType(item.type) } as PortableMovie;
+  const coerced: Record<string, unknown> = { ...item, title, type: coerceType(item.type) };
+
+  // An export taken before 2.12.0 carries one bare stamp per episode; imports go
+  // straight to the write path, which never sees normalizeMovie (lib/episodes).
+  if (item.episodeWatchDates || item.episodesWatched) {
+    const log = normalizeEpisodeWatchDates(item.episodeWatchDates);
+    coerced.episodeWatchDates = log;
+    coerced.episodesWatched = mergeEpisodeMirror(item.episodesWatched as Record<string, boolean> | null, log);
+  }
+
+  return coerced as PortableMovie;
 }
 
 // Accepts either a Radar export object ({ version, movies: [...] }) or a bare

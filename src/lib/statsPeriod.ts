@@ -1,3 +1,4 @@
+import { episodesWatchedMirror, normalizeEpisodeWatchDates } from '@/lib/episodes';
 import type { Movie } from '@/types/movie';
 
 // Time-period scoping for the Stats screen. Stats used to be all-time only; the
@@ -46,8 +47,9 @@ function isInside(timestamp: string | null | undefined, from: number, until: num
  * - Movies keep their runtime once. `completedAt` only records the latest
  *   completion, so earlier rewatches cannot be placed in a window and are not
  *   counted in one.
- * - Shows keep the episodes whose watch date lands in the window. Full-series
- *   rewatches (`timesWatched`) carry no dates at all, so they are dropped too.
+ * - Shows keep the *stamps* that land in the window, not the episodes: an
+ *   episode watched in June and again in July belongs to July's numbers once.
+ *   `timesWatched` is derived from the whole log, so it is dropped here.
  */
 export function scopeMoviesToPeriod(movies: Movie[], start: Date | null, end: Date | null = null): Movie[] {
   if (!start && !end) return movies;
@@ -66,21 +68,17 @@ export function scopeMoviesToPeriod(movies: Movie[], start: Date | null, end: Da
       continue;
     }
 
-    const episodeWatchDates: Record<string, string> = {};
-    for (const [key, timestamp] of Object.entries(movie.episodeWatchDates || {})) {
-      if (isInside(timestamp, from, until)) episodeWatchDates[key] = timestamp;
+    const episodeWatchDates: Record<string, string[]> = {};
+    for (const [key, stamps] of Object.entries(normalizeEpisodeWatchDates(movie.episodeWatchDates))) {
+      const kept = stamps.filter((stamp) => isInside(stamp, from, until));
+      if (kept.length > 0) episodeWatchDates[key] = kept;
     }
     if (Object.keys(episodeWatchDates).length === 0 && !completedInWindow) continue;
-
-    const episodesWatched: Record<string, boolean> = {};
-    for (const key of Object.keys(episodeWatchDates)) {
-      if (movie.episodesWatched?.[key]) episodesWatched[key] = true;
-    }
 
     scoped.push({
       ...movie,
       episodeWatchDates,
-      episodesWatched,
+      episodesWatched: episodesWatchedMirror(episodeWatchDates),
       timesWatched: 0,
       completedAt: completedInWindow ? movie.completedAt : null,
       watched: completedInWindow ? movie.watched : false,

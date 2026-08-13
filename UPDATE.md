@@ -4,6 +4,17 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.12.0 — Unreleased
 
+### Added
+
+- Episodes count every watch, so a rewatched episode is logged again instead of staying ticked
+- A watched episode carries a − N + counter, and a season header can rewatch the whole season
+- The day view behind the TV calendar can log an episode you already watched
+
+### Changed
+
+- A show's watch count is read from its episodes instead of typed into the status box
+- Time watched counts every episode watch, so TV rewatches finally show up in your hours
+
 ## 2.11.0 — 2026-08-13
 
 ### Added

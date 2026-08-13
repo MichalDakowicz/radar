@@ -8,12 +8,19 @@ export type StatusPickerValue = StatusFlags & { timesWatched: number };
 type StatusPickerProps = {
   value: StatusPickerValue;
   onChange: (next: StatusPickerValue) => void;
+  /**
+   * A series' watch count is the minimum across its episodes (lib/episodes), so
+   * it is shown read-only with the episode tracker named as its source - typing
+   * a 3 into a show whose episodes say once would only be overwritten on save.
+   */
+  derivedCount?: number | null;
 };
 
 // Legacy-style standalone status buttons (watchlist_app EditMovieWatchStatus)
 // instead of a single segmented pill - watchlist/in-progress toggle
 // independently, watched is its own box with a Yes/No + rewatch counter.
-export function StatusPicker({ value, onChange }: StatusPickerProps) {
+export function StatusPicker({ value, onChange, derivedCount = null }: StatusPickerProps) {
+  const derived = derivedCount != null;
   const toggleWatchlist = () => {
     if (value.inWatchlist) onChange({ ...value, inWatchlist: false });
     else onChange({ ...setToWatchlist(value), timesWatched: value.timesWatched });
@@ -63,17 +70,24 @@ export function StatusPicker({ value, onChange }: StatusPickerProps) {
             <Text className={value.watched ? 'font-medium text-green-400' : 'font-medium text-foreground'}>Watched</Text>
           </View>
           <View className="flex-row items-center gap-3">
-            {value.watched && (
-              <View className="flex-row items-center gap-2 rounded-lg bg-black/30 p-1">
-                <Pressable onPress={() => bumpTimesWatched(-1)} className="p-1">
-                  <Minus size={14} color="hsl(0 0% 63.9%)" />
-                </Pressable>
-                <Text className="w-6 text-center font-mono text-sm text-foreground">{value.timesWatched || 1}</Text>
-                <Pressable onPress={() => bumpTimesWatched(1)} className="p-1">
-                  <Plus size={14} color="hsl(0 0% 63.9%)" />
-                </Pressable>
-              </View>
-            )}
+            {value.watched &&
+              (derived ? (
+                <View className="rounded-lg bg-black/30 px-3 py-1.5">
+                  <Text className="font-mono text-sm text-foreground">
+                    {derivedCount}× <Text className="font-sans text-xs text-muted-foreground">watched</Text>
+                  </Text>
+                </View>
+              ) : (
+                <View className="flex-row items-center gap-2 rounded-lg bg-black/30 p-1">
+                  <Pressable onPress={() => bumpTimesWatched(-1)} className="p-1">
+                    <Minus size={14} color="hsl(0 0% 63.9%)" />
+                  </Pressable>
+                  <Text className="w-6 text-center font-mono text-sm text-foreground">{value.timesWatched || 1}</Text>
+                  <Pressable onPress={() => bumpTimesWatched(1)} className="p-1">
+                    <Plus size={14} color="hsl(0 0% 63.9%)" />
+                  </Pressable>
+                </View>
+              ))}
             <Pressable
               onPress={toggleWatched}
               className={`rounded-md border px-2 py-1 ${value.watched ? 'border-green-500/50' : 'border-border'}`}
@@ -84,6 +98,9 @@ export function StatusPicker({ value, onChange }: StatusPickerProps) {
             </Pressable>
           </View>
         </View>
+        {derived && value.watched && (
+          <Text className="mt-2 text-xs text-muted-foreground">Counted from the episode tracker — rewatch a season to raise it</Text>
+        )}
       </View>
     </View>
   );

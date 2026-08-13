@@ -78,7 +78,13 @@ create table if not exists public.movies (
   ratings             jsonb not null default '{}',
   number_of_seasons   int,
   number_of_episodes  int,
+  -- Derived mirror of episode_watch_dates: {"s1e1":true}. Kept because the
+  -- friend-shelf query selects it directly and older clients only read it.
   episodes_watched    jsonb not null default '{}',
+  -- The watch log and the source of truth: one array of ISO stamps per episode
+  -- key, {"s1e1":["2026-08-01T…","2026-08-13T…"]} for an episode watched twice.
+  -- Rows written before 2.12.0 hold a single bare stamp per key; the client
+  -- coerces those on read (src/lib/episodes.ts), so no migration is needed.
   episode_watch_dates jsonb not null default '{}',
   season_episode_counts jsonb not null default '{}',
   tmdb_status         text,

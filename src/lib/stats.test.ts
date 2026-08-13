@@ -7,6 +7,10 @@ import {
 } from './stats';
 import type { Movie } from '@/types/movie';
 
+const ISO = '2024-03-05T12:00:00.000Z';
+const ISO_LATER = '2024-03-06T12:00:00.000Z';
+const ISO_LATEST = '2024-03-07T12:00:00.000Z';
+
 // Minimal Movie factory - only the fields computeStats reads.
 function movie(overrides: Partial<Movie> = {}): Movie {
   return {
@@ -104,22 +108,34 @@ describe('computeStats', () => {
     expect(computeStats([])).toBeNull();
   });
 
-  it('bills a finished series once when it carries both ticks and a watch count', () => {
-    const episodes = { s1e1: true, s1e2: true, s1e3: true, s1e4: true };
+  it('bills a series by every episode watch its log holds', () => {
+    const once = { s1e1: [ISO], s1e2: [ISO], s1e3: [ISO], s1e4: [ISO] };
     const show = movie({
       type: 'tv',
       watched: true,
       timesWatched: 1,
       runtime: 30,
       numberOfEpisodes: 4,
-      episodesWatched: episodes,
+      episodeWatchDates: once,
+      episodesWatched: { s1e1: true, s1e2: true, s1e3: true, s1e4: true },
     });
 
     expect(computeStats([show])!.totalHours).toBe(2);
-    // A second pass is a real rewatch and doubles it.
-    expect(computeStats([{ ...show, timesWatched: 2 }])!.totalHours).toBe(4);
-    // Part-watched still counts only the episodes ticked off.
-    expect(computeStats([{ ...show, watched: false, timesWatched: 0, episodesWatched: { s1e1: true, s1e2: true } }])!.totalHours).toBe(1);
+    // A rewatch of every episode is a second pass through the series.
+    const twice = Object.fromEntries(Object.keys(once).map((key) => [key, [ISO, ISO_LATER]]));
+    expect(computeStats([{ ...show, episodeWatchDates: twice }])!.totalHours).toBe(4);
+    // Part-watched still counts only the episodes actually watched.
+    expect(
+      computeStats([{ ...show, watched: false, timesWatched: 0, episodeWatchDates: { s1e1: [ISO], s1e2: [ISO] }, episodesWatched: {} }])!
+        .totalHours,
+    ).toBe(1);
+    // One episode watched three times is three episodes' worth of runtime, and
+    // timesWatched cannot double-bill it - it is derived from the same log.
+    expect(
+      computeStats([
+        { ...show, watched: false, timesWatched: 0, episodeWatchDates: { s1e1: [ISO, ISO_LATER, ISO_LATEST] }, episodesWatched: {} },
+      ])!.totalHours,
+    ).toBe(2);
   });
 
   it('aggregates status, type, genres, decades and ratings', () => {
@@ -181,14 +197,23 @@ describe('computeStats', () => {
 
   it('buckets completions and episode watches by day', () => {
     const movies = [
-      movie({ watched: true, completedAt: '2024-03-05T12:00:00.000Z' }),
+      movie({ watched: true, completedAt: ISO }),
       movie({
         type: 'tv',
-        episodeWatchDates: { s1e1: '2024-03-05T12:00:00.000Z', s1e2: '2024-03-05T13:00:00.000Z' },
+        episodeWatchDates: { s1e1: [ISO], s1e2: ['2024-03-05T13:00:00.000Z'] },
       }),
     ];
     const stats = computeStats(movies, { now: new Date(2024, 2, 6) })!;
     expect(stats.dailyCompletions['2024-03-05']).toBe(1);
     expect(stats.dailyEpisodes['2024-03-05']).toBe(2);
+  });
+
+  // The point of the log: the second viewing marks the day it happened, so the
+  // TV streak sees two days instead of one.
+  it('marks the day a rewatched episode was watched again', () => {
+    const show = movie({ type: 'tv', episodeWatchDates: { s1e1: [ISO, ISO_LATER] } });
+    const stats = computeStats([show], { now: new Date(2024, 2, 6) })!;
+    expect(stats.dailyEpisodes['2024-03-05']).toBe(1);
+    expect(stats.dailyEpisodes['2024-03-06']).toBe(1);
   });
 });

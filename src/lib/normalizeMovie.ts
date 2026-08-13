@@ -1,3 +1,4 @@
+import { mergeEpisodeMirror, normalizeEpisodeWatchDates } from './episodes';
 import { migrateStatus } from './movieStatus';
 import type { CastMember, Movie, NamedRef, ProductionCompany, Ratings } from '@/types/movie';
 
@@ -33,7 +34,9 @@ export type MovieRow = {
   number_of_seasons: number | null;
   number_of_episodes: number | null;
   episodes_watched: Record<string, boolean> | null;
-  episode_watch_dates: Record<string, string> | null;
+  // A log per episode since 2.12.0; rows written before that carry one bare
+  // stamp per key (and the very oldest carry epoch millis).
+  episode_watch_dates: Record<string, string[] | string | number> | null;
   season_episode_counts: Record<string, number> | null;
   tmdb_status: string | null;
   tagline: string | null;
@@ -49,6 +52,9 @@ export type MovieRow = {
  * flags via migrateStatus so a row can never render in an inconsistent state.
  */
 export function normalizeMovie(row: MovieRow): Movie {
+  const episodeWatchDates = normalizeEpisodeWatchDates(row.episode_watch_dates);
+  const episodesWatched = mergeEpisodeMirror(row.episodes_watched, episodeWatchDates);
+
   const statusFlags = migrateStatus({
     inWatchlist: row.in_watchlist,
     inProgress: row.in_progress,
@@ -57,7 +63,8 @@ export function normalizeMovie(row: MovieRow): Movie {
     timesWatched: row.times_watched,
     type: row.type,
     number_of_episodes: row.number_of_episodes ?? undefined,
-    episodesWatched: row.episodes_watched ?? undefined,
+    episodesWatched,
+    episodeWatchDates,
   });
 
   return {
@@ -96,8 +103,8 @@ export function normalizeMovie(row: MovieRow): Movie {
     addedAt: row.added_at,
     updatedAt: row.updated_at,
 
-    episodesWatched: row.episodes_watched ?? {},
-    episodeWatchDates: row.episode_watch_dates ?? {},
+    episodesWatched,
+    episodeWatchDates,
     seasonEpisodeCounts: row.season_episode_counts ?? {},
   };
 }

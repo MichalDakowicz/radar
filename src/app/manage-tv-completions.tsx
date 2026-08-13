@@ -7,6 +7,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { useSeasonDetails } from '@/hooks/useTmdb';
+import {
+  episodeWatchCount,
+  episodeWatchLog,
+  logEpisodeWatch,
+  mergeEpisodeMirror,
+  normalizeEpisodeWatchDates,
+  unlogEpisodeWatch,
+} from '@/lib/episodes';
 import { dateKey } from '@/lib/stats';
 import { goBackOrHome } from '@/lib/utils';
 import type { Movie } from '@/types/movie';
@@ -44,24 +52,23 @@ function SeasonEpisodePicker({
     <View className="gap-2">
       {episodes.map((ep) => {
         const key = `s${season}e${ep.episode_number}`;
-        const alreadyWatched = !!show.episodesWatched?.[key];
+        // Watched episodes stay pickable: choosing one logs another watch on this
+        // day, which is how a rewatch reaches the streak and the recaps.
+        const watches = episodeWatchCount(show, key);
         const selected = selectedKeys.includes(key);
         return (
           <Pressable
             key={ep.id}
-            disabled={alreadyWatched}
             onPress={() => onToggle(key)}
-            className={`flex-row items-center gap-3 rounded-lg border p-3 ${
-              alreadyWatched ? 'border-border opacity-50' : selected ? 'border-primary bg-primary/10' : 'border-border'
-            }`}
+            className={`flex-row items-center gap-3 rounded-lg border p-3 ${selected ? 'border-primary bg-primary/10' : 'border-border'}`}
           >
             <View className={`h-5 w-5 items-center justify-center rounded border-2 ${selected ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
               {selected && <Check size={12} color="#fff" />}
             </View>
             <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>
               {ep.episode_number}. {ep.name}
-              {alreadyWatched ? '  · watched' : ''}
             </Text>
+            {watches > 0 && <Text className="text-xs text-muted-foreground">watched {watches}×</Text>}
           </Pressable>
         );
       })}
@@ -88,13 +95,17 @@ export default function ManageTVCompletions() {
 
   const tvShows = useMemo(() => movies.filter((m) => m.type === 'tv'), [movies]);
 
+  // One row per *stamp*, not per episode: an episode watched twice on this day
+  // is two entries, and Remove drops the one it sits on.
   const episodesOnThisDay = useMemo(() => {
-    const out: { show: Movie; key: string; season: string; episode: string }[] = [];
+    const out: { show: Movie; key: string; stamp: string; season: string; episode: string }[] = [];
     for (const show of tvShows) {
-      for (const [key, ts] of Object.entries(show.episodeWatchDates || {})) {
-        if (dateKey(ts) !== dateStr) continue;
-        const match = key.match(/s(\d+)e(\d+)/i);
-        out.push({ show, key, season: match?.[1] ?? '?', episode: match?.[2] ?? '?' });
+      for (const [key, stamps] of Object.entries(normalizeEpisodeWatchDates(show.episodeWatchDates))) {
+        for (const stamp of stamps) {
+          if (dateKey(stamp) !== dateStr) continue;
+          const match = key.match(/s(\d+)e(\d+)/i);
+          out.push({ show, key, stamp, season: match?.[1] ?? '?', episode: match?.[2] ?? '?' });
+        }
       }
     }
     return out;
@@ -110,12 +121,9 @@ export default function ManageTVCompletions() {
     setSaving(true);
     try {
       const iso = isoForDate();
-      const episodesWatched = { ...(selectedShow.episodesWatched || {}) };
-      const episodeWatchDates = { ...(selectedShow.episodeWatchDates || {}) };
-      for (const key of selectedKeys) {
-        episodesWatched[key] = true;
-        episodeWatchDates[key] = iso;
-      }
+      let episodeWatchDates = normalizeEpisodeWatchDates(selectedShow.episodeWatchDates);
+      for (const key of selectedKeys) episodeWatchDates = logEpisodeWatch(episodeWatchDates, key, iso);
+      const episodesWatched = mergeEpisodeMirror(selectedShow.episodesWatched, episodeWatchDates);
       await updateMovie(selectedShow.id, { episodesWatched, episodeWatchDates }, { silent: true });
       setSelectedKeys([]);
       setSelectedShow(null);
@@ -124,10 +132,13 @@ export default function ManageTVCompletions() {
     }
   };
 
-  const removeEpisode = async (show: Movie, key: string) => {
-    const episodeWatchDates = { ...(show.episodeWatchDates || {}) };
-    delete episodeWatchDates[key];
-    await updateMovie(show.id, { episodeWatchDates }, { silent: true });
+  const removeEpisode = async (show: Movie, key: string, stamp: string) => {
+    const episodeWatchDates = unlogEpisodeWatch(normalizeEpisodeWatchDates(show.episodeWatchDates), key, stamp);
+    // Dropping the last stamp is the user unwatching that episode, so its tick
+    // goes too - every other episode keeps whatever the mirror already held.
+    const episodesWatched = mergeEpisodeMirror(show.episodesWatched, episodeWatchDates);
+    if (!episodeWatchDates[key]) delete episodesWatched[key];
+    await updateMovie(show.id, { episodeWatchDates, episodesWatched }, { silent: true });
   };
 
   const prettyDate = selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -165,16 +176,17 @@ export default function ManageTVCompletions() {
             <Text className="text-lg font-bold text-foreground">Episodes Watched</Text>
             <View className="gap-2">
               {episodesOnThisDay.map((item) => (
-                <View key={`${item.show.id}-${item.key}`} className="flex-row items-center justify-between rounded-lg border border-border bg-secondary/40 p-3">
+                <View key={`${item.show.id}-${item.key}-${item.stamp}`} className="flex-row items-center justify-between rounded-lg border border-border bg-secondary/40 p-3">
                   <View className="flex-1">
                     <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
                       {item.show.title}
                     </Text>
                     <Text className="text-xs text-muted-foreground">
                       Season {item.season}, Episode {item.episode}
+                      {episodeWatchLog(item.show, item.key).length > 1 ? ' · rewatch' : ''}
                     </Text>
                   </View>
-                  <Pressable onPress={() => removeEpisode(item.show, item.key)} className="rounded-md bg-red-500/20 px-3 py-1.5">
+                  <Pressable onPress={() => removeEpisode(item.show, item.key, item.stamp)} className="rounded-md bg-red-500/20 px-3 py-1.5">
                     <Text className="text-xs font-medium text-red-400">Remove</Text>
                   </Pressable>
                 </View>

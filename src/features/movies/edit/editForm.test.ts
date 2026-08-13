@@ -1,6 +1,9 @@
 import { buildMoviePayload, fromMovie, recalcOverall, recalcSeasonsAverage, type EditForm } from './editForm';
 import type { Movie } from '@/types/movie';
 
+const ISO = '2026-08-01T20:00:00.000Z';
+const LATER = '2026-08-13T21:00:00.000Z';
+
 const BASE_MOVIE: Movie = {
   id: 'm1',
   userId: 'u1',
@@ -154,14 +157,45 @@ describe('fromMovie / buildMoviePayload round trip', () => {
     }
   });
 
-  it('keeps a rewatch count on a finished series rather than flattening it to one', () => {
+  // A series' count is the minimum across its episodes now, so a 3 typed into
+  // the status box while the episodes say once is not the truth about the show.
+  it('derives a series watch count from its episode log, not the status box', () => {
     const show: Movie = { ...BASE_MOVIE, type: 'tv', numberOfEpisodes: 2, watched: true, timesWatched: 3 };
     const form = fromMovie(show);
+    form.episodeWatchDates = { s1e1: [ISO], s1e2: [ISO] };
     form.episodesWatched = { s1e1: true, s1e2: true };
 
     const result = buildMoviePayload(form, show);
     expect(result.remove).toBe(false);
-    if (!result.remove) expect(result.updates.timesWatched).toBe(3);
+    if (!result.remove) expect(result.updates.timesWatched).toBe(1);
+  });
+
+  it('reads a whole-series rewatch off the log', () => {
+    const show: Movie = { ...BASE_MOVIE, type: 'tv', numberOfEpisodes: 2, watched: true, timesWatched: 1 };
+    const form = fromMovie(show);
+    form.episodeWatchDates = { s1e1: [ISO, LATER], s1e2: [ISO, LATER] };
+    form.episodesWatched = { s1e1: true, s1e2: true };
+
+    const result = buildMoviePayload(form, show);
+    expect(result.remove).toBe(false);
+    if (!result.remove) expect(result.updates.timesWatched).toBe(2);
+  });
+
+  it('leaves an untracked show on the count the user set, having nothing to derive from', () => {
+    const show: Movie = { ...BASE_MOVIE, type: 'tv', numberOfEpisodes: 20, watched: true, timesWatched: 2 };
+    const result = buildMoviePayload(fromMovie(show), show);
+    expect(result.remove).toBe(false);
+    if (!result.remove) expect(result.updates.timesWatched).toBe(2);
+  });
+
+  it('writes the episode mirror alongside the log', () => {
+    const show: Movie = { ...BASE_MOVIE, type: 'tv', numberOfEpisodes: 3 };
+    const form = fromMovie(show);
+    form.episodeWatchDates = { s1e1: [ISO] };
+
+    const result = buildMoviePayload(form, show);
+    expect(result.remove).toBe(false);
+    if (!result.remove) expect(result.updates.episodesWatched).toEqual({ s1e1: true });
   });
 
   it('upgrades legacy flat-number season ratings to the object format', () => {

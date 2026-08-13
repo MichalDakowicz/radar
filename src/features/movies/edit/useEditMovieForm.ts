@@ -2,6 +2,13 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
 import { useMovies } from '@/hooks/useMovies';
+import {
+  clearEpisodeWatches,
+  episodeWatchCount,
+  logEpisodeWatch,
+  unlogEpisodeWatch,
+  type EpisodeWatchLog,
+} from '@/lib/episodes';
 import { normalizeAvailability } from '@/lib/services';
 import { fetchMediaMetadata, searchMedia } from '@/lib/tmdb';
 import { goBackOrHome } from '@/lib/utils';
@@ -98,28 +105,65 @@ export function useEditMovieForm(movie: Movie | undefined) {
 
   const episodeKey = (season: number, episodeNumber: number) => `s${season}e${episodeNumber}`;
 
+  /**
+   * The log carries the watches; `episodesWatched` is its mirror and is written
+   * in the same breath, so nothing can read one without the other (lib/episodes).
+   * A key kept in the mirror without a stamp is a legacy tick that never had a
+   * date - it is dropped here only when the user actually unwatches it.
+   */
+  const applyLog = (log: EpisodeWatchLog, unwatched: string[] = []) => {
+    if (!form) return;
+    const episodesWatched = { ...form.episodesWatched };
+    for (const key of unwatched) delete episodesWatched[key];
+    for (const key of Object.keys(log)) episodesWatched[key] = true;
+    update({ episodeWatchDates: log, episodesWatched });
+  };
+
+  // Mirrors the movie Watched box: the row toggles the episode, the stepper
+  // beside it moves the count.
   const toggleEpisodeWatched = (season: number, episodeNumber: number) => {
     if (!form) return;
     const key = episodeKey(season, episodeNumber);
-    const nowWatched = !form.episodesWatched[key];
-    const episodesWatched = { ...form.episodesWatched, [key]: nowWatched };
-    const episodeWatchDates = { ...form.episodeWatchDates };
-    if (nowWatched) episodeWatchDates[key] = new Date().toISOString();
-    else delete episodeWatchDates[key];
-    update({ episodesWatched, episodeWatchDates });
+    if (episodeWatchCount(form, key) > 0) applyLog(clearEpisodeWatches(form.episodeWatchDates, key), [key]);
+    else applyLog(logEpisodeWatch(form.episodeWatchDates, key, new Date().toISOString()));
   };
 
+  /** `+` logs another watch of one episode; `-` drops its latest. */
+  const bumpEpisodeWatch = (season: number, episodeNumber: number, delta: number) => {
+    if (!form) return;
+    const key = episodeKey(season, episodeNumber);
+    if (delta > 0) {
+      applyLog(logEpisodeWatch(form.episodeWatchDates, key, new Date().toISOString()));
+      return;
+    }
+    const count = episodeWatchCount(form, key);
+    if (count <= 1) applyLog(clearEpisodeWatches(form.episodeWatchDates, key), [key]);
+    else applyLog(unlogEpisodeWatch(form.episodeWatchDates, key));
+  };
+
+  /** Fills the gaps: episodes never watched get one stamp, counts are untouched. */
   const markSeasonComplete = (season: number, episodeNumbers: number[]) => {
     if (!form) return;
     const now = new Date().toISOString();
-    const episodesWatched = { ...form.episodesWatched };
-    const episodeWatchDates = { ...form.episodeWatchDates };
+    let log = form.episodeWatchDates;
     for (const num of episodeNumbers) {
       const key = episodeKey(season, num);
-      episodesWatched[key] = true;
-      if (!form.episodesWatched[key]) episodeWatchDates[key] = now;
+      if (episodeWatchCount(form, key) === 0) log = logEpisodeWatch(log, key, now);
     }
-    update({ episodesWatched, episodeWatchDates });
+    applyLog(log);
+  };
+
+  /**
+   * "I watched the season again" - +1 to every episode in it. The show counter is
+   * the minimum across its episodes, so raising the whole season is the only
+   * honest way to raise the show.
+   */
+  const rewatchSeason = (season: number, episodeNumbers: number[]) => {
+    if (!form) return;
+    const now = new Date().toISOString();
+    let log = form.episodeWatchDates;
+    for (const num of episodeNumbers) log = logEpisodeWatch(log, episodeKey(season, num), now);
+    applyLog(log);
   };
 
   const save = async () => {
@@ -156,7 +200,9 @@ export function useEditMovieForm(movie: Movie | undefined) {
     recalcAllSeasonsAverage,
     setSeasonRating,
     toggleEpisodeWatched,
+    bumpEpisodeWatch,
     markSeasonComplete,
+    rewatchSeason,
     save,
     remove,
     isSmartFilling,
