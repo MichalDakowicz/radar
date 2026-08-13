@@ -40,10 +40,9 @@ export function FacetLibraryHeader({ facet, title, summary, onOpenExternal }: Fa
         {!!onOpenExternal && (
           <Pressable
             onPress={onOpenExternal}
-            className="shrink-0 flex-row items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-2"
+            className="h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-secondary"
           >
-            <ExternalLink size={14} color={MUTED} />
-            <Text className="text-sm text-muted-foreground">TMDB</Text>
+            <ExternalLink size={18} color={MUTED} />
           </Pressable>
         )}
       </View>
