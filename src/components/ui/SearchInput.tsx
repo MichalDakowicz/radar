@@ -12,6 +12,14 @@ import { Platform, TextInput, type TextInputProps } from 'react-native';
 // field's own padding classes alone.
 const ANDROID_TEXT_METRICS = Platform.OS === 'android' ? { includeFontPadding: false, textAlignVertical: 'center' as const } : null;
 
-export const SearchInput = forwardRef<TextInput, TextInputProps>(function SearchInput(props, ref) {
-  return <TextInput ref={ref} {...ANDROID_TEXT_METRICS} {...props} />;
+// The font size lives here rather than in each caller's `text-sm`, because
+// NativeWind's text utilities emit a `lineHeight` alongside the size and an
+// explicit lineHeight on an Android TextInput (with includeFontPadding off)
+// clips descenders in a short fixed-height field. Setting the size inline, with
+// no line height, keeps the glyph box the same box the border draws. Callers can
+// still override through their own `style`; padding classes are untouched.
+const TEXT_STYLE = { fontSize: 14, lineHeight: undefined };
+
+export const SearchInput = forwardRef<TextInput, TextInputProps>(function SearchInput({ style, ...props }, ref) {
+  return <TextInput ref={ref} {...ANDROID_TEXT_METRICS} {...props} style={[TEXT_STYLE, style]} />;
 });

@@ -61,7 +61,7 @@ export function FriendsView({ friends, events, freshIds, removing, onRemove, onF
             placeholderTextColor="hsl(0 0% 63.9%)"
             autoCapitalize="none"
             aria-label="Search your friends"
-            className="h-11 flex-1 text-sm text-foreground"
+            className="h-11 flex-1 text-foreground"
           />
         </View>
 

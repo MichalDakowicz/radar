@@ -54,7 +54,7 @@ export function FacetFilterRow({
           onChangeText={setQuery}
           placeholder={searchPlaceholder}
           placeholderTextColor="hsl(0 0% 63.9%)"
-          className="h-9 rounded-lg border border-border bg-secondary px-3 text-sm text-foreground"
+          className="h-10 rounded-lg border border-border bg-secondary px-3 text-foreground"
         />
       )}
 

@@ -48,7 +48,7 @@ export function LibraryToolbar({ searchQuery, onSearchChange, onOpenFilters }: L
           // The hint is the discoverability for the global "/" shortcut.
           placeholder={isDesktop ? 'Search library…    /' : 'Search library…'}
           placeholderTextColor="hsl(0 0% 63.9%)"
-          className="h-10 w-full rounded-lg border border-border bg-secondary pl-10 pr-4 text-sm text-foreground"
+          className="h-10 w-full rounded-lg border border-border bg-secondary pl-10 pr-4 text-foreground"
         />
       </View>
 
