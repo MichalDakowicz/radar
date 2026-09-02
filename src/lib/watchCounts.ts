@@ -56,6 +56,37 @@ export function totalWatches(dated: number, undated: number): number {
 }
 
 /**
+ * What the undated count becomes when the dated records gain passes.
+ *
+ * A new dated pass usually *documents* a watch the row already claimed rather
+ * than adding one: a show carrying "watched 5×" with no episode data, walked
+ * through once with the tracker, is still five watches - one of them now dated.
+ * So a gained pass absorbs an undated one.
+ *
+ * "Rewatch season" is the exception and skips this: that is the user saying they
+ * watched it *again*, which is a sixth watch, not the fifth being written down.
+ */
+export function absorbUndatedWatches(undated: number, datedBefore: number, datedAfter: number): number {
+  const gained = Math.max(0, datedAfter - datedBefore);
+  return Math.max(0, undated - gained);
+}
+
+/**
+ * `timesWatched` after an edit to the dated records alone - a date cleared, a
+ * stamp dropped from the episode log, a day backfilled.
+ *
+ * The total is dated + undated, and only the dated half moved, so the undated
+ * half is carried across. Without that, removing a watch turns it into a watch
+ * that merely lost its date: still counted, still in your hours, invisible to
+ * every calendar - which is the one thing an undated watch is meant to be, on
+ * purpose. A gained pass absorbs, for the reason above.
+ */
+export function retotalWatches(before: WatchCountSource, after: WatchCountSource): number {
+  const dated = datedPasses(after);
+  return totalWatches(dated, absorbUndatedWatches(undatedWatches(before), datedPasses(before), dated));
+}
+
+/**
  * Minutes a title has taken, dated and undated alike.
  *
  * A series bills every episode watch its log holds, plus a full pass of episodes

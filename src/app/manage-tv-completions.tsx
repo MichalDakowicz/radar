@@ -16,7 +16,9 @@ import {
   normalizeEpisodeWatchDates,
   unlogEpisodeWatch,
 } from '@/lib/episodes';
+import { setToUnwatched } from '@/lib/movieStatus';
 import { dateKey } from '@/lib/stats';
+import { retotalWatches } from '@/lib/watchCounts';
 import { goBackOrHome } from '@/lib/utils';
 import type { Movie } from '@/types/movie';
 
@@ -133,7 +135,11 @@ export default function ManageTVCompletions() {
       let episodeWatchDates = normalizeEpisodeWatchDates(selectedShow.episodeWatchDates);
       for (const key of selectedKeys) episodeWatchDates = logEpisodeWatch(episodeWatchDates, key, iso);
       const episodesWatched = mergeEpisodeMirror(selectedShow.episodesWatched, episodeWatchDates);
-      await updateMovie(selectedShow.id, { episodesWatched, episodeWatchDates }, { silent: true });
+      // The count is dated passes plus undated ones, so backfilling a day has to
+      // re-total the row: a pass this completes documents a watch already claimed
+      // and absorbs an undated one, rather than adding a sixth (lib/watchCounts).
+      const timesWatched = retotalWatches(selectedShow, { ...selectedShow, episodeWatchDates, episodesWatched });
+      await updateMovie(selectedShow.id, { episodesWatched, episodeWatchDates, timesWatched }, { silent: true });
       setSelectedKeys([]);
       setSelectedShow(null);
     } finally {
@@ -149,7 +155,15 @@ export default function ManageTVCompletions() {
     for (const key of dropped) {
       if (!episodeWatchDates[key]) delete episodesWatched[key];
     }
-    await updateMovie(show.id, { episodeWatchDates, episodesWatched }, { silent: true });
+    // Dropping a watch has to drop it from the count too. Leaving the count alone
+    // turned the removed watch into an undated one - still billed to your hours,
+    // gone from every calendar - which is not what removing means.
+    const next = { ...show, episodeWatchDates, episodesWatched };
+    const timesWatched = retotalWatches(show, next);
+    // Nothing left to have watched: the flag goes with the last watch, and a show
+    // with episodes still ticked is partway through rather than unstarted.
+    const flags = timesWatched === 0 ? setToUnwatched(next) : {};
+    await updateMovie(show.id, { episodeWatchDates, episodesWatched, timesWatched, ...flags }, { silent: true });
   };
 
   /** Drops one watch - the newest of the ones logged on this day. */

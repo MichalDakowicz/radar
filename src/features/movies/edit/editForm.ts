@@ -1,6 +1,6 @@
 import type { QuickAddStatus } from '@/features/movies/add/useQuickAdd';
 import { mergeEpisodeMirror, showWatchCount, watchedEpisodeCount, type EpisodeWatchLog } from '@/lib/episodes';
-import { datedPasses, totalWatches, undatedWatches } from '@/lib/watchCounts';
+import { absorbUndatedWatches, datedPasses, totalWatches, undatedWatches } from '@/lib/watchCounts';
 import type { CastMember, MediaType, Movie, NamedRef, Ratings } from '@/types/movie';
 
 export type CategoryRatings = { story: number; acting: number; ending: number; enjoyment: number };
@@ -123,22 +123,9 @@ export function formDatedPasses(form: EditForm): number {
  * it comes from the episode tracker - but an undated watch has no episodes and no
  * days behind it, so it is only ever a number.
  */
-/**
- * What the undated count becomes when the episode log gains dated passes.
- *
- * Ticking episodes off usually *documents* a watch the row already claimed rather
- * than adding one: a show carrying "watched 5×" with no episode data, walked
- * through once with the tracker, is still five watches - one of them now dated.
- * So a new dated pass absorbs an undated one.
- *
- * "Rewatch season" is the exception and passes absorb=false: that is the user
- * saying they watched it *again*, which is a sixth watch, not the fifth being
- * written down.
- */
-export function absorbUndatedWatches(undated: number, datedBefore: number, datedAfter: number): number {
-  const gained = Math.max(0, datedAfter - datedBefore);
-  return Math.max(0, undated - gained);
-}
+// The absorb rule moved to lib/watchCounts, where the completion managers reach
+// it too. Re-exported because the hook and its tests import it from here.
+export { absorbUndatedWatches };
 
 export function derivedTimesWatched(form: EditForm, watched: boolean): number {
   if (!watched) return 0;

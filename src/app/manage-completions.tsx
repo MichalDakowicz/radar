@@ -9,8 +9,9 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
-import { isWatched } from '@/lib/movieStatus';
+import { isWatched, setToUnwatched } from '@/lib/movieStatus';
 import { dateKey } from '@/lib/stats';
+import { retotalWatches } from '@/lib/watchCounts';
 import { goBackOrHome } from '@/lib/utils';
 import type { Movie } from '@/types/movie';
 
@@ -61,7 +62,13 @@ export default function ManageCompletions() {
     try {
       const iso = isoForDate();
       for (const id of selectedIds) {
-        await updateMovie(id, { completedAt: iso }, { silent: true });
+        const film = films.find((m) => m.id === id);
+        if (!film) continue;
+        // Dating a film that had no date documents a watch it already claimed, so
+        // the count holds and an undated watch becomes the dated one; a film with
+        // no watches at all gains its first (lib/watchCounts).
+        const timesWatched = retotalWatches(film, { ...film, completedAt: iso });
+        await updateMovie(id, { completedAt: iso, timesWatched }, { silent: true });
       }
       setSelectedIds([]);
       setSearchQuery('');
@@ -74,7 +81,12 @@ export default function ManageCompletions() {
     if (!movieToRemove) return;
     setRemoving(true);
     try {
-      await updateMovie(movieToRemove.id, { completedAt: null }, { silent: true });
+      // Taking the film off this day takes the watch with it. Clearing the date
+      // alone left the watch counted but undated, which is a claim the user never
+      // made - they said it did not happen.
+      const timesWatched = retotalWatches(movieToRemove, { ...movieToRemove, completedAt: null });
+      const flags = timesWatched === 0 ? setToUnwatched(movieToRemove) : {};
+      await updateMovie(movieToRemove.id, { completedAt: null, timesWatched, ...flags }, { silent: true });
       setMovieToRemove(null);
     } finally {
       setRemoving(false);
