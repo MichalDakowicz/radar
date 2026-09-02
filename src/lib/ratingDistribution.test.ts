@@ -7,13 +7,19 @@ function rated(ratings: Ratings): Movie {
 }
 
 describe('ratingBucketIndex', () => {
-  it('puts a score in the half-star bucket it rounds up into', () => {
+  it('puts a score in the half-star bucket below it, unless it is on the mark', () => {
     expect(ratingBucketIndex(0.5)).toBe(1);
-    expect(ratingBucketIndex(0.1)).toBe(1);
-    expect(ratingBucketIndex(3.1)).toBe(7); // 3.5 bucket
     expect(ratingBucketIndex(3.5)).toBe(7);
-    expect(ratingBucketIndex(3.6)).toBe(8); // 4 bucket
+    expect(ratingBucketIndex(3.9)).toBe(7); // still under four stars
+    expect(ratingBucketIndex(4)).toBe(8);
     expect(ratingBucketIndex(5)).toBe(10);
+  });
+
+  it('keeps a score below half a star in the bottom bucket', () => {
+    // Nowhere else to draw it, and it is a rating - dropping it would undercount
+    // the shelf.
+    expect(ratingBucketIndex(0.1)).toBe(1);
+    expect(ratingBucketIndex(0.4)).toBe(1);
   });
 
   it('has no bucket for an unrated title', () => {
