@@ -32,6 +32,7 @@ function makeMovie(over: Partial<Movie> = {}): Movie {
     inProgress: false,
     watched: false,
     timesWatched: 0,
+    watchDates: [],
     completedAt: null,
     lastWatchedPosition: null,
     ratings: {},

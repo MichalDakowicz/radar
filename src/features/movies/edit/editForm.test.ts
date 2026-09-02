@@ -40,6 +40,7 @@ const BASE_MOVIE: Movie = {
   inProgress: false,
   watched: false,
   timesWatched: 0,
+  watchDates: [],
   completedAt: null,
   lastWatchedPosition: null,
   ratings: {},
@@ -101,15 +102,20 @@ describe('fromMovie / buildMoviePayload round trip', () => {
 
   it('leaves an already-watched title undated rather than stamping today', () => {
     // Ticking Watchlist on a title finished long ago (an import with no date)
-    // must not put a mark on today's square in the streak calendar.
+    // must not put a mark on today's square in the streak calendar. The row's one
+    // watch loads as undated, because there is no date on file for it, and nothing
+    // in this save adds a watch.
     const movie: Movie = { ...BASE_MOVIE, watched: true, completedAt: null, timesWatched: 1 };
     const form = fromMovie(movie);
-    form.status = { inWatchlist: true, inProgress: false, watched: true, timesWatched: 1, undatedWatches: 0 };
+    expect(form.status.undatedWatches).toBe(1);
+    form.status = { ...form.status, inWatchlist: true };
 
     const result = buildMoviePayload(form, movie);
     expect(result.remove).toBe(false);
     if (!result.remove) {
       expect(result.updates.completedAt).toBeNull();
+      expect(result.updates.watchDates).toEqual([]);
+      expect(result.updates.timesWatched).toBe(1);
       expect(result.updates.inWatchlist).toBe(true);
     }
   });
@@ -139,6 +145,104 @@ describe('fromMovie / buildMoviePayload round trip', () => {
     if (!result.remove) {
       expect(result.updates.timesWatched).toBe(2);
       expect(result.updates.completedAt).toBe('2019-05-05T00:00:00.000Z');
+    }
+  });
+
+  // The film watch log: a second viewing gets a day of its own, and removing one
+  // leaves the rest dated. Both were impossible while completedAt was the only
+  // record a film had (lib/watchDates).
+  it('logs a rewatch as its own dated watch', () => {
+    const movie: Movie = {
+      ...BASE_MOVIE,
+      watched: true,
+      timesWatched: 1,
+      watchDates: ['2019-05-05T00:00:00.000Z'],
+      completedAt: '2019-05-05T00:00:00.000Z',
+    };
+    const form = fromMovie(movie);
+    form.status = { ...form.status, timesWatched: 2 };
+
+    const result = buildMoviePayload(form, movie);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.watchDates).toHaveLength(2);
+      expect(result.updates.watchDates?.[0]).toBe('2019-05-05T00:00:00.000Z');
+      expect(result.updates.completedAt).toBe(result.updates.watchDates?.[1]);
+      expect(result.updates.timesWatched).toBe(2);
+    }
+  });
+
+  it('takes the newest date off a watch the count just lost', () => {
+    const movie: Movie = {
+      ...BASE_MOVIE,
+      watched: true,
+      timesWatched: 2,
+      watchDates: [ISO, LATER],
+      completedAt: LATER,
+    };
+    const form = fromMovie(movie);
+    form.status = { ...form.status, timesWatched: 1 };
+
+    const result = buildMoviePayload(form, movie);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.watchDates).toEqual([ISO]);
+      expect(result.updates.completedAt).toBe(ISO);
+      expect(result.updates.timesWatched).toBe(1);
+    }
+  });
+
+  it('leaves the log alone on a save that changed no watch', () => {
+    const movie: Movie = {
+      ...BASE_MOVIE,
+      watched: true,
+      timesWatched: 2,
+      watchDates: [ISO, LATER],
+      completedAt: LATER,
+    };
+    const form = fromMovie(movie);
+    form.notes = 'nothing to do with watches';
+
+    const result = buildMoviePayload(form, movie);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.watchDates).toEqual([ISO, LATER]);
+      expect(result.updates.completedAt).toBe(LATER);
+    }
+  });
+
+  it('clears the log when the title is unwatched', () => {
+    const movie: Movie = {
+      ...BASE_MOVIE,
+      inWatchlist: true,
+      watched: true,
+      timesWatched: 1,
+      watchDates: [ISO],
+      completedAt: ISO,
+    };
+    const form = fromMovie(movie);
+    form.status = { ...form.status, watched: false, timesWatched: 0, undatedWatches: 0 };
+
+    const result = buildMoviePayload(form, movie);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.watchDates).toEqual([]);
+      expect(result.updates.completedAt).toBeNull();
+    }
+  });
+
+  it('keeps an undated watch out of the log', () => {
+    const movie: Movie = { ...BASE_MOVIE, watched: true, timesWatched: 1, watchDates: [ISO], completedAt: ISO };
+    const form = fromMovie(movie);
+    // "I had also seen it before I tracked anything" - a second watch, no day.
+    form.status = { ...form.status, timesWatched: 2, undatedWatches: 1 };
+
+    const result = buildMoviePayload(form, movie);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.watchDates).toEqual([ISO]);
+      expect(result.updates.completedAt).toBe(ISO);
+      expect(result.updates.timesWatched).toBe(2);
     }
   });
 

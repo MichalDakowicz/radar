@@ -12,6 +12,7 @@ import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
 import { isWatched, setToUnwatched } from '@/lib/movieStatus';
 import { dateKey } from '@/lib/stats';
 import { retotalWatches } from '@/lib/watchCounts';
+import { latestWatch, logWatch, normalizeWatchDates, watchesOnDay } from '@/lib/watchDates';
 import { goBackOrHome } from '@/lib/utils';
 import type { Movie } from '@/types/movie';
 
@@ -40,9 +41,23 @@ export default function ManageCompletions() {
   // one here would offer to backfill a day the movie streak cannot see.
   const films = useMemo(() => movies.filter((m) => m.type !== 'tv'), [movies]);
 
+  // Off the watch log, so a film watched twice in a week is on both days and
+  // carries only that day's stamps here (lib/watchDates).
   const moviesOnThisDay = useMemo(
-    () => films.filter((m) => m.completedAt && dateKey(m.completedAt) === dateStr),
+    () =>
+      films
+        .map((movie) => ({
+          movie,
+          stamps: watchesOnDay(normalizeWatchDates(movie.watchDates, movie.completedAt), dateStr, dateKey),
+        }))
+        .filter((entry) => entry.stamps.length > 0),
     [films, dateStr],
+  );
+
+  /** Every watch logged on this day, a film watched twice counting twice. */
+  const watchesOnThisDay = useMemo(
+    () => moviesOnThisDay.reduce((total, entry) => total + entry.stamps.length, 0),
+    [moviesOnThisDay],
   );
 
   const results = useMemo(() => {
@@ -64,11 +79,17 @@ export default function ManageCompletions() {
       for (const id of selectedIds) {
         const film = films.find((m) => m.id === id);
         if (!film) continue;
-        // Dating a film that had no date documents a watch it already claimed, so
+        // Appended, not overwritten: the log is what lets a film sit on more than
+        // one day. A pass this dates documents a watch the row already claimed, so
         // the count holds and an undated watch becomes the dated one; a film with
         // no watches at all gains its first (lib/watchCounts).
-        const timesWatched = retotalWatches(film, { ...film, completedAt: iso });
-        await updateMovie(id, { completedAt: iso, timesWatched }, { silent: true });
+        const watchDates = logWatch(normalizeWatchDates(film.watchDates, film.completedAt), iso);
+        const next = { ...film, watchDates };
+        await updateMovie(
+          id,
+          { watchDates, completedAt: latestWatch(watchDates), timesWatched: retotalWatches(film, next) },
+          { silent: true },
+        );
       }
       setSelectedIds([]);
       setSearchQuery('');
@@ -81,12 +102,20 @@ export default function ManageCompletions() {
     if (!movieToRemove) return;
     setRemoving(true);
     try {
-      // Taking the film off this day takes the watch with it. Clearing the date
-      // alone left the watch counted but undated, which is a claim the user never
-      // made - they said it did not happen.
-      const timesWatched = retotalWatches(movieToRemove, { ...movieToRemove, completedAt: null });
+      // Only this day's stamps go. Every other watch keeps its own date, which is
+      // the whole reason a film has a log: clearing the one date used to leave the
+      // rest reading as undated - a claim the user never made.
+      const remaining = normalizeWatchDates(movieToRemove.watchDates, movieToRemove.completedAt).filter(
+        (stamp) => dateKey(stamp) !== dateStr,
+      );
+      const next = { ...movieToRemove, watchDates: remaining };
+      const timesWatched = retotalWatches(movieToRemove, next);
       const flags = timesWatched === 0 ? setToUnwatched(movieToRemove) : {};
-      await updateMovie(movieToRemove.id, { completedAt: null, timesWatched, ...flags }, { silent: true });
+      await updateMovie(
+        movieToRemove.id,
+        { watchDates: remaining, completedAt: latestWatch(remaining), timesWatched, ...flags },
+        { silent: true },
+      );
       setMovieToRemove(null);
     } finally {
       setRemoving(false);
@@ -110,7 +139,8 @@ export default function ManageCompletions() {
             <View className="mt-0.5 flex-row items-center gap-1.5">
               <Film size={13} color="hsl(0 0% 63.9%)" />
               <Text className="text-sm text-muted-foreground">
-                {moviesOnThisDay.length} {moviesOnThisDay.length === 1 ? 'movie' : 'movies'} watched
+                {watchesOnThisDay} {watchesOnThisDay === 1 ? 'movie' : 'movies'} watched
+                {watchesOnThisDay > moviesOnThisDay.length ? ` · ${moviesOnThisDay.length} distinct` : ''}
               </Text>
             </View>
           </View>
@@ -126,7 +156,7 @@ export default function ManageCompletions() {
           <View className="gap-3">
             <Text className="text-lg font-bold text-foreground">Movies Watched</Text>
             <View className="flex-row flex-wrap gap-3">
-              {moviesOnThisDay.map((movie) => (
+              {moviesOnThisDay.map(({ movie, stamps }) => (
                 <View key={movie.id} className="w-[30%]">
                   <Pressable
                     onPress={() => router.push({ pathname: '/edit/[movieId]', params: { movieId: movie.id } })}
@@ -137,6 +167,13 @@ export default function ManageCompletions() {
                     ) : (
                       <View className="flex-1 items-center justify-center p-2">
                         <Text className="text-center text-xs text-muted-foreground">{movie.title}</Text>
+                      </View>
+                    )}
+                    {/* Twice in one day is a real thing to log, and the poster is the
+                        only place it would otherwise be invisible. */}
+                    {stamps.length > 1 && (
+                      <View className="absolute bottom-1.5 left-1.5 rounded bg-black/80 px-1.5 py-0.5">
+                        <Text className="text-[10px] font-bold text-white">{stamps.length}×</Text>
                       </View>
                     )}
                   </Pressable>
@@ -187,7 +224,7 @@ export default function ManageCompletions() {
               <View className="flex-row flex-wrap gap-3">
                 {results.map((movie) => {
                   const selected = selectedIds.includes(movie.id);
-                  const onThisDay = moviesOnThisDay.some((m) => m.id === movie.id);
+                  const onThisDay = moviesOnThisDay.some((entry) => entry.movie.id === movie.id);
                   return (
                     <Pressable
                       key={movie.id}

@@ -1,6 +1,7 @@
 import { allEpisodeStamps } from '@/lib/episodes';
 import { isWatched } from '@/lib/movieStatus';
 import { watchedMinutes } from '@/lib/watchCounts';
+import { normalizeWatchDates } from '@/lib/watchDates';
 import type { Movie } from '@/types/movie';
 
 // Pure stats derivation ported from legacy pages/Stats.jsx's 550-line useMemo.
@@ -249,8 +250,12 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
     // week", and be counted a second time by the episode streak below - one show
     // finished on a Tuesday keeping a film streak alive.
     if (m.type === 'tv') continue;
-    if (isWatched(m) && m.completedAt) {
-      const key = dateKey(m.completedAt);
+    if (!isWatched(m)) continue;
+    // Every stamp in the log, not just the latest: a film watched three times
+    // over three days is three days on the calendar, the way a rewatched episode
+    // already is (lib/watchDates).
+    for (const stamp of normalizeWatchDates(m.watchDates, m.completedAt)) {
+      const key = dateKey(stamp);
       dailyCompletions[key] = (dailyCompletions[key] || 0) + 1;
     }
   }

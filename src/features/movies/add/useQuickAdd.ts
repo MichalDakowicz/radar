@@ -24,6 +24,18 @@ function statusLabel(status: StatusFlags): string {
   return status.watched ? 'Completed' : status.inProgress ? 'Watching' : 'Watchlist';
 }
 
+/** True when at least one of the watches being added happened now. */
+function datedNow(status: QuickAddStatus): boolean {
+  return status.watched && status.undatedWatches < (status.timesWatched || 1);
+}
+
+/** Today, once per dated watch - the rest of the count is the undated part. */
+function datedStamps(status: QuickAddStatus): string[] {
+  const iso = new Date().toISOString();
+  const dated = Math.max(0, (status.timesWatched || 1) - status.undatedWatches);
+  return Array.from({ length: dated }, () => iso);
+}
+
 function metadataToPayload(
   meta: MediaMetadata,
   status: QuickAddStatus,
@@ -58,8 +70,10 @@ function metadataToPayload(
     timesWatched: status.watched ? status.timesWatched || 1 : 0,
     // "Watched it before" on the way in leaves the completion undated, so adding
     // a title you saw years ago does not put a mark on today's streak. Adding one
-    // you watched tonight still does (lib/watchCounts).
-    completedAt: status.watched && status.undatedWatches < (status.timesWatched || 1) ? new Date().toISOString() : null,
+    // you watched tonight still does (lib/watchCounts) - and for a film that date
+    // opens its watch log, one stamp per dated watch (lib/watchDates).
+    completedAt: datedNow(status) ? new Date().toISOString() : null,
+    watchDates: meta.type === 'tv' || !datedNow(status) ? [] : datedStamps(status),
     ratings,
   };
 }
@@ -117,6 +131,7 @@ export function useQuickAdd() {
       watched: status.watched,
       timesWatched: status.watched ? status.timesWatched || 1 : 0,
       completedAt: status.watched ? new Date().toISOString() : null,
+      watchDates: type === 'tv' || !status.watched ? [] : datedStamps(status),
       ratings,
     });
   };

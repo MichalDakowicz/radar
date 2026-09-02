@@ -1,4 +1,5 @@
 import { episodesWatchedMirror, normalizeEpisodeWatchDates } from '@/lib/episodes';
+import { latestWatch, normalizeWatchDates } from '@/lib/watchDates';
 import type { Movie } from '@/types/movie';
 
 // Time-period scoping for the Stats screen. Stats used to be all-time only; the
@@ -44,9 +45,8 @@ function isInside(timestamp: string | null | undefined, from: number, until: num
  * it drop out entirely; the ones that stay have their watch data trimmed so
  * runtime, streaks and calendars only count what happened in the period.
  *
- * - Movies keep their runtime once. `completedAt` only records the latest
- *   completion, so earlier rewatches cannot be placed in a window and are not
- *   counted in one.
+ * - Films keep the watches their log places inside the window, so a rewatch in
+ *   June and another in July count once each, in their own months.
  * - Shows keep the *stamps* that land in the window, not the episodes: an
  *   episode watched in June and again in July belongs to July's numbers once.
  *   `timesWatched` is derived from the whole log, so it is dropped here.
@@ -63,8 +63,13 @@ export function scopeMoviesToPeriod(movies: Movie[], start: Date | null, end: Da
     const completedInWindow = isInside(movie.completedAt, from, until);
 
     if (movie.type !== 'tv') {
-      if (!completedInWindow) continue;
-      scoped.push({ ...movie, timesWatched: 1 });
+      const kept = normalizeWatchDates(movie.watchDates, movie.completedAt).filter((stamp) =>
+        isInside(stamp, from, until),
+      );
+      if (kept.length === 0) continue;
+      // The count is what happened in the window, and completedAt follows the log
+      // as it always does - the latest watch still inside it.
+      scoped.push({ ...movie, watchDates: kept, timesWatched: kept.length, completedAt: latestWatch(kept) });
       continue;
     }
 

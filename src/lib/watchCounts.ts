@@ -18,10 +18,12 @@
 // Pure (doc 10) - the edit form writes the numbers, this decides what they mean.
 
 import { showWatchCount, totalEpisodeWatches } from '@/lib/episodes';
+import { normalizeWatchDates } from '@/lib/watchDates';
 
 type WatchCountSource = {
   type?: string;
   timesWatched?: number;
+  watchDates?: unknown;
   completedAt?: string | null;
   runtime?: number;
   numberOfEpisodes?: number | null;
@@ -37,12 +39,12 @@ function episodeSpan(source: WatchCountSource): number {
 
 /**
  * Complete watches that carry dates. A series' comes from its episode log - the
- * fewest times any episode was watched; a film's is 0 or 1, because `completedAt`
- * holds one date and cannot record an earlier viewing.
+ * fewest times any episode was watched; a film's is the length of its own watch
+ * log, which is why a film can now be on the calendar more than once.
  */
 export function datedPasses(source: WatchCountSource): number {
   if (source.type === 'tv') return showWatchCount(source);
-  return source.completedAt ? 1 : 0;
+  return normalizeWatchDates(source.watchDates, source.completedAt).length;
 }
 
 /** Watches with no date on them: the total, less the ones a calendar can show. */

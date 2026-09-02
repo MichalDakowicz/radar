@@ -43,6 +43,7 @@ function movie(overrides: Partial<Movie>): Movie {
     inProgress: false,
     watched: true,
     timesWatched: 1,
+    watchDates: [],
     completedAt: null,
     lastWatchedPosition: null,
     ratings: {},

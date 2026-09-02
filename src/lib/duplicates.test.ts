@@ -92,7 +92,10 @@ describe('findDuplicates', () => {
     expect(groups[0].patch).toMatchObject({ ratings: { overall: 4 }, notes: 'great' });
   });
 
-  it('marks the survivor watched and keeps the earliest completion date', () => {
+  it('marks the survivor watched and keeps every copy’s watch date', () => {
+    // Two rows each holding a watch on a different day are two watches, the same
+    // reading the episode logs above get - so the merged film keeps both days on
+    // the calendar and counts them both.
     const groups = findDuplicates([
       movie({ id: 'first', ratings: { overall: 5 }, notes: 'n' }),
       movie({ id: 'second', watched: true, timesWatched: 1, completedAt: '2024-02-02T00:00:00.000Z' }),
@@ -101,8 +104,9 @@ describe('findDuplicates', () => {
 
     const { keep, patch } = groups[0];
     // The patch only carries what changes, so read it through the keeper.
-    expect(patch.timesWatched ?? keep.timesWatched).toBe(1);
-    expect(patch.completedAt).toBe('2023-01-01T00:00:00.000Z');
+    expect(patch.timesWatched ?? keep.timesWatched).toBe(2);
+    expect(patch.watchDates).toEqual(['2023-01-01T00:00:00.000Z', '2024-02-02T00:00:00.000Z']);
+    expect(patch.completedAt ?? keep.completedAt).toBe('2024-02-02T00:00:00.000Z');
   });
 
   it('unions the episode watch logs on each copy of a show', () => {

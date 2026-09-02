@@ -56,6 +56,10 @@ export type Movie = {
   inProgress: boolean;
   watched: boolean;
   timesWatched: number;
+  // A film's dated watches, oldest first (lib/watchDates). completedAt is the
+  // latest of them, kept because everything ordered by "when did you finish it"
+  // reads that one field. A series logs its dates per episode instead.
+  watchDates: string[];
   completedAt: string | null;
   lastWatchedPosition: string | null;
   ratings: Ratings;

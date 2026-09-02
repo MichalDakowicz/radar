@@ -86,6 +86,11 @@ create table if not exists public.movies (
   -- Rows written before 2.12.0 hold a single bare stamp per key; the client
   -- coerces those on read (src/lib/episodes.ts), so no migration is needed.
   episode_watch_dates jsonb not null default '{}',
+  -- A film's watch log: ["2026-08-01T…","2026-09-02T…"], oldest first, one
+  -- stamp per viewing. completed_at holds the latest of them, because a single
+  -- date is what everything from "recently logged" to duplicate merge reads.
+  -- A series keeps its dated passes in episode_watch_dates instead.
+  watch_dates jsonb not null default '[]',
   season_episode_counts jsonb not null default '{}',
   tmdb_status         text,
   tagline             text,
@@ -214,6 +219,21 @@ alter table public.movies
 -- The refresh queue reads oldest-synced-first, never-synced ahead of everything.
 create index if not exists movies_user_id_metadata_synced_at_idx
   on public.movies (user_id, metadata_synced_at nulls first);
+
+-- movies.watch_dates (a film logs every viewing, not just its latest).
+alter table public.movies
+  add column if not exists watch_dates jsonb not null default '[]';
+
+-- Backfill: the one date a film already had becomes its first logged watch.
+-- Films only - a series' dated passes come from episode_watch_dates, and
+-- seeding this for one would count the same viewing twice. Skips rows that
+-- already hold a log, so re-running the file cannot duplicate a stamp, and
+-- skips films whose log was emptied on purpose (their completed_at is null).
+update public.movies
+   set watch_dates = jsonb_build_array(to_char(completed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))
+ where type <> 'tv'
+   and completed_at is not null
+   and coalesce(jsonb_array_length(watch_dates), 0) = 0;
 
 -- ============================================================================
 -- RLS
