@@ -1,6 +1,7 @@
 import type { QuickAddStatus } from '@/features/movies/add/useQuickAdd';
 import { mergeEpisodeMirror, showWatchCount, watchedEpisodeCount, type EpisodeWatchLog } from '@/lib/episodes';
-import { totalWatches, undatedWatches } from '@/lib/watchCounts';
+import { absorbUndatedWatches, datedPasses, totalWatches, undatedWatches } from '@/lib/watchCounts';
+import { latestWatch, normalizeWatchDates, resizeWatchLog } from '@/lib/watchDates';
 import type { CastMember, MediaType, Movie, NamedRef, Ratings } from '@/types/movie';
 
 export type CategoryRatings = { story: number; acting: number; ending: number; enjoyment: number };
@@ -22,8 +23,14 @@ export type EditForm = {
   availability: string[];
   status: QuickAddStatus;
   /**
-   * The one date a film's completion carries, or a series' - held on the form so
-   * an undated watch can be saved without stamping today (lib/watchCounts).
+   * A film's dated watches, oldest first. The stepper types a total and this is
+   * where the dated half of it lives, so a second viewing has a day of its own
+   * (lib/watchDates). Empty for a series, which dates its passes per episode.
+   */
+  watchDates: string[];
+  /**
+   * The latest of those, or a series' completion - held on the form so an undated
+   * watch can be saved without stamping today (lib/watchCounts).
    */
   completedAt: string | null;
   lastWatchedPosition: string;
@@ -83,6 +90,7 @@ export function fromMovie(movie: Movie): EditForm {
       timesWatched: movie.timesWatched,
       undatedWatches: undatedWatches(movie),
     },
+    watchDates: movie.type === 'tv' ? [] : normalizeWatchDates(movie.watchDates, movie.completedAt),
     completedAt: movie.completedAt,
     lastWatchedPosition: movie.lastWatchedPosition ?? '',
     notes: movie.notes,
@@ -111,10 +119,10 @@ export function episodesComplete(form: EditForm): boolean {
 
 /**
  * Complete watches this form has dates for: a series' from its episode log, a
- * film's 0 or 1 from `completedAt`.
+ * film's from its own watch log.
  */
 export function formDatedPasses(form: EditForm): number {
-  return form.type === 'tv' ? showWatchCount(form) : form.completedAt ? 1 : 0;
+  return form.type === 'tv' ? showWatchCount(form) : form.watchDates.length;
 }
 
 /**
@@ -123,26 +131,21 @@ export function formDatedPasses(form: EditForm): number {
  * it comes from the episode tracker - but an undated watch has no episodes and no
  * days behind it, so it is only ever a number.
  */
-/**
- * What the undated count becomes when the episode log gains dated passes.
- *
- * Ticking episodes off usually *documents* a watch the row already claimed rather
- * than adding one: a show carrying "watched 5×" with no episode data, walked
- * through once with the tracker, is still five watches - one of them now dated.
- * So a new dated pass absorbs an undated one.
- *
- * "Rewatch season" is the exception and passes absorb=false: that is the user
- * saying they watched it *again*, which is a sixth watch, not the fifth being
- * written down.
- */
-export function absorbUndatedWatches(undated: number, datedBefore: number, datedAfter: number): number {
-  const gained = Math.max(0, datedAfter - datedBefore);
-  return Math.max(0, undated - gained);
-}
+// The absorb rule moved to lib/watchCounts, where the completion managers reach
+// it too. Re-exported because the hook and its tests import it from here.
+export { absorbUndatedWatches };
 
 export function derivedTimesWatched(form: EditForm, watched: boolean): number {
   if (!watched) return 0;
-  const total = totalWatches(formDatedPasses(form), form.status.undatedWatches ?? 0);
+  const undated = form.status.undatedWatches ?? 0;
+  // A series' total is fully derived: its dated half is the episode tracker's and
+  // is never typed. A film's is the other way round - the stepper types the total
+  // and the watch log is resized to match it on save, so deriving the total back
+  // off the log would leave the stepper unable to go down (lib/watchDates).
+  const total =
+    form.type === 'tv'
+      ? totalWatches(formDatedPasses(form), undated)
+      : Math.max(form.status.timesWatched || 0, undated);
   // Watched with nothing behind it: an old row, or the Watched box ticked before
   // anything was logged. One watch is what the tick means.
   return total > 0 ? total : 1;
@@ -172,19 +175,32 @@ export function buildMoviePayload(form: EditForm, current: Movie): EditSaveResul
     return { remove: true };
   }
 
-  // The form owns the date now, so "watched, but not today" is expressible: the
-  // undated actions leave it null while still raising the count.
+  // The form owns the dates now, so "watched, but not today" is expressible: the
+  // undated actions raise the count without touching the log.
   //
-  // A save that *flips* a title to watched with no date chosen still stamps today,
-  // which is the ordinary "just finished it" path. A row that was already watched
-  // keeps whatever date it had, including none - dating it now would drop a mark
-  // on today for a save that changed nothing about the watch (ticking Watchlist
-  // for a rewatch, say).
-  const flippedToWatched = status.watched && !current.watched;
-  const noUndatedWatch = (status.undatedWatches ?? 0) === 0;
-  const completedAt = status.watched
-    ? (form.completedAt ?? (flippedToWatched && noUndatedWatch ? new Date().toISOString() : null))
-    : null;
+  // A film reconciles the two here. The stepper types a total, the undated row
+  // types the part of it with no day behind it, and the difference is how many
+  // dated watches the log should hold: one short and the user just watched it
+  // again, which happened now; one long and they removed a watch, which takes the
+  // newest date with it. Nothing else re-dates anything, so a save that changed no
+  // watch leaves every stamp where it was (lib/watchDates).
+  const nextTotal = derivedTimesWatched(form, status.watched);
+  const undated = Math.min(status.undatedWatches ?? 0, nextTotal);
+  const watchDates = status.watched ? resizeWatchLog(form.watchDates, nextTotal - undated, new Date().toISOString()) : [];
+
+  // A series has no log of its own: its dated passes are the episode tracker's,
+  // and completedAt is the day it was finished. Same rule as before - stamp today
+  // when this save is what finished it, keep whatever was there otherwise.
+  const priorUndated = undatedWatches(current);
+  const priorTotal = totalWatches(datedPasses(current), priorUndated);
+  const finishedNow =
+    status.watched && nextTotal > priorTotal && (status.undatedWatches ?? 0) <= priorUndated;
+  const completedAt =
+    form.type === 'tv'
+      ? status.watched
+        ? (finishedNow ? new Date().toISOString() : (form.completedAt ?? null))
+        : null
+      : latestWatch(watchDates);
 
   const updates: Partial<Movie> = {
     title: form.title,
@@ -206,7 +222,8 @@ export function buildMoviePayload(form: EditForm, current: Movie): EditSaveResul
     inWatchlist: status.inWatchlist,
     inProgress: status.inProgress,
     watched: status.watched,
-    timesWatched: derivedTimesWatched(form, status.watched),
+    timesWatched: nextTotal,
+    watchDates,
     completedAt,
     ratings:
       form.type === 'tv'

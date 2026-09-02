@@ -2,7 +2,22 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.13.0 — Unreleased
+## 2.13.0 — 2026-09-02
+
+### Added
+
+- Profile shows how you rate as a curve, read every tenth of a star
+- A film keeps a date for every watch, so a rewatch lands on its own day
+- The movie calendar shows a film on every day you watched it, twice on a day included
+
+### Fixed
+
+- Raising a watch count dates the rewatch today, so a rewatch reaches your streak
+- Finishing a series no longer counts towards the movie streak or the movie calendar
+- A movie calendar day lists and adds films only, matching the streak it belongs to
+- Removing a watch from a calendar day removes the watch, not just the date on it
+- Removing one watch of a film leaves every other watch of it dated
+- A title that loses its last watch stops calling itself watched
 
 ## 2.12.0 — 2026-08-13
 

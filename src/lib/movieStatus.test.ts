@@ -7,6 +7,7 @@ import {
   isWatched,
   migrateStatus,
   setToInProgress,
+  setToUnwatched,
   setToWatched,
   setToWatchlist,
 } from './movieStatus';
@@ -151,5 +152,32 @@ describe('getStatusIcon', () => {
     expect(getStatusIcon({ inProgress: false, inWatchlist: true, watched: true })).toBe('watchlist');
     expect(getStatusIcon({ inProgress: false, inWatchlist: false, watched: true })).toBe('completed');
     expect(getStatusIcon({ inProgress: false, inWatchlist: false, watched: false })).toBe('watchlist');
+  });
+});
+
+describe('setToUnwatched', () => {
+  // A row left "Completed, watched 0×" is what removing the last watch used to
+  // leave behind.
+  it('puts a film that lost its last watch back on the watchlist', () => {
+    expect(setToUnwatched({ type: 'movie', watched: true, inWatchlist: false })).toEqual({
+      inWatchlist: true,
+      inProgress: false,
+      watched: false,
+      status: 'Watchlist',
+    });
+  });
+
+  it('calls a series with episodes still ticked partway through, not unstarted', () => {
+    expect(setToUnwatched({ type: 'tv', watched: true, numberOfEpisodes: 4, episodesWatched: { s1e1: true } })).toEqual({
+      inWatchlist: false,
+      inProgress: true,
+      watched: false,
+      status: 'Watching',
+    });
+  });
+
+  it('never leaves the watched flag standing', () => {
+    expect(setToUnwatched({ watched: true }).watched).toBe(false);
+    expect(setToUnwatched({ type: 'tv', watched: true, episodesWatched: { s1e1: true } }).watched).toBe(false);
   });
 });

@@ -8,6 +8,7 @@
 // them on but a title, and two titles that read alike can be different films.
 
 import { mergeEpisodeMirror, normalizeEpisodeWatchDates, watchedEpisodeCount } from '@/lib/episodes';
+import { latestWatch, normalizeWatchDates } from '@/lib/watchDates';
 import type { Movie } from '@/types/movie';
 
 export type DuplicateGroup = {
@@ -39,11 +40,6 @@ function weight(movie: Movie): number {
   );
 }
 
-function earlier(a: string | null, b: string | null): string | null {
-  if (!a) return b;
-  if (!b) return a;
-  return Date.parse(a) <= Date.parse(b) ? a : b;
-}
 
 function mergePatch(keep: Movie, others: Movie[]): Partial<Movie> {
   const patch: Partial<Movie> = {};
@@ -75,12 +71,6 @@ function mergePatch(keep: Movie, others: Movie[]): Partial<Movie> {
     patch.episodesWatched = mirror;
   }
 
-  // Left as the highest of the copies, for shows too: the merge is not an edit,
-  // and the next save through the edit screen re-derives a series' count from
-  // the log this just unioned.
-  const timesWatched = Math.max(...all.map((m) => m.timesWatched ?? 0));
-  if (timesWatched !== keep.timesWatched) patch.timesWatched = timesWatched;
-
   const watched = all.some((m) => m.watched);
   if (watched !== keep.watched) {
     patch.watched = true;
@@ -89,10 +79,26 @@ function mergePatch(keep: Movie, others: Movie[]): Partial<Movie> {
     patch.status = 'Completed';
   }
 
-  // The first time you finished it is the date that belongs on the calendar,
-  // not whichever copy was saved last.
-  const completedAt = all.reduce<string | null>((acc, m) => earlier(acc, m.completedAt), null);
+  // Both copies were watched, so both logs are real: the merge is their union,
+  // and completedAt follows it the way it always does - the latest stamp in it
+  // (lib/watchDates). A copy with no log at all still contributes its one date,
+  // which is what normalizeWatchDates reads it as.
+  const watchDates = [...new Set(all.flatMap((m) => normalizeWatchDates(m.watchDates, m.completedAt)))].sort(
+    (a, b) => Date.parse(a) - Date.parse(b),
+  );
+  const kept = normalizeWatchDates(keep.watchDates, keep.completedAt);
+  if (watchDates.length !== kept.length || watchDates.some((stamp, i) => stamp !== kept[i])) {
+    patch.watchDates = watchDates;
+  }
+  const completedAt = latestWatch(watchDates);
   if (completedAt !== keep.completedAt) patch.completedAt = completedAt;
+
+  // The highest of the copies, for shows too: the merge is not an edit, and the
+  // next save through the edit screen re-derives a series' count from the log
+  // this just unioned. Never below the dated watches on file, though - a count
+  // short of its own dates would read the difference back as undated.
+  const timesWatched = Math.max(...all.map((m) => m.timesWatched ?? 0), watchDates.length);
+  if (timesWatched !== keep.timesWatched) patch.timesWatched = timesWatched;
 
   if (!keep.ratings?.overall) {
     const rated = others.find((m) => m.ratings?.overall);

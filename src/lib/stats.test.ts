@@ -42,6 +42,7 @@ function movie(overrides: Partial<Movie> = {}): Movie {
     inProgress: false,
     watched: false,
     timesWatched: 0,
+    watchDates: [],
     completedAt: null,
     lastWatchedPosition: null,
     ratings: {},
@@ -248,6 +249,35 @@ describe('computeStats', () => {
     const stats = computeStats(movies, { now: new Date(2024, 2, 6) })!;
     expect(stats.dailyCompletions['2024-03-05']).toBe(1);
     expect(stats.dailyEpisodes['2024-03-05']).toBe(2);
+  });
+
+  // A film logs every viewing now, so the movie calendar can show one on more
+  // than one day - the way the TV calendar always could.
+  it('marks every day a film was watched on, not just its latest', () => {
+    const film = movie({
+      watched: true,
+      timesWatched: 2,
+      watchDates: [ISO, ISO_LATER],
+      completedAt: ISO_LATER,
+    });
+    const stats = computeStats([film], { now: new Date(2024, 2, 6) })!;
+    expect(stats.dailyCompletions['2024-03-05']).toBe(1);
+    expect(stats.dailyCompletions['2024-03-06']).toBe(1);
+  });
+
+  it('counts two watches on one day twice', () => {
+    const film = movie({ watched: true, timesWatched: 2, watchDates: [ISO, ISO], completedAt: ISO });
+    const stats = computeStats([film], { now: new Date(2024, 2, 6) })!;
+    expect(stats.dailyCompletions['2024-03-05']).toBe(2);
+  });
+
+  // A finished series used to land in dailyCompletions, which is the film
+  // calendar and the film streak - so a week of no films kept its streak anyway.
+  it('keeps a finished series out of the movie completions', () => {
+    const show = movie({ type: 'tv', watched: true, completedAt: ISO });
+    const stats = computeStats([show], { now: new Date(2024, 2, 6) })!;
+    expect(stats.dailyCompletions['2024-03-05']).toBeUndefined();
+    expect(stats.currentStreak).toBe(0);
   });
 
   // The point of the log: the second viewing marks the day it happened, so the

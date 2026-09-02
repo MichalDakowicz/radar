@@ -1,4 +1,5 @@
 import { allEpisodeStamps } from '@/lib/episodes';
+import { normalizeWatchDates } from '@/lib/watchDates';
 import type { Movie } from '@/types/movie';
 
 // Period identity for a recap: which window it covers, how it is keyed in
@@ -105,7 +106,9 @@ export function latestClosedPeriodKey(kind: RecapKind, now: Date = new Date()): 
 /** Every timestamp that counts as watch activity, as local dates. */
 function watchDates(movie: Movie): Date[] {
   const dates: Date[] = [];
-  if (movie.completedAt) dates.push(new Date(movie.completedAt));
+  // A film logs every viewing, so a rewatch belongs to the month it happened in
+  // rather than folding into the latest one (lib/watchDates).
+  for (const stamp of normalizeWatchDates(movie.watchDates, movie.completedAt)) dates.push(new Date(stamp));
   for (const timestamp of allEpisodeStamps(movie)) dates.push(new Date(timestamp));
   return dates.filter((d) => Number.isFinite(d.getTime()));
 }

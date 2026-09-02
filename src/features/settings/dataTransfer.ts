@@ -1,4 +1,5 @@
 import { mergeEpisodeMirror, normalizeEpisodeWatchDates } from '@/lib/episodes';
+import { normalizeWatchDates } from '@/lib/watchDates';
 import type { MediaType, Movie } from '@/types/movie';
 
 // Stable import/export format (doc 03 Settings "Import/Export JSON (stable
@@ -60,6 +61,12 @@ function coerceItem(item: Record<string, unknown>, index: number, errors: string
     const log = normalizeEpisodeWatchDates(item.episodeWatchDates);
     coerced.episodeWatchDates = log;
     coerced.episodesWatched = mergeEpisodeMirror(item.episodesWatched as Record<string, boolean> | null, log);
+  }
+
+  // An export taken before the film log existed carries only completedAt, so the
+  // one date it holds becomes that film's first logged watch (lib/watchDates).
+  if (coerced.type !== 'tv') {
+    coerced.watchDates = normalizeWatchDates(item.watchDates, item.completedAt as string | null);
   }
 
   return coerced as PortableMovie;

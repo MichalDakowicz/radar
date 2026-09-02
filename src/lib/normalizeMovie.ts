@@ -1,5 +1,6 @@
 import { mergeEpisodeMirror, normalizeEpisodeWatchDates } from './episodes';
 import { migrateStatus } from './movieStatus';
+import { normalizeWatchDates } from './watchDates';
 import type { CastMember, Movie, NamedRef, ProductionCompany, Ratings } from '@/types/movie';
 
 // Raw shape of a row from public.movies (supabase/schema.sql).
@@ -37,6 +38,7 @@ export type MovieRow = {
   // A log per episode since 2.12.0; rows written before that carry one bare
   // stamp per key (and the very oldest carry epoch millis).
   episode_watch_dates: Record<string, string[] | string | number> | null;
+  watch_dates: string[] | null;
   season_episode_counts: Record<string, number> | null;
   tmdb_status: string | null;
   tagline: string | null;
@@ -53,6 +55,9 @@ export type MovieRow = {
  */
 export function normalizeMovie(row: MovieRow): Movie {
   const episodeWatchDates = normalizeEpisodeWatchDates(row.episode_watch_dates);
+  // Rows written before the film log existed carry their one date in
+  // completed_at, so it reads as that single watch (lib/watchDates).
+  const watchDates = normalizeWatchDates(row.watch_dates, row.completed_at);
   const episodesWatched = mergeEpisodeMirror(row.episodes_watched, episodeWatchDates);
 
   const statusFlags = migrateStatus({
@@ -95,6 +100,7 @@ export function normalizeMovie(row: MovieRow): Movie {
     status: row.status,
     ...statusFlags,
     timesWatched: row.times_watched,
+    watchDates,
     completedAt: row.completed_at,
     lastWatchedPosition: row.last_watched_position,
     ratings: row.ratings ?? {},
@@ -139,6 +145,7 @@ const FIELD_MAP: Record<string, string> = {
   inProgress: 'in_progress',
   watched: 'watched',
   timesWatched: 'times_watched',
+  watchDates: 'watch_dates',
   completedAt: 'completed_at',
   lastWatchedPosition: 'last_watched_position',
   ratings: 'ratings',

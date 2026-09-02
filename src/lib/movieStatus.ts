@@ -158,6 +158,20 @@ export function setToWatched(
 }
 
 /**
+ * Flags for a title that has just lost its last watch - a completion cleared off
+ * a calendar, an episode log emptied.
+ *
+ * Watched is a claim that a watch exists, so it cannot outlive the last one: a
+ * row left "Completed, watched 0×" is a state no screen can explain. Nothing
+ * unwatched may end up with no status either, or it sits in the library on no
+ * shelf at all - so it goes back on the watchlist, unless episodes are still
+ * ticked, which is being partway through.
+ */
+export function setToUnwatched(movie: MigratableMovie): StatusFlags & { status: string } {
+  return watchedEpisodeCount(movie) > 0 ? setToInProgress() : setToWatchlist();
+}
+
+/**
  * Watch progress 0-100 for the card progress bar (library carousels).
  * TV = watched episodes / total episodes; a fully-watched title = 100.
  * Movies carry no partial state, so a not-yet-watched movie returns 0.

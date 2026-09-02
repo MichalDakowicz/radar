@@ -1,4 +1,54 @@
-import { datedPasses, totalWatches, undatedWatches, watchedMinutes } from '@/lib/watchCounts';
+import { datedPasses, retotalWatches, totalWatches, undatedWatches, watchedMinutes } from '@/lib/watchCounts';
+
+describe('retotalWatches', () => {
+  // The bug this exists for: a removed watch stayed in the count with its date
+  // gone, which is the app saying "you watched this, we just do not know when" -
+  // a claim the user never made.
+  it('drops a film’s count with the date it just lost', () => {
+    const film = { type: 'movie', timesWatched: 1, completedAt: ISO };
+    expect(retotalWatches(film, { ...film, completedAt: null })).toBe(0);
+  });
+
+  it('keeps the undated watches a film also had', () => {
+    const film = { type: 'movie', timesWatched: 3, completedAt: ISO };
+    expect(retotalWatches(film, { ...film, completedAt: null })).toBe(2);
+  });
+
+  it('drops one pass off a series when a stamp is removed', () => {
+    const show = {
+      type: 'tv',
+      numberOfEpisodes: 2,
+      timesWatched: 2,
+      episodeWatchDates: { s1e1: [ISO, LATER], s1e2: [ISO, LATER] },
+    };
+    const after = { ...show, episodeWatchDates: { s1e1: [ISO], s1e2: [ISO, LATER] } };
+    expect(retotalWatches(show, after)).toBe(1);
+  });
+
+  it('empties the count when a series log is cleared out and nothing was undated', () => {
+    const show = {
+      type: 'tv',
+      numberOfEpisodes: 1,
+      timesWatched: 1,
+      episodeWatchDates: { s1e1: [ISO] },
+      episodesWatched: { s1e1: true },
+    };
+    expect(retotalWatches(show, { ...show, episodeWatchDates: {}, episodesWatched: {} })).toBe(0);
+  });
+
+  it('leaves the count alone when a pass is gained, because it documents one', () => {
+    // Five watches claimed, none dated; dating one of them writes it down rather
+    // than adding a sixth.
+    const show = { type: 'tv', numberOfEpisodes: 1, timesWatched: 5 };
+    const after = { ...show, episodeWatchDates: { s1e1: [ISO] }, episodesWatched: { s1e1: true } };
+    expect(retotalWatches(show, after)).toBe(5);
+  });
+
+  it('gives a film its first watch when a day is backfilled onto nothing', () => {
+    const film = { type: 'movie', timesWatched: 0, completedAt: null };
+    expect(retotalWatches(film, { ...film, completedAt: ISO })).toBe(1);
+  });
+});
 
 const ISO = '2026-03-03T20:00:00.000Z';
 const LATER = '2026-08-13T20:00:00.000Z';
