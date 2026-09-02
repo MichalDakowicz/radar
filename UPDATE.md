@@ -6,7 +6,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ### Added
 
-- Profile shows your ratings as a curve, from half a star to five
+- Profile shows how you rate as a curve, read every tenth of a star
 
 ### Fixed
 
