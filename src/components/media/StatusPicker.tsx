@@ -59,11 +59,16 @@ export function StatusPicker({ value, onChange, datedPasses = 0, derived = false
   };
 
   // Films only: the total is typed, and the dated pass is whatever completedAt
-  // holds. Lowering it takes an undated watch off first, so a real date is never
-  // the thing that gets thrown away.
+  // holds.
+  //
+  // Raising it is "I watched it again", which happened now - so the undated count
+  // stays put and the save stamps today (editForm.buildMoviePayload). A watch that
+  // should not touch a streak is the row below, not this stepper. Lowering takes an
+  // undated watch off first, so a real date is never the thing that gets thrown away.
   const bumpTotal = (delta: number) => {
     const next = Math.max(1, total + delta);
-    onChange({ ...value, timesWatched: next, undatedWatches: Math.max(0, Math.min(undated + delta, next)) });
+    const nextUndated = delta < 0 ? undated + delta : undated;
+    onChange({ ...value, timesWatched: next, undatedWatches: Math.max(0, Math.min(nextUndated, next)) });
   };
 
   return (

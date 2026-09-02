@@ -114,6 +114,34 @@ describe('fromMovie / buildMoviePayload round trip', () => {
     }
   });
 
+  // Raising the watch count is "I watched it again", and again happened today -
+  // the whole reason the count exists is that the streak and the calendar see it.
+  it('dates a rewatch that raises the count', () => {
+    const movie: Movie = { ...BASE_MOVIE, watched: true, timesWatched: 1, completedAt: '2019-05-05T00:00:00.000Z' };
+    const form = fromMovie(movie);
+    form.status = { ...form.status, timesWatched: 2 };
+
+    const result = buildMoviePayload(form, movie);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.timesWatched).toBe(2);
+      expect(Date.parse(result.updates.completedAt!)).toBeGreaterThan(Date.parse('2019-05-05T00:00:00.000Z'));
+    }
+  });
+
+  it('leaves an added watch undated when it was added as an undated one', () => {
+    const movie: Movie = { ...BASE_MOVIE, watched: true, timesWatched: 1, completedAt: '2019-05-05T00:00:00.000Z' };
+    const form = fromMovie(movie);
+    form.status = { ...form.status, timesWatched: 2, undatedWatches: 1 };
+
+    const result = buildMoviePayload(form, movie);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.timesWatched).toBe(2);
+      expect(result.updates.completedAt).toBe('2019-05-05T00:00:00.000Z');
+    }
+  });
+
   it('builds tv ratings as { overall, seasons } instead of the movie category shape', () => {
     const tvMovie: Movie = { ...BASE_MOVIE, type: 'tv' };
     const form = fromMovie(tvMovie);

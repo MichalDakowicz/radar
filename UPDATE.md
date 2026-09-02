@@ -8,6 +8,9 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - Profile shows your ratings as a curve, from half a star to five
 
+### Fixed
+
+- Raising a watch count dates the rewatch today, so a rewatch reaches your streak
 
 ## 2.12.0 — 2026-08-13
 
