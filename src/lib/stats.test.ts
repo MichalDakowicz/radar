@@ -250,6 +250,15 @@ describe('computeStats', () => {
     expect(stats.dailyEpisodes['2024-03-05']).toBe(2);
   });
 
+  // A finished series used to land in dailyCompletions, which is the film
+  // calendar and the film streak - so a week of no films kept its streak anyway.
+  it('keeps a finished series out of the movie completions', () => {
+    const show = movie({ type: 'tv', watched: true, completedAt: ISO });
+    const stats = computeStats([show], { now: new Date(2024, 2, 6) })!;
+    expect(stats.dailyCompletions['2024-03-05']).toBeUndefined();
+    expect(stats.currentStreak).toBe(0);
+  });
+
   // The point of the log: the second viewing marks the day it happened, so the
   // TV streak sees two days instead of one.
   it('marks the day a rewatched episode was watched again', () => {

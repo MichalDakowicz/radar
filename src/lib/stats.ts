@@ -244,6 +244,11 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
   // Daily completion buckets feed both the streaks and the calendars.
   const dailyCompletions: Record<string, number> = {};
   for (const m of movies) {
+    // Films only. A series finishing is not a film watched: it would land on the
+    // movie calendar, count towards a threshold measured in "movies completed per
+    // week", and be counted a second time by the episode streak below - one show
+    // finished on a Tuesday keeping a film streak alive.
+    if (m.type === 'tv') continue;
     if (isWatched(m) && m.completedAt) {
       const key = dateKey(m.completedAt);
       dailyCompletions[key] = (dailyCompletions[key] || 0) + 1;

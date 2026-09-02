@@ -34,16 +34,21 @@ export default function ManageCompletions() {
   const [movieToRemove, setMovieToRemove] = useState<Movie | null>(null);
   const [removing, setRemoving] = useState(false);
 
+  // Films only, the same cut the movie streak and its calendar are built from
+  // (lib/stats): a series belongs to the episode calendar next door, and listing
+  // one here would offer to backfill a day the movie streak cannot see.
+  const films = useMemo(() => movies.filter((m) => m.type !== 'tv'), [movies]);
+
   const moviesOnThisDay = useMemo(
-    () => movies.filter((m) => m.completedAt && dateKey(m.completedAt) === dateStr),
-    [movies, dateStr],
+    () => films.filter((m) => m.completedAt && dateKey(m.completedAt) === dateStr),
+    [films, dateStr],
   );
 
   const results = useMemo(() => {
     if (!searchQuery) return [];
     const q = searchQuery.toLowerCase();
-    return movies.filter((m) => isWatched(m) && m.title.toLowerCase().includes(q)).slice(0, 50);
-  }, [movies, searchQuery]);
+    return films.filter((m) => isWatched(m) && m.title.toLowerCase().includes(q)).slice(0, 50);
+  }, [films, searchQuery]);
 
   const toggle = (id: string) =>
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));

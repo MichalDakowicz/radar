@@ -11,6 +11,8 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Fixed
 
 - Raising a watch count dates the rewatch today, so a rewatch reaches your streak
+- Finishing a series no longer counts towards the movie streak or the movie calendar
+- A movie calendar day lists and adds films only, matching the streak it belongs to
 
 ## 2.12.0 — 2026-08-13
 
