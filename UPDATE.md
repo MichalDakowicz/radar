@@ -4,6 +4,11 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.13.0 — Unreleased
 
+### Added
+
+- Profile shows your ratings as a curve, from half a star to five
+
+
 ## 2.12.0 — 2026-08-13
 
 ### Added

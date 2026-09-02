@@ -17,6 +17,7 @@ import { MyShelfHeader } from '@/features/profile/MyShelfHeader';
 import { RandomPickCard, type RandomPickScope } from '@/features/profile/RandomPickCard';
 import { RandomPickSheet } from '@/features/profile/RandomPickSheet';
 import { RankedYearsCards } from '@/features/profile/RankedYearsCards';
+import { RatingsDistribution } from '@/features/profile/RatingsDistribution';
 import { useRankedYears } from '@/features/profile/useRankedYears';
 import { RecapRail } from '@/features/recap/RecapRail';
 import { useRecapIndex } from '@/features/recap/useRecap';
@@ -27,6 +28,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { MAX_W } from '@/hooks/useResponsive';
 import { useUserSettings } from '@/hooks/useUserSettings';
 import { isInWatchlist } from '@/lib/movieStatus';
+import { ratingDistribution } from '@/lib/ratingDistribution';
 import { retainedMonthKeys, type RecapKind } from '@/lib/recapPeriod';
 import { MY_SERVICES_KEY, matchesServiceFilter } from '@/lib/serviceFilter';
 import { publicShelfUrl } from '@/lib/shelfLink';
@@ -58,6 +60,8 @@ function ProfileScreen() {
 
   const stats = useMemo(() => shelfStats(movies, (m) => personalScore(m.ratings)), [movies]);
   const recent = useMemo(() => recentlyLogged(movies), [movies]);
+  // Every scored title, not just the finished ones: a rating is a rating.
+  const ratings = useMemo(() => ratingDistribution(movies), [movies]);
   const inProgress = useMemo(() => inProgressTitles(movies), [movies]);
   // Same eligibility the Library used with no filters applied: the picker is
   // there to answer "what next", so it only draws from the watchlist.
@@ -148,12 +152,17 @@ function ProfileScreen() {
               inProgress={inProgress}
               recent={recent}
               belowFavorites={
-                <RandomPickCard
-                  serviceCount={onMyServices.length}
-                  libraryCount={pickable.length}
-                  hasServices={settings.ownedServices.length > 0}
-                  onPick={openPicker}
-                />
+                <View className="gap-6">
+                  <RandomPickCard
+                    serviceCount={onMyServices.length}
+                    libraryCount={pickable.length}
+                    hasServices={settings.ownedServices.length > 0}
+                    onPick={openPicker}
+                  />
+                  {/* Under the picker: the picker is a prompt about tonight, the
+                      curve is a read on everything already logged. */}
+                  <RatingsDistribution distribution={ratings} />
+                </View>
               }
               belowInProgress={
                 <>
