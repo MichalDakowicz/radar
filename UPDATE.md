@@ -4,6 +4,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.14.0 — Unreleased
 
+### Fixed
+
+- The web app opens again instead of failing to load on a blank screen
+
 ## 2.13.0 — 2026-09-02
 
 ### Added
