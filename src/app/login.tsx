@@ -69,6 +69,11 @@ export default function Login() {
         </View>
         <Text className="text-4xl font-bold tracking-tight text-foreground">Radar</Text>
         <Text className="text-muted-foreground">Curate and track your movie watchlist.</Text>
+        {/* Worth saying up front: the three apps share one account, and
+            someone who already has one should not create a second. */}
+        <Text className="pt-1 text-center text-xs text-muted-foreground/70">
+          Same account as Lidar and Sonar — sign in with it and your profile and friends come with you.
+        </Text>
       </View>
 
       {/* Capped and boxed so a 1440p browser shows a sign-in card rather than

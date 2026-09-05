@@ -4,6 +4,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.14.0 — Unreleased
 
+### Added
+
+- Sign-in screen says the account is the same one Lidar and Sonar use
+
 ### Fixed
 
 - The web app opens again instead of failing to load on a blank screen
