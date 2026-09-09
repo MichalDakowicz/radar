@@ -58,6 +58,11 @@ async function fetchExpirations(country: string, owned: string[], today: string)
   if (owned.length > 0) request = request.in('service_name', owned);
 
   const { data, error } = await request;
+  // A project that has not had expirations.sql run against it has no table, and
+  // PostgREST answers that with 42P01 or a schema-cache miss. That is the
+  // documented "not set up yet" state, not a failure — the surfaces are supposed
+  // to show their empty state, the same as a country with nothing leaving.
+  if (error && (error.code === '42P01' || error.code === 'PGRST205')) return [];
   if (error) throw error;
 
   return (data as ExpirationRow[]).map((row) => ({
