@@ -1,10 +1,13 @@
 import {
   buildLeavingTitles,
   daysUntil,
-  groupByDay,
+  filterLeaving,
+  groupByHorizon,
   needsSubscription,
+  serviceCounts,
   splitLeaving,
   todayKey,
+  urgency,
   urgencyLabel,
 } from './leaving';
 import type { Expiration } from './leaving';
@@ -206,24 +209,120 @@ describe('splitLeaving', () => {
   });
 });
 
-describe('groupByDay', () => {
-  it('buckets by expiry date and drops days already gone', () => {
+describe('groupByHorizon', () => {
+  it('buckets by horizon and drops days already gone', () => {
     const rows = [
-      exp({ tmdbId: 1, expiresOn: '2026-09-20' }),
+      exp({ tmdbId: 1, expiresOn: '2026-09-12' }),
       exp({ tmdbId: 2, expiresOn: '2026-09-20' }),
-      exp({ tmdbId: 3, expiresOn: '2026-09-09' }),
+      exp({ tmdbId: 3, expiresOn: '2026-10-30' }),
+      exp({ tmdbId: 4, expiresOn: '2026-09-09' }),
     ];
-    const days = groupByDay(buildLeavingTitles(rows, [], ['Netflix'], TODAY));
-    expect([...days.keys()]).toEqual(['2026-09-20']);
-    expect(days.get('2026-09-20')).toHaveLength(2);
+    const buckets = groupByHorizon(buildLeavingTitles(rows, [], [], TODAY));
+    expect(buckets.map((b) => b.key)).toEqual(['week', 'fortnight', 'later']);
+    expect(buckets.flatMap((b) => b.titles)).toHaveLength(3);
   });
 
-  it('puts what you can watch tonight above what needs a subscription', () => {
+  it('drops empty buckets rather than rendering an empty heading', () => {
+    const rows = [exp({ tmdbId: 1, expiresOn: '2026-09-11' })];
+    const buckets = groupByHorizon(buildLeavingTitles(rows, [], [], TODAY));
+    expect(buckets.map((b) => b.key)).toEqual(['week']);
+  });
+
+  it('orders by date even when a later one is on a service you already have', () => {
     const rows = [
-      exp({ tmdbId: 1, title: 'Needs a sub', serviceName: 'Hulu' }),
-      exp({ tmdbId: 2, title: 'Already have it', serviceName: 'Netflix' }),
+      exp({ tmdbId: 1, title: 'Sooner, needs a sub', serviceName: 'Hulu', expiresOn: '2026-09-11' }),
+      exp({ tmdbId: 2, title: 'Later, already have it', serviceName: 'Netflix', expiresOn: '2026-09-12' }),
     ];
-    const days = groupByDay(buildLeavingTitles(rows, [], ['Netflix'], TODAY));
-    expect(days.get('2026-09-20')?.map((t) => t.title)).toEqual(['Already have it', 'Needs a sub']);
+    const [week] = groupByHorizon(buildLeavingTitles(rows, [], ['Netflix'], TODAY));
+    expect(week.titles.map((t) => t.title)).toEqual(['Sooner, needs a sub', 'Later, already have it']);
+  });
+
+  it('orders by date inside a bucket', () => {
+    const rows = [
+      exp({ tmdbId: 1, title: 'Later', expiresOn: '2026-09-15' }),
+      exp({ tmdbId: 2, title: 'Sooner', expiresOn: '2026-09-12' }),
+    ];
+    const [week] = groupByHorizon(buildLeavingTitles(rows, [], [], TODAY));
+    expect(week.titles.map((t) => t.title)).toEqual(['Sooner', 'Later']);
+  });
+});
+
+describe('urgency', () => {
+  it('always carries a readable label, never colour alone', () => {
+    for (const days of [-3, 0, 1, 2, 5, 9, 30]) {
+      expect(urgency(days).label).toMatch(/\w/);
+    }
+  });
+
+  it('names the near dates and shortens the far ones', () => {
+    expect(urgency(0).label).toBe('Today');
+    expect(urgency(1).label).toBe('1 day');
+    expect(urgency(5).label).toBe('5 days');
+    expect(urgency(28).label).toBe('4 wks');
+  });
+
+  it('returns hex colours, which are the only ones RN inline styles parse', () => {
+    for (const days of [0, 2, 6, 20]) {
+      const { bg, fg } = urgency(days);
+      expect(bg).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(fg).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+  });
+
+  it('escalates the closer the date is', () => {
+    expect(urgency(0).bg).not.toBe(urgency(1).bg);
+    expect(urgency(1).bg).not.toBe(urgency(5).bg);
+  });
+});
+
+describe('serviceCounts', () => {
+  it('counts each service and puts the biggest first', () => {
+    const rows = [
+      exp({ tmdbId: 1, serviceName: 'Netflix' }),
+      exp({ tmdbId: 2, serviceName: 'Netflix' }),
+      exp({ tmdbId: 3, serviceName: 'Max' }),
+    ];
+    expect(serviceCounts(buildLeavingTitles(rows, [], [], TODAY))).toEqual([
+      { service: 'Netflix', count: 2 },
+      { service: 'Max', count: 1 },
+    ]);
+  });
+
+  it('counts a title once per service it is leaving', () => {
+    const rows = [
+      exp({ tmdbId: 1, serviceName: 'Netflix' }),
+      exp({ tmdbId: 1, serviceName: 'Max' }),
+    ];
+    expect(serviceCounts(buildLeavingTitles(rows, [], [], TODAY))).toHaveLength(2);
+  });
+});
+
+describe('filterLeaving', () => {
+  const titles = () =>
+    buildLeavingTitles(
+      [
+        exp({ tmdbId: 1, title: 'Film', serviceName: 'Netflix', mediaType: 'movie' }),
+        exp({ tmdbId: 2, title: 'Series', serviceName: 'Max', mediaType: 'tv' }),
+      ],
+      [],
+      [],
+      TODAY,
+    );
+
+  it('keeps everything when nothing is selected', () => {
+    expect(filterLeaving(titles(), {})).toHaveLength(2);
+    expect(filterLeaving(titles(), { services: [], mediaType: null })).toHaveLength(2);
+  });
+
+  it('narrows by service', () => {
+    expect(filterLeaving(titles(), { services: ['Max'] }).map((t) => t.title)).toEqual(['Series']);
+  });
+
+  it('narrows by media type', () => {
+    expect(filterLeaving(titles(), { mediaType: 'movie' }).map((t) => t.title)).toEqual(['Film']);
+  });
+
+  it('ANDs the two dimensions', () => {
+    expect(filterLeaving(titles(), { services: ['Max'], mediaType: 'movie' })).toEqual([]);
   });
 });

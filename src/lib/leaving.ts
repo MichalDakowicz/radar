@@ -86,6 +86,25 @@ export function urgencyLabel(daysLeft: number): string {
   return `${Math.round(daysLeft / 7)} weeks`;
 }
 
+/** How long is left, as a badge. Always carries words — the colour is emphasis
+ *  on top of the label, never the label itself.
+ *
+ *  Hex, not the `hsl(...)` design token: these are handed to RN inline styles,
+ *  and RN's colour parser rejects the space-separated CSS Color 4 form the
+ *  tokens use. It fails silently to a flat grey, which is exactly how a badge
+ *  ends up looking like an unlabelled blob. Same reasoning as the note in
+ *  components/media/ServiceFilterChips. */
+export type Urgency = { label: string; bg: string; fg: string };
+
+export function urgency(daysLeft: number): Urgency {
+  if (daysLeft <= 0) return { label: 'Today', bg: '#dc2626', fg: '#ffffff' };
+  if (daysLeft === 1) return { label: '1 day', bg: '#ea580c', fg: '#ffffff' };
+  if (daysLeft <= 3) return { label: `${daysLeft} days`, bg: '#f97316', fg: '#1c1917' };
+  if (daysLeft <= 7) return { label: `${daysLeft} days`, bg: '#eab308', fg: '#1c1917' };
+  if (daysLeft <= 13) return { label: `${daysLeft} days`, bg: '#3f3f46', fg: '#e4e4e7' };
+  return { label: `${Math.round(daysLeft / 7)} wks`, bg: '#3f3f46', fg: '#e4e4e7' };
+}
+
 function keyOf(tmdbId: number, mediaType: MediaType) {
   return `${mediaType}:${tmdbId}`;
 }
@@ -187,25 +206,69 @@ export function needsSubscription(title: LeavingTitle): boolean {
   return title.ownedServices.length === 0;
 }
 
-/** Day buckets for the calendar grid, keyed `YYYY-MM-DD`. Past days are dropped:
- *  the prune job keeps a week of history in the table for debugging, but a
- *  calendar of chances you already missed is only dispiriting.
+/** Services present in the list, biggest first — the filter row is built from
+ *  what is actually leaving in this region, not from a hardcoded roster. Poland
+ *  has SkyShowtime and Mubi and no Hulu; a fixed list would be wrong in both
+ *  directions. */
+export function serviceCounts(titles: LeavingTitle[]): { service: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const title of titles) {
+    for (const service of title.services) counts.set(service, (counts.get(service) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([service, count]) => ({ service, count }))
+    .sort((a, b) => b.count - a.count || a.service.localeCompare(b.service));
+}
+
+export type LeavingFilter = { services?: string[]; mediaType?: MediaType | null };
+
+/** Narrowing applied after the access rules, so it never changes what a date
+ *  means — only how much of the list you are looking at. */
+export function filterLeaving(titles: LeavingTitle[], { services, mediaType }: LeavingFilter): LeavingTitle[] {
+  const wanted = services && services.length > 0 ? new Set(services) : null;
+  return titles.filter((title) => {
+    if (mediaType && title.mediaType !== mediaType) return false;
+    if (wanted && !title.services.some((service) => wanted.has(service))) return false;
+    return true;
+  });
+}
+
+/** Time buckets for the browse grid, in order, empty ones dropped.
  *
- *  Within a day, titles you can actually watch tonight come first — the rest are
- *  browsing, and browsing should not bury the actionable half. */
-export function groupByDay(titles: LeavingTitle[]): Map<string, LeavingTitle[]> {
-  const days = new Map<string, LeavingTitle[]>();
+ *  Not one section per calendar day: expirations cluster on month-end, so a
+ *  day-grouped grid is a run of headers over single ragged posters followed by
+ *  one enormous section. Three horizons keep every grid row full while still
+ *  saying roughly when the thing goes — the per-title countdown badge carries
+ *  the exact timing. Past days are dropped; the prune job keeps a week of
+ *  history in the table for debugging, but a list of chances you already missed
+ *  is only dispiriting.
+ *
+ *  Ordered strictly by date inside a bucket. Floating the titles you already
+ *  subscribe to reads as a broken sort once every card wears a countdown — the
+ *  grid showed 1 day, 4 days, 2 days — and "only what I have" is what the My
+ *  services filter is for. */
+export type LeavingBucket = { key: string; label: string; titles: LeavingTitle[] };
+
+const HORIZONS: { key: string; label: string; within: number }[] = [
+  { key: 'week', label: 'Within a week', within: 7 },
+  { key: 'fortnight', label: 'One to two weeks', within: 14 },
+  { key: 'later', label: 'Later', within: Infinity },
+];
+
+export function groupByHorizon(titles: LeavingTitle[]): LeavingBucket[] {
+  const buckets = new Map<string, LeavingTitle[]>();
   for (const title of titles) {
     if (title.daysLeft < 0) continue;
-    const bucket = days.get(title.expiresOn);
+    const horizon = HORIZONS.find((h) => title.daysLeft <= h.within)!;
+    const bucket = buckets.get(horizon.key);
     if (bucket) bucket.push(title);
-    else days.set(title.expiresOn, [title]);
+    else buckets.set(horizon.key, [title]);
   }
-  for (const bucket of days.values()) {
-    bucket.sort(
-      (a, b) =>
-        Number(needsSubscription(a)) - Number(needsSubscription(b)) || a.title.localeCompare(b.title),
-    );
-  }
-  return days;
+  return HORIZONS.filter((h) => buckets.has(h.key)).map((h) => ({
+    key: h.key,
+    label: h.label,
+    titles: buckets
+      .get(h.key)!
+      .sort((a, b) => a.expiresOn.localeCompare(b.expiresOn) || a.title.localeCompare(b.title)),
+  }));
 }

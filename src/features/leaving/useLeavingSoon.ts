@@ -5,7 +5,6 @@ import { useUserSettings } from '@/hooks/useUserSettings';
 import { useMovies } from '@/hooks/useMovies';
 import {
   buildLeavingTitles,
-  groupByDay,
   splitLeaving,
   todayKey,
   type Expiration,
@@ -74,12 +73,14 @@ async function fetchExpirations(country: string, today: string): Promise<Expirat
 }
 
 export type LeavingSoon = {
+  /** Everything in scope, flat and date-sorted, before any filter row is
+   *  applied — the page narrows this itself and needs the whole set to build
+   *  its service chips from. */
+  titles: LeavingTitle[];
   /** In your watchlist and running out of time. */
   tracked: LeavingTitle[];
   /** Leaving and never saved. */
   discover: LeavingTitle[];
-  /** Everything in scope, bucketed `YYYY-MM-DD` for the agenda. */
-  byDay: Map<string, LeavingTitle[]>;
   loading: boolean;
   error: unknown;
   /** False when the catalogue holds nothing for this region — the surfaces say
@@ -118,7 +119,6 @@ export function useLeavingSoon(onlyOwned = false): LeavingSoon {
   );
 
   const { tracked, discover } = useMemo(() => splitLeaving(titles), [titles]);
-  const byDay = useMemo(() => groupByDay(titles), [titles]);
 
   const ownedCount = useMemo(
     () => (query.data ?? []).filter((row) => owned.includes(row.serviceName)).length,
@@ -126,9 +126,9 @@ export function useLeavingSoon(onlyOwned = false): LeavingSoon {
   );
 
   return {
+    titles,
     tracked,
     discover,
-    byDay,
     loading: query.isLoading || moviesLoading,
     error: query.error,
     hasCatalogue: (query.data?.length ?? 0) > 0,
