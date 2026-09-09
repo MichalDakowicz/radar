@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useMovies } from '@/hooks/useMovies';
 import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
-import { useSeasonDetails } from '@/hooks/useTmdb';
+import { useSeasonDetails } from '@/hooks/useSeasonDetails';
 import {
   episodeWatchCount,
   episodeWatchLog,

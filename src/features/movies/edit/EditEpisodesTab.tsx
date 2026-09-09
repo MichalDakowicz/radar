@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { LoadingState } from '@/components/ui/LoadingState';
-import { useSeasonDetails } from '@/hooks/useTmdb';
+import { useSeasonDetails } from '@/hooks/useSeasonDetails';
 import { episodeWatchCount, type EpisodeWatchLog } from '@/lib/episodes';
+import { currentEpisodeSeason } from '@/lib/seasonPreload';
 
 import { EpisodeList } from './EpisodeList';
 
@@ -30,10 +31,14 @@ export function EditEpisodesTab({
   onMarkSeasonComplete,
   onRewatchSeason,
 }: EditEpisodesTabProps) {
-  const [season, setSeason] = useState(1);
+  // Opens where the user left off rather than at season 1 - and that is the
+  // season SeasonPreload warmed, so the list is usually already on the device.
+  const [season, setSeason] = useState(() =>
+    currentEpisodeSeason({ episodeWatchDates, episodesWatched }, numberOfSeasons),
+  );
   const { data: seasonData, isLoading } = useSeasonDetails(tmdbId, season);
   const seasons = Array.from({ length: numberOfSeasons || 1 }, (_, i) => i + 1);
-  const episodes = seasonData?.episodes as { episode_number: number }[] | undefined;
+  const episodes = seasonData?.episodes;
 
   // Watch counts for the season on screen, so EpisodeList never touches the log
   // shape itself.
@@ -72,8 +77,8 @@ export function EditEpisodesTab({
           counts={counts}
           onToggle={(episodeNumber) => onToggleEpisode(season, episodeNumber)}
           onBump={(episodeNumber, delta) => onBumpEpisode(season, episodeNumber, delta)}
-          onMarkSeasonComplete={() => onMarkSeasonComplete(season, seasonData.episodes.map((e: { episode_number: number }) => e.episode_number))}
-          onRewatchSeason={() => onRewatchSeason(season, seasonData.episodes.map((e: { episode_number: number }) => e.episode_number))}
+          onMarkSeasonComplete={() => onMarkSeasonComplete(season, seasonData.episodes.map((e) => e.episode_number))}
+          onRewatchSeason={() => onRewatchSeason(season, seasonData.episodes.map((e) => e.episode_number))}
         />
       ) : (
         <View className="items-center rounded-xl border border-dashed border-border py-12">

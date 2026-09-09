@@ -8,6 +8,11 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 - Sign-in screen says the account is the same one Lidar and Sonar use
 
+### Changed
+
+- A show opens straight on Episodes, at the season you were last watching
+- Episode lists come from the device, so a show you are watching opens without a wait
+
 ### Fixed
 
 - The web app opens again instead of failing to load on a blank screen
