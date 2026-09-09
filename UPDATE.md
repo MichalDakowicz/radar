@@ -6,7 +6,9 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ### Added
 
-- Browse calendar has a Leaving tab for what is about to go from your services
+- Browse calendar has a Leaving tab for everything about to go in your region
+- Services you do not subscribe to are marked, so a last chance is still visible
+- Filter the leaving list down to only the services you already pay for
 - Watchlist titles leaving soon are listed first, with how many days are left
 - Browse feed gets a Last chance row of titles leaving that you never saved
 - Notification when a watchlist title is days from leaving a service you have

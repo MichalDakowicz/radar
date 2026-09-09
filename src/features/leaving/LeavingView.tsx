@@ -1,5 +1,6 @@
 import { CalendarX, Clapperboard } from 'lucide-react-native';
-import { ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -16,6 +17,12 @@ import { useLeavingSoon } from './useLeavingSoon';
 
 // Browse → Calendar → "Leaving". Two questions, in the order they matter:
 // what am I about to lose off my watchlist, and what else is going.
+//
+// Region-wide by default rather than limited to services the user pays for.
+// This is a browse surface: a film about to vanish from a service you do not
+// have is exactly the kind of thing worth knowing, and occasionally worth
+// subscribing over. "My services" is there as a filter for when the question is
+// "what can I watch tonight" instead.
 
 type LeavingViewProps = { onPress: (movie: Movie) => void };
 
@@ -29,27 +36,29 @@ function Empty({ title, body }: { title: string; body: string }) {
   );
 }
 
+function ScopeChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className={`rounded-full border px-3 py-1 ${active ? 'border-primary bg-primary/15' : 'border-border'}`}
+    >
+      <Text className={active ? 'text-xs font-semibold text-primary' : 'text-xs text-muted-foreground'}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 export function LeavingView({ onPress }: LeavingViewProps) {
   const { settings } = useUserSettings();
-  const { tracked, discover, byDay, loading, error, hasCatalogue } = useLeavingSoon();
+  const [onlyOwned, setOnlyOwned] = useState(false);
+  const { tracked, discover, byDay, loading, error, hasCatalogue, ownedCount } = useLeavingSoon(onlyOwned);
   const navBarSpace = useNavBarSpace();
 
   const open = (entry: LeavingTitle) => onPress(leavingToMovie(entry));
 
   if (loading) return <LoadingState label="Checking what's leaving…" />;
   if (error) return <ErrorState message="Couldn't load the leaving-soon list" />;
-
-  // No services picked means the filter has nothing to filter by, and showing a
-  // whole country's churn would be worse than showing nothing. Send them to the
-  // setting instead of pretending there is no news.
-  if (settings.ownedServices.length === 0) {
-    return (
-      <Empty
-        title="Tell Radar what you subscribe to"
-        body="Pick your services in Settings and this fills with the titles about to leave them."
-      />
-    );
-  }
 
   if (!hasCatalogue) {
     return (
@@ -60,13 +69,23 @@ export function LeavingView({ onPress }: LeavingViewProps) {
     );
   }
 
-  const total = byDay.size === 0 ? 0 : [...byDay.values()].reduce((n, day) => n + day.length, 0);
+  const total = [...byDay.values()].reduce((n, day) => n + day.length, 0);
+  // Offering the filter when it would empty the screen is a trap, so it only
+  // appears once the user has services set and something is actually on them.
+  const canFilter = settings.ownedServices.length > 0 && ownedCount > 0;
 
   return (
     <ScrollView
       contentContainerClassName="gap-6 px-4 pt-4"
       contentContainerStyle={{ paddingBottom: navBarSpace + 24 }}
     >
+      {canFilter && (
+        <View className="flex-row gap-2">
+          <ScopeChip label="Everything" active={!onlyOwned} onPress={() => setOnlyOwned(false)} />
+          <ScopeChip label="My services" active={onlyOwned} onPress={() => setOnlyOwned(true)} />
+        </View>
+      )}
+
       <View className="gap-3">
         <View className="flex-row items-baseline justify-between">
           <Text className="text-lg font-bold text-foreground">On your watchlist</Text>
@@ -94,12 +113,27 @@ export function LeavingView({ onPress }: LeavingViewProps) {
           <Text className="text-xs text-muted-foreground">{total}</Text>
         </View>
         <Text className="-mt-1 text-xs text-muted-foreground">
-          {countryName(settings.watchProviderCountry)} · {settings.ownedServices.join(' · ')}
+          {countryName(settings.watchProviderCountry)}
+          {onlyOwned ? ` · ${settings.ownedServices.join(' · ')}` : ' · every service'}
         </Text>
-        {discover.length === 0 && tracked.length === 0 ? (
-          <Empty title="Nothing is leaving soon" body="Nothing on your services has a published expiry date right now." />
+        {total === 0 ? (
+          <Empty
+            title={onlyOwned ? 'Nothing leaving your services' : 'Nothing is leaving soon'}
+            body={
+              onlyOwned
+                ? 'Switch to Everything to see what is going from the services you do not have.'
+                : 'Nothing in this region has a published expiry date right now.'
+            }
+          />
         ) : (
-          <LeavingAgenda byDay={byDay} onPress={open} />
+          <>
+            {!onlyOwned && discover.length > 0 && (
+              <Text className="-mt-1 text-xs text-muted-foreground">
+                Outlined badges are services you do not subscribe to
+              </Text>
+            )}
+            <LeavingAgenda byDay={byDay} onPress={open} />
+          </>
         )}
       </View>
     </ScrollView>

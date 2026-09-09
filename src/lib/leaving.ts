@@ -15,6 +15,14 @@
 //
 // Rule 2 only works where availability is known, which is library titles. The
 // discovery feed has expirations and nothing else, so there it is best-effort.
+//
+// SCOPE. Both rules are about *your* access, so they only apply when the list is
+// scoped to services you subscribe to. Unscoped, this is a browse surface for
+// the whole region — a film leaving a service you do not have is still worth
+// seeing, and is the one moment a subscription is genuinely worth considering.
+// So `onlyOwned` picks which question is being asked, and the answers differ:
+// scoped, the date is when you lose it; unscoped, it is when it is gone from
+// every service that lists it.
 
 import { normalizeAvailability } from '@/lib/services';
 import type { MediaType, Movie } from '@/types/movie';
@@ -43,8 +51,10 @@ export type LeavingTitle = {
   /** Access-loss date: the last day it is on any service you own. */
   expiresOn: string;
   daysLeft: number;
-  /** Owned services dropping it, soonest first. */
+  /** Services dropping it, soonest first. */
   services: string[];
+  /** Which of those you subscribe to. Empty means this one needs a sub. */
+  ownedServices: string[];
   /** Library row, when this is something you already track. */
   movieId: string | null;
   watched: boolean;
@@ -81,21 +91,22 @@ function keyOf(tmdbId: number, mediaType: MediaType) {
 }
 
 /**
- * Collapse expiration rows into titles, applying both rules above.
+ * Collapse expiration rows into titles.
  *
- * `owned` is the user's subscribed services; rows for anything else are dropped
- * before any of this, because a film leaving a service you do not pay for is
- * not news. An empty `owned` means the user never configured their services —
- * treated as "all", so the feature still shows something rather than nothing.
+ * `owned` is the user's subscribed services. With `onlyOwned` it narrows the
+ * list to those and both access rules apply; without it nothing is dropped and
+ * `owned` only decides which services get marked as ones you already have.
  */
 export function buildLeavingTitles(
   expirations: Expiration[],
   movies: Movie[],
   owned: string[],
   today: string = todayKey(),
+  { onlyOwned = false }: { onlyOwned?: boolean } = {},
 ): LeavingTitle[] {
   const mine = owned.length > 0 ? new Set(owned) : null;
-  const relevant = mine ? expirations.filter((e) => mine.has(e.serviceName)) : expirations;
+  const scoped = onlyOwned && mine;
+  const relevant = scoped ? expirations.filter((e) => mine.has(e.serviceName)) : expirations;
 
   const byTitle = new Map<string, Expiration[]>();
   for (const row of relevant) {
@@ -120,7 +131,9 @@ export function buildLeavingTitles(
     const movie = library.get(key) ?? null;
 
     // Rule 2: something you own still carries it, and that copy is not expiring.
-    if (movie && mine) {
+    // Scoped only — unscoped this is a browse listing, and "leaves Netflix on
+    // the 12th" is true whether or not you personally keep it elsewhere.
+    if (movie && scoped) {
       const leaving = new Set(sorted.map((row) => row.serviceName));
       const staying = normalizeAvailability(movie.availability).filter(
         (service) => mine.has(service) && !leaving.has(service),
@@ -138,6 +151,7 @@ export function buildLeavingTitles(
       expiresOn: last.expiresOn,
       daysLeft: daysUntil(last.expiresOn, today),
       services: sorted.map((row) => row.serviceName),
+      ownedServices: mine ? sorted.map((row) => row.serviceName).filter((s) => mine.has(s)) : [],
       movieId: movie?.id ?? null,
       watched: movie?.watched ?? false,
     });
@@ -168,9 +182,17 @@ export function splitLeaving(titles: LeavingTitle[]): {
   return { tracked, discover };
 }
 
+/** True when watching this before it goes would mean paying for something new. */
+export function needsSubscription(title: LeavingTitle): boolean {
+  return title.ownedServices.length === 0;
+}
+
 /** Day buckets for the calendar grid, keyed `YYYY-MM-DD`. Past days are dropped:
  *  the prune job keeps a week of history in the table for debugging, but a
- *  calendar of chances you already missed is only dispiriting. */
+ *  calendar of chances you already missed is only dispiriting.
+ *
+ *  Within a day, titles you can actually watch tonight come first — the rest are
+ *  browsing, and browsing should not bury the actionable half. */
 export function groupByDay(titles: LeavingTitle[]): Map<string, LeavingTitle[]> {
   const days = new Map<string, LeavingTitle[]>();
   for (const title of titles) {
@@ -178,6 +200,12 @@ export function groupByDay(titles: LeavingTitle[]): Map<string, LeavingTitle[]> 
     const bucket = days.get(title.expiresOn);
     if (bucket) bucket.push(title);
     else days.set(title.expiresOn, [title]);
+  }
+  for (const bucket of days.values()) {
+    bucket.sort(
+      (a, b) =>
+        Number(needsSubscription(a)) - Number(needsSubscription(b)) || a.title.localeCompare(b.title),
+    );
   }
   return days;
 }

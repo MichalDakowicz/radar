@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 
 import { getServiceStyle } from '@/lib/services';
-import { urgencyLabel, type LeavingTitle } from '@/lib/leaving';
+import { needsSubscription, urgencyLabel, type LeavingTitle } from '@/lib/leaving';
 
 const POSTER_W = 46;
 
@@ -52,21 +52,35 @@ export function LeavingRow({ entry, onPress }: LeavingRowProps) {
         {!!entry.releaseYear && (
           <Text className="text-xs text-muted-foreground">{entry.releaseYear}</Text>
         )}
-        <View className="mt-1 flex-row flex-wrap gap-1">
+        <View className="mt-1 flex-row flex-wrap items-center gap-1">
           {entry.services.map((service) => {
             const style = getServiceStyle(service);
+            // Filled means you already pay for it and can watch it tonight;
+            // outlined means the title is going but watching it would mean
+            // taking out a subscription. The distinction has to survive being
+            // glanced at, which is why it is fill and not a shade of the brand.
+            const have = entry.ownedServices.includes(service);
             return (
               <View
                 key={service}
-                className="rounded px-1.5 py-0.5"
-                style={{ backgroundColor: style.color }}
+                className="rounded border px-1.5 py-0.5"
+                style={{
+                  backgroundColor: have ? style.color : 'transparent',
+                  borderColor: style.color,
+                }}
               >
-                <Text className="text-[10px] font-semibold" style={{ color: style.textColor }}>
+                <Text
+                  className="text-[10px] font-semibold"
+                  style={{ color: have ? style.textColor : style.color }}
+                >
                   {service}
                 </Text>
               </View>
             );
           })}
+          {needsSubscription(entry) && (
+            <Text className="text-[10px] text-muted-foreground">· needs a sub</Text>
+          )}
         </View>
       </View>
 

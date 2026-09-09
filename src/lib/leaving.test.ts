@@ -1,4 +1,12 @@
-import { buildLeavingTitles, daysUntil, groupByDay, splitLeaving, todayKey, urgencyLabel } from './leaving';
+import {
+  buildLeavingTitles,
+  daysUntil,
+  groupByDay,
+  needsSubscription,
+  splitLeaving,
+  todayKey,
+  urgencyLabel,
+} from './leaving';
 import type { Expiration } from './leaving';
 import type { Movie } from '@/types/movie';
 
@@ -64,9 +72,27 @@ describe('urgencyLabel', () => {
 });
 
 describe('buildLeavingTitles', () => {
-  it('drops services the user does not subscribe to', () => {
+  it('keeps services the user does not subscribe to, unscoped', () => {
     const rows = [exp({ serviceName: 'Hulu' })];
-    expect(buildLeavingTitles(rows, [], ['Netflix'], TODAY)).toEqual([]);
+    const [title] = buildLeavingTitles(rows, [], ['Netflix'], TODAY);
+    expect(title.services).toEqual(['Hulu']);
+    expect(title.ownedServices).toEqual([]);
+    expect(needsSubscription(title)).toBe(true);
+  });
+
+  it('drops services the user does not subscribe to when scoped', () => {
+    const rows = [exp({ serviceName: 'Hulu' })];
+    expect(buildLeavingTitles(rows, [], ['Netflix'], TODAY, { onlyOwned: true })).toEqual([]);
+  });
+
+  it('marks the services the user does have', () => {
+    const rows = [
+      exp({ serviceName: 'Netflix', expiresOn: '2026-09-12' }),
+      exp({ serviceName: 'Hulu', expiresOn: '2026-09-14' }),
+    ];
+    const [title] = buildLeavingTitles(rows, [], ['Netflix'], TODAY);
+    expect(title.ownedServices).toEqual(['Netflix']);
+    expect(needsSubscription(title)).toBe(false);
   });
 
   it('treats an empty owned list as "all services"', () => {
@@ -86,26 +112,44 @@ describe('buildLeavingTitles', () => {
     expect(title.services).toEqual(['Netflix', 'Max']);
   });
 
-  it('ignores a later date on a service the user does not own', () => {
+  it('ignores a later date on an unowned service when scoped', () => {
+    const rows = [
+      exp({ serviceName: 'Netflix', expiresOn: '2026-09-12' }),
+      exp({ serviceName: 'Hulu', expiresOn: '2026-09-30' }),
+    ];
+    const [title] = buildLeavingTitles(rows, [], ['Netflix'], TODAY, { onlyOwned: true });
+    expect(title.expiresOn).toBe('2026-09-12');
+    expect(title.services).toEqual(['Netflix']);
+  });
+
+  it('counts the unowned service unscoped, where the date is when it is gone everywhere', () => {
     const rows = [
       exp({ serviceName: 'Netflix', expiresOn: '2026-09-12' }),
       exp({ serviceName: 'Hulu', expiresOn: '2026-09-30' }),
     ];
     const [title] = buildLeavingTitles(rows, [], ['Netflix'], TODAY);
-    expect(title.expiresOn).toBe('2026-09-12');
-    expect(title.services).toEqual(['Netflix']);
+    expect(title.expiresOn).toBe('2026-09-30');
+    expect(title.services).toEqual(['Netflix', 'Hulu']);
   });
 
   it('stays quiet when an owned service still carries it and is not expiring', () => {
     const rows = [exp({ serviceName: 'Netflix', expiresOn: '2026-09-12' })];
     const tracked = movie({ availability: ['Netflix', 'Max'] });
-    expect(buildLeavingTitles(rows, [tracked], ['Netflix', 'Max'], TODAY)).toEqual([]);
+    expect(buildLeavingTitles(rows, [tracked], ['Netflix', 'Max'], TODAY, { onlyOwned: true })).toEqual([]);
+  });
+
+  it('still lists it unscoped, where leaving Netflix is news regardless', () => {
+    const rows = [exp({ serviceName: 'Netflix', expiresOn: '2026-09-12' })];
+    const tracked = movie({ availability: ['Netflix', 'Max'] });
+    expect(buildLeavingTitles(rows, [tracked], ['Netflix', 'Max'], TODAY)).toHaveLength(1);
   });
 
   it('still reports when the only other carrier is a service you do not own', () => {
     const rows = [exp({ serviceName: 'Netflix', expiresOn: '2026-09-12' })];
     const tracked = movie({ availability: ['Netflix', 'Hulu'] });
-    expect(buildLeavingTitles(rows, [tracked], ['Netflix', 'Max'], TODAY)).toHaveLength(1);
+    expect(
+      buildLeavingTitles(rows, [tracked], ['Netflix', 'Max'], TODAY, { onlyOwned: true }),
+    ).toHaveLength(1);
   });
 
   it('reports when every owned carrier is expiring', () => {
@@ -114,7 +158,7 @@ describe('buildLeavingTitles', () => {
       exp({ serviceName: 'Max', expiresOn: '2026-09-14' }),
     ];
     const tracked = movie({ availability: ['Netflix', 'Max'] });
-    const [title] = buildLeavingTitles(rows, [tracked], ['Netflix', 'Max'], TODAY);
+    const [title] = buildLeavingTitles(rows, [tracked], ['Netflix', 'Max'], TODAY, { onlyOwned: true });
     expect(title.expiresOn).toBe('2026-09-14');
   });
 
@@ -172,5 +216,14 @@ describe('groupByDay', () => {
     const days = groupByDay(buildLeavingTitles(rows, [], ['Netflix'], TODAY));
     expect([...days.keys()]).toEqual(['2026-09-20']);
     expect(days.get('2026-09-20')).toHaveLength(2);
+  });
+
+  it('puts what you can watch tonight above what needs a subscription', () => {
+    const rows = [
+      exp({ tmdbId: 1, title: 'Needs a sub', serviceName: 'Hulu' }),
+      exp({ tmdbId: 2, title: 'Already have it', serviceName: 'Netflix' }),
+    ];
+    const days = groupByDay(buildLeavingTitles(rows, [], ['Netflix'], TODAY));
+    expect(days.get('2026-09-20')?.map((t) => t.title)).toEqual(['Already have it', 'Needs a sub']);
   });
 });
