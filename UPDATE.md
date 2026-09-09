@@ -4,6 +4,14 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.15.0 — Unreleased
 
+### Added
+
+- Browse calendar has a Leaving tab for what is about to go from your services
+- Watchlist titles leaving soon are listed first, with how many days are left
+- Browse feed gets a Last chance row of titles leaving that you never saved
+- Notification when a watchlist title is days from leaving a service you have
+- Settings offers SkyShowtime, Mubi and Crunchyroll under My services
+
 ## 2.14.0 — 2026-09-09
 
 ### Added

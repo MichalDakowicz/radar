@@ -15,6 +15,12 @@ export const SERVICE_CONFIG: Record<string, ServiceStyle> = {
   'Paramount+': { color: '#1d4ed8', textColor: '#ffffff', short: 'P+' },
   Fubo: { color: '#f97316', textColor: '#ffffff', short: 'Fu' },
   'Criterion Channel': { color: '#262626', textColor: '#ffffff', short: 'CC' },
+  // Added for the leaving-soon catalogue: outside the US these carry real
+  // weight. SkyShowtime alone is a fifth of everything expiring in Poland, so
+  // omitting it would have made "leaving my services" quietly wrong there.
+  SkyShowtime: { color: '#1b1f3b', textColor: '#ffffff', short: 'SS' },
+  Mubi: { color: '#000000', textColor: '#ffffff', short: 'Mu' },
+  Crunchyroll: { color: '#f47521', textColor: '#ffffff', short: 'Cr' },
 };
 
 export const OTHER_SERVICE_KEY = 'Other';
@@ -36,6 +42,9 @@ export const POPULAR_SERVICES = [
 export const ALL_SERVICES = [
   ...POPULAR_SERVICES,
   'Peacock',
+  'SkyShowtime',
+  'Mubi',
+  'Crunchyroll',
   'Fubo',
   'Criterion Channel',
 ] as const;
@@ -54,6 +63,9 @@ export function normalizeServiceName(name: string | null | undefined): string | 
   if (n.includes('paramount')) return 'Paramount+';
   if (n.includes('fubo')) return 'Fubo';
   if (n.includes('criterion')) return 'Criterion Channel';
+  if (n.includes('skyshowtime')) return 'SkyShowtime';
+  if (n.includes('mubi')) return 'Mubi';
+  if (n.includes('crunchyroll')) return 'Crunchyroll';
 
   return name;
 }

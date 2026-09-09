@@ -13,7 +13,8 @@ export type NotificationKind =
   | 'release'
   | 'release_soon'
   | 'streak_risk'
-  | 'nudge';
+  | 'nudge'
+  | 'leaving_soon';
 
 /**
  * The `data` payload. Every field is optional because it is a snapshot written

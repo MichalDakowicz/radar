@@ -72,6 +72,7 @@ const CHANNELS: Record<string, string> = {
   release_soon: 'releases',
   streak_risk: 'streaks',
   nudge: 'nudges',
+  leaving_soon: 'leaving',
 };
 
 // A streak warning is time-critical in a way a nudge is not; only the former

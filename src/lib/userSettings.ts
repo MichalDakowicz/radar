@@ -23,6 +23,8 @@ export type UserSettings = {
   notifySocial: boolean;
   notifyReleases: boolean;
   notifyReleaseLeadDays: number;
+  notifyLeaving: boolean;
+  notifyLeavingLeadDays: number;
   notifyStreaks: boolean;
   notifyNudges: boolean;
   notifyQuietStart: number;
@@ -53,6 +55,8 @@ export type UserSettingsRow = {
   notify_social: boolean | null;
   notify_releases: boolean | null;
   notify_release_lead_days: number | null;
+  notify_leaving: boolean | null;
+  notify_leaving_lead_days: number | null;
   notify_streaks: boolean | null;
   notify_nudges: boolean | null;
   notify_quiet_start: number | null;
@@ -79,6 +83,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   notifySocial: true,
   notifyReleases: true,
   notifyReleaseLeadDays: 1,
+  notifyLeaving: true,
+  notifyLeavingLeadDays: 3,
   notifyStreaks: true,
   notifyNudges: true,
   notifyQuietStart: 23,
@@ -118,6 +124,8 @@ export function normalizeSettings(row: UserSettingsRow): UserSettings {
     notifySocial: bool(row.notify_social, true),
     notifyReleases: bool(row.notify_releases, true),
     notifyReleaseLeadDays: num(row.notify_release_lead_days, 1),
+    notifyLeaving: bool(row.notify_leaving, true),
+    notifyLeavingLeadDays: num(row.notify_leaving_lead_days, 3),
     notifyStreaks: bool(row.notify_streaks, true),
     notifyNudges: bool(row.notify_nudges, true),
     notifyQuietStart: num(row.notify_quiet_start, 23),
@@ -145,6 +153,8 @@ const TO_COLUMN: Record<keyof UserSettings, keyof UserSettingsRow> = {
   notifySocial: 'notify_social',
   notifyReleases: 'notify_releases',
   notifyReleaseLeadDays: 'notify_release_lead_days',
+  notifyLeaving: 'notify_leaving',
+  notifyLeavingLeadDays: 'notify_leaving_lead_days',
   notifyStreaks: 'notify_streaks',
   notifyNudges: 'notify_nudges',
   notifyQuietStart: 'notify_quiet_start',

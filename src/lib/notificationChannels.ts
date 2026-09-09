@@ -14,6 +14,7 @@ export const CHANNELS = {
   social: 'social',
   releases: 'releases',
   streaks: 'streaks',
+  leaving: 'leaving',
   nudges: 'nudges',
   /** The metadata sweep's progress row. Pre-dates the rest; kept for continuity. */
   refresh: 'metadata-refresh',
@@ -55,6 +56,15 @@ const SPECS: ChannelSpec[] = [
     // deadline, and it is worthless if it arrives after midnight.
     description: 'A warning when your watching streak is about to break',
     importance: AndroidImportance.HIGH,
+    showBadge: true,
+  },
+  {
+    id: CHANNELS.leaving,
+    name: 'Leaving soon',
+    // Deadline-carrying like a streak warning, but the deadline is days out
+    // rather than hours, so it does not earn HIGH.
+    description: 'When a watchlist title is about to leave one of your services',
+    importance: AndroidImportance.DEFAULT,
     showBadge: true,
   },
   {

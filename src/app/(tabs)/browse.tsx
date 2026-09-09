@@ -20,6 +20,9 @@ import { ReleaseCalendar } from '@/features/browse/ReleaseCalendar';
 import { SearchResultsGrid } from '@/features/browse/SearchResultsGrid';
 import { useBrowseSearch } from '@/features/browse/useBrowseSearch';
 import { type BrowseTabId, useDiscoveryFeed } from '@/features/browse/useDiscoveryFeed';
+import { type CalendarMode, CalendarModeTabs } from '@/features/leaving/CalendarModeTabs';
+import { LastChanceRow } from '@/features/leaving/LastChanceRow';
+import { LeavingView } from '@/features/leaving/LeavingView';
 import { useQuickAdd } from '@/features/movies/add/useQuickAdd';
 import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import { MAX_W, useCenteredContentStyle } from '@/hooks/useResponsive';
@@ -37,6 +40,7 @@ function Browse() {
   const router = useRouter();
   const { show } = useToast();
   const [tab, setTab] = useState<BrowseTabId>('movies');
+  const [calendarMode, setCalendarMode] = useState<CalendarMode>('coming');
   const [rerollNonce, setRerollNonce] = useState(0);
   const search = useBrowseSearch();
   const filterSheetRef = useRef<BottomSheetModal>(null);
@@ -133,12 +137,19 @@ function Browse() {
         </ContentShell>
       ) : tab === 'calendar' ? (
         <ContentShell fill maxWidth={MAX_W.grid}>
-          <View className="bg-background px-4 pb-2 pt-3">
+          <View className="gap-2 bg-background px-4 pb-2 pt-3">
             <View className="mx-auto w-full max-w-md">
               <BrowseTabs active={tab} onChange={setTab} />
             </View>
+            <View className="mx-auto w-full max-w-md">
+              <CalendarModeTabs active={calendarMode} onChange={setCalendarMode} />
+            </View>
           </View>
-          <ReleaseCalendar onPress={openMedia} onAdd={handleAdd} onRemove={handleRemove} isAdded={isAdded} />
+          {calendarMode === 'leaving' ? (
+            <LeavingView onPress={openMedia} />
+          ) : (
+            <ReleaseCalendar onPress={openMedia} onAdd={handleAdd} onRemove={handleRemove} isAdded={isAdded} />
+          )}
         </ContentShell>
       ) : (
         <ScrollView
@@ -161,6 +172,7 @@ function Browse() {
               <BrowseTabs active={tab} onChange={setTab} />
             </View>
           </View>
+          <LastChanceRow onPress={openMedia} onAdd={handleAdd} onRemove={handleRemove} isAdded={isAdded} />
           {categories.map((category) => (
             <DiscoveryRow
               key={category.id}
