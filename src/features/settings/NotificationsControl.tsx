@@ -22,6 +22,10 @@ const SCOPES: { value: FriendActivityScope; label: string; icon: React.ReactNode
 
 const LEAD_DAYS = [0, 1, 3, 7];
 
+// No "None" here, unlike releases: the last-day alert always fires, so the
+// choice is only how much earlier the warning comes.
+const LEAVING_LEAD_DAYS = [1, 3, 7, 14];
+
 const SCOPE_HINT: Record<FriendActivityScope, string> = {
   none: 'Nothing from friends unless they add you or react to you',
   collection: 'Only when a friend watches something already in your library',
@@ -110,6 +114,30 @@ export function NotificationsControl() {
             }))}
             value={String(settings.notifyReleaseLeadDays) as `${number}`}
             onChange={(value) => void updateSettings({ notifyReleaseLeadDays: Number(value) })}
+          />
+        </View>
+      )}
+
+      <NotificationToggle
+        title="Leaving soon"
+        description="When something on your watchlist is about to leave a service you have"
+        value={settings.notifyLeaving}
+        disabled={off}
+        onChange={(notifyLeaving) => void updateSettings({ notifyLeaving })}
+      />
+
+      {settings.notifyLeaving && (
+        <View className="gap-2" style={{ opacity: off ? 0.45 : 1 }}>
+          <Text className="text-xs text-muted-foreground">How much warning before the last day</Text>
+          <Segmented
+            columns={4}
+            disabled={off}
+            options={LEAVING_LEAD_DAYS.map((days) => ({
+              value: String(days) as `${number}`,
+              label: `${days}d`,
+            }))}
+            value={String(settings.notifyLeavingLeadDays) as `${number}`}
+            onChange={(value) => void updateSettings({ notifyLeavingLeadDays: Number(value) })}
           />
         </View>
       )}

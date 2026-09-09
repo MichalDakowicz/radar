@@ -61,7 +61,7 @@ export function unreadCount(notifications: AppNotification[]): number {
 }
 
 /** The visual family a row belongs to — icon, tint, and nothing else. */
-export type NotificationTone = 'social' | 'release' | 'streak' | 'nudge';
+export type NotificationTone = 'social' | 'release' | 'streak' | 'nudge' | 'leaving';
 
 const TONES: Record<NotificationKind, NotificationTone> = {
   friend_request: 'social',
@@ -73,6 +73,7 @@ const TONES: Record<NotificationKind, NotificationTone> = {
   release_soon: 'release',
   streak_risk: 'streak',
   nudge: 'nudge',
+  leaving_soon: 'leaving',
 };
 
 export function notificationTone(kind: NotificationKind | string): NotificationTone {

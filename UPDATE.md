@@ -2,7 +2,17 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.15.0 — Unreleased
+## 2.15.0 — 2026-09-09
+
+### Added
+
+- Browse calendar has a Leaving tab for everything about to go in your region
+- Leaving is a poster grid you can filter by service, or by films and shows
+- Every poster says how long is left and which services are dropping it
+- Watchlist titles leaving soon come first, above the rest of the region
+- Browse feed gets a Last chance row of titles leaving that you never saved
+- Notification when a watchlist title is days from leaving a service you have
+- Settings offers SkyShowtime, Mubi and Crunchyroll under My services
 
 ## 2.14.0 — 2026-09-09
 

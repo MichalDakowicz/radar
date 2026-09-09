@@ -1,4 +1,4 @@
-import { CalendarClock, Flame, Sparkles, Users } from 'lucide-react-native';
+import { CalendarClock, CalendarX, Flame, Sparkles, Users } from 'lucide-react-native';
 import { View } from 'react-native';
 
 import { Avatar } from '@/features/friends/Avatar';
@@ -14,6 +14,7 @@ const TONE_STYLE: Record<NotificationTone, { color: string; className: string }>
   release: { color: '#c4b5fd', className: 'bg-violet-500/15' },
   streak: { color: '#fdba74', className: 'bg-orange-500/15' },
   nudge: { color: '#86efac', className: 'bg-green-500/15' },
+  leaving: { color: '#fca5a5', className: 'bg-red-500/15' },
 };
 
 const TONE_ICON = {
@@ -21,6 +22,7 @@ const TONE_ICON = {
   release: CalendarClock,
   streak: Flame,
   nudge: Sparkles,
+  leaving: CalendarX,
 } as const;
 
 /**

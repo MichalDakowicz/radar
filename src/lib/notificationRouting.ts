@@ -47,6 +47,7 @@ export function notificationHref(notification: Routable): string | null {
     case 'release':
     case 'release_soon':
     case 'nudge':
+    case 'leaving_soon':
       return titleHref(data) ?? '/';
     case 'streak_risk':
       return '/stats';
