@@ -111,6 +111,19 @@ alter type public.notification_kind add value if not exists 'leaving_soon';
 -- unknown kinds to notify_enabled alone, which would ignore notify_leaving.
 -- Re-declared here so this file is self-sufficient; the body is the original
 -- plus the one new branch.
+--
+-- Switched on `p_kind::text`, not on the enum. A `language sql` body is parsed
+-- and its literals resolved when the function is CREATED, so an enum literal
+-- here would be resolved in the same transaction as the ADD VALUE above and
+-- Postgres refuses that outright:
+--
+--   55P04: unsafe use of new value "leaving_soon" of enum type
+--   HINT: New enum values must be committed before they can be used.
+--
+-- Comparing text to text never looks the value up, so the whole file still runs
+-- as one script. (The plpgsql generator below can keep using the enum: a plpgsql
+-- body is only syntax-checked at creation and resolves its literals when it
+-- actually runs, which is a later transaction.)
 create or replace function private.notification_allowed(
   p_user uuid,
   p_kind public.notification_kind
@@ -121,7 +134,7 @@ stable
 security definer
 set search_path = ''
 as $$
-  select s.notify_enabled and case p_kind
+  select s.notify_enabled and case p_kind::text
            when 'friend_request'  then s.notify_friend_requests
            when 'friend_accepted' then s.notify_friend_requests
            when 'friend_activity' then s.notify_friend_activity <> 'none'
