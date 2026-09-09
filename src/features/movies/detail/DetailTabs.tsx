@@ -2,6 +2,15 @@ import { Pressable, Text, View } from 'react-native';
 
 export type DetailTab = 'details' | 'ratings' | 'episodes';
 
+/**
+ * What an owned title opens on. A series is opened to carry on watching it far
+ * more often than to read its cast, so Episodes leads; a film has no Episodes
+ * tab at all and stays on Details.
+ */
+export function defaultDetailTab(type: string | undefined): DetailTab {
+  return type === 'tv' ? 'episodes' : 'details';
+}
+
 // Segmented control under the owned-title controls (doc 03 Edit). Only owned
 // titles get it - a not-yet-owned title has nothing to put in Ratings or
 // Episodes, so its catalogue sections stay in the main scroll instead.

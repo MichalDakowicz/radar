@@ -27,13 +27,8 @@ export function useMediaMetadata(tmdbId: number | null, type: MediaType, country
   });
 }
 
-export function useSeasonDetails(tmdbId: number | null, season: number | null) {
-  return useQuery({
-    queryKey: ['tmdb', 'season', tmdbId, season],
-    queryFn: () => tmdb.fetchSeasonDetails(tmdbId as number, season as number),
-    enabled: !!tmdbId && season != null,
-  });
-}
+// useSeasonDetails lives in hooks/useSeasonDetails - the season endpoint is
+// cached on the device, so it needs more than a plain useQuery.
 
 export function useTrending() {
   return useQuery({ queryKey: ['tmdb', 'trending'], queryFn: tmdb.getTrending });

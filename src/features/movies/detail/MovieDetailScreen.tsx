@@ -13,7 +13,7 @@ import type { MediaType } from '@/types/movie';
 import { AddToLibraryButton } from './AddToLibraryButton';
 import { DetailAvailability, DetailCast, DetailGenres, DetailProduction, DetailStats } from './DetailFacts';
 import { DetailHero } from './DetailHero';
-import { DetailTabs, type DetailTab } from './DetailTabs';
+import { DetailTabs, defaultDetailTab, type DetailTab } from './DetailTabs';
 import { OverviewSection } from './OverviewSection';
 import { OwnedControls, SmartFillButton } from './OwnedControls';
 import { SimilarRow } from './SimilarRow';
@@ -36,9 +36,12 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
   const contentStyle = useCenteredContentStyle(MAX_W.detail);
   const detail = useMovieDetail({ tmdbId, type, movieId });
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [tab, setTab] = useState<DetailTab>('details');
+  // Null until the user picks: the form arrives a beat after mount, so which
+  // tab a title *defaults* to is derived rather than seeded into state.
+  const [pickedTab, setPickedTab] = useState<DetailTab | null>(null);
 
   const { display, editForm, form, owned } = detail;
+  const tab = pickedTab ?? defaultDetailTab(form?.type);
   const tabs: { key: DetailTab; label: string }[] = [
     ...(form?.type === 'tv' ? [{ key: 'episodes' as DetailTab, label: 'Episodes' }] : []),
     { key: 'details', label: 'Details' },
@@ -133,7 +136,7 @@ export function MovieDetailScreen({ tmdbId, type, movieId }: MovieDetailScreenPr
 
         {owned && form && (
           <>
-            <DetailTabs tabs={tabs} value={tab} onChange={setTab} />
+            <DetailTabs tabs={tabs} value={tab} onChange={setPickedTab} />
             <View className="gap-6 px-4">
               {tab === 'details' && (
                 <>

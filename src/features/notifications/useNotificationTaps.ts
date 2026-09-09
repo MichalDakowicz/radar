@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
-import * as Notifications from 'expo-notifications';
 import { useRootNavigationState, useRouter, type Href } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
+import { useLastNotificationResponse } from '@/features/notifications/lastNotificationResponse';
 import { invalidateInbox } from '@/hooks/useNotifications';
 import { notificationHref } from '@/lib/notificationRouting';
 import { supabase } from '@/lib/supabase';
@@ -20,7 +20,7 @@ import type { NotificationData } from '@/types/notification';
 export function useNotificationTaps(enabled: boolean) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const response = Notifications.useLastNotificationResponse();
+  const response = useLastNotificationResponse();
   // The root navigator has no key until it has mounted; pushing before then is
   // dropped, which on a cold start is exactly when the tap arrives.
   const navigationReady = !!useRootNavigationState()?.key;

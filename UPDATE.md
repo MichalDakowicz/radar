@@ -2,7 +2,20 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.14.0 — Unreleased
+## 2.14.0 — 2026-09-09
+
+### Added
+
+- Sign-in screen says the account is the same one Lidar and Sonar use
+
+### Changed
+
+- A show opens straight on Episodes, at the season you were last watching
+- Episode lists come from the device, so a show you are watching opens without a wait
+
+### Fixed
+
+- The web app opens again instead of failing to load on a blank screen
 
 ## 2.13.0 — 2026-09-02
 
