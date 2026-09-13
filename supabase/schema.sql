@@ -212,6 +212,26 @@ end $$;
 alter table public.user_settings
   add column if not exists owned_services text[] not null default '{}';
 
+-- user_settings.lidar_streak — Lidar's publish channel, the twin of the
+-- current_streak/streak_updated_at pair notifications.sql adds for Radar.
+--
+-- Radar does not read these. They are here because Radar owns user_settings and
+-- schema changes land in this file first; Lidar writes them and Pulsar reads
+-- them for its cross-app strip.
+--
+-- Lidar's reading streak cannot be re-derived by anyone else. It is pages per
+-- week against a threshold Lidar keeps in device MMKV, measured from a reset
+-- epoch Lidar also keeps in device MMKV — neither value exists in this
+-- database, so a sibling reading book_progress directly is guessing at two
+-- numbers at once. Snapshotting the answer is the only honest version, exactly
+-- as Radar does for its own.
+--
+-- updated_at is what makes a stale snapshot detectable: a phone that has not
+-- opened Lidar in a week must not keep publishing last week's streak as today's.
+alter table public.user_settings
+  add column if not exists lidar_streak            int not null default 0,
+  add column if not exists lidar_streak_updated_at timestamptz;
+
 -- movies.metadata_synced_at (background metadata refresh queue cursor).
 alter table public.movies
   add column if not exists metadata_synced_at timestamptz;
