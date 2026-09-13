@@ -30,7 +30,7 @@ export default function Login() {
   const isDesktop = useIsDesktop();
 
   // `as Href`: expo-router's generated route union is unstable for the
-  // transparent (tabs) group across typegen runs (observed in Phase 3) -
+  // transparent (tabs) group across typegen runs (observed in Phase 3) —
   // "/" always resolves correctly at runtime regardless.
   if (user) return <Redirect href={'/' as Href} />;
 
@@ -45,96 +45,94 @@ export default function Login() {
     }
   };
 
-  const handleGoogle = () => runAction(signInWithGoogle);
-
   const handleEmail = () => {
     if (!email || !password) return show('Enter an email and password');
     runAction(() => (mode === 'signIn' ? signInWithEmail(email, password) : signUpWithEmail(email, password)));
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-background"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView className="flex-1 bg-background" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <ScrollView
           contentContainerClassName="flex-grow items-center justify-center gap-10 px-6 py-12"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-      <View className="items-center gap-2">
-        <View className="h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
-          <Logo width={48} height={48} />
-        </View>
-        <Text className="text-4xl font-bold tracking-tight text-foreground">Radar</Text>
-        <Text className="text-muted-foreground">Curate and track your movie watchlist.</Text>
-        {/* Worth saying up front: the three apps share one account, and
-            someone who already has one should not create a second. */}
-        <Text className="pt-1 text-center text-xs text-muted-foreground/70">
-          Same account as Lidar and Sonar — sign in with it and your profile and friends come with you.
-        </Text>
-      </View>
-
-      {/* Capped and boxed so a 1440p browser shows a sign-in card rather than
-          inputs stretched the full width of the monitor. */}
-      <View
-        className={isDesktop ? 'w-full gap-3 rounded-2xl border border-border bg-card p-8' : 'w-full gap-3'}
-        style={{ maxWidth: MAX_W.form }}
-      >
-        <Pressable
-          onPress={handleGoogle}
-          disabled={busy}
-          className="flex-row items-center justify-center gap-2 rounded-full bg-foreground py-3 active:opacity-80 disabled:opacity-50"
-        >
-          <GoogleIcon width={18} height={18} />
-          <Text className="font-medium text-background">Sign in with Google</Text>
-        </Pressable>
-
-        <View className="my-1 flex-row items-center gap-3">
-          <View className="h-px flex-1 bg-border" />
-          <Text className="text-xs text-muted-foreground">OR</Text>
-          <View className="h-px flex-1 bg-border" />
-        </View>
-
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Email"
-          placeholderTextColor="hsl(0 0% 63.9%)"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          className="rounded-full border border-border px-5 py-3 text-foreground"
-        />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Password"
-          placeholderTextColor="hsl(0 0% 63.9%)"
-          secureTextEntry
-          className="rounded-full border border-border px-5 py-3 text-foreground"
-        />
-
-        <Pressable
-          onPress={handleEmail}
-          disabled={busy}
-          className="flex-row items-center justify-center gap-2 rounded-full border border-border py-3 active:opacity-80 disabled:opacity-50"
-        >
-          {busy ? (
-            <ActivityIndicator />
-          ) : (
-            <Text className="font-medium text-foreground">
-              {mode === 'signIn' ? 'Sign in with email' : 'Create account'}
+          <View className="items-center gap-2">
+            <View className="h-20 w-20 items-center justify-center rounded-2xl bg-primary/10">
+              <Logo width={48} height={48} />
+            </View>
+            <Text className="text-4xl font-bold tracking-tight text-foreground">Radar</Text>
+            <Text className="text-center text-muted-foreground">Curate and track your movie watchlist.</Text>
+            {/* Worth saying up front: the four apps share one account, and
+                someone who already has one should not create a second. */}
+            <Text className="pt-1 text-center text-xs text-muted-foreground/70">
+              Same account as Lidar, Sonar and Pulsar — sign in with it and your profile and friends come
+              with you.
             </Text>
-          )}
-        </Pressable>
+          </View>
 
-        <Pressable onPress={() => setMode(mode === 'signIn' ? 'signUp' : 'signIn')} className="items-center py-1">
-          <Text className="text-sm text-muted-foreground">
-            {mode === 'signIn' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
-          </Text>
-        </Pressable>
-      </View>
+          {/* Capped and boxed so a wide browser shows a sign-in card rather than
+              inputs stretched across the monitor. */}
+          <View
+            className={isDesktop ? 'w-full gap-3 rounded-2xl border border-border bg-card p-8' : 'w-full gap-3'}
+            style={{ maxWidth: MAX_W.form }}
+          >
+            <Pressable
+              onPress={() => runAction(signInWithGoogle)}
+              disabled={busy}
+              className="flex-row items-center justify-center gap-2 rounded-full bg-foreground py-3 active:opacity-80"
+              style={{ opacity: busy ? 0.5 : 1 }}
+            >
+              <GoogleIcon width={18} height={18} />
+              <Text className="font-medium text-background">Sign in with Google</Text>
+            </Pressable>
+
+            <View className="my-1 flex-row items-center gap-3">
+              <View className="h-px flex-1 bg-border" />
+              <Text className="text-xs text-muted-foreground">OR</Text>
+              <View className="h-px flex-1 bg-border" />
+            </View>
+
+            <TextInput
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Email"
+              placeholderTextColor="hsl(0 0% 63.9%)"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              className="rounded-full border border-border px-5 py-3 text-foreground"
+            />
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Password"
+              placeholderTextColor="hsl(0 0% 63.9%)"
+              secureTextEntry
+              className="rounded-full border border-border px-5 py-3 text-foreground"
+            />
+
+            <Pressable
+              onPress={handleEmail}
+              disabled={busy}
+              className="flex-row items-center justify-center gap-2 rounded-full border border-border py-3 active:opacity-80"
+              style={{ opacity: busy ? 0.5 : 1 }}
+            >
+              {busy ? (
+                <ActivityIndicator color="hsl(217 91% 60%)" />
+              ) : (
+                <Text className="font-medium text-foreground">
+                  {mode === 'signIn' ? 'Sign in with email' : 'Create account'}
+                </Text>
+              )}
+            </Pressable>
+
+            <Pressable onPress={() => setMode(mode === 'signIn' ? 'signUp' : 'signIn')} className="items-center py-1">
+              <Text className="text-sm text-muted-foreground">
+                {mode === 'signIn' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+              </Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>

@@ -4,6 +4,11 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.16.0 — Unreleased
 
+### Changed
+
+- Sign-in screen names Pulsar too, so all four apps point at the one account
+- Library rows drop the coloured rule down their left edge
+
 ## 2.15.0 — 2026-09-09
 
 ### Added
