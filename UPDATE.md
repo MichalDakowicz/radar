@@ -7,6 +7,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Changed
 
 - Sign-in screen names Pulsar too, so all four apps point at the one account
+- Library rows drop the coloured rule down their left edge
 
 ## 2.15.0 — 2026-09-09
 
