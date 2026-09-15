@@ -38,6 +38,16 @@ export type UserSettings = {
   streakWeekStart: string | null;
   /** Completions still owed this week to keep the streak. 0 = nothing to warn about. */
   streakWeekNeeded: number;
+  /**
+   * The same two streaks Stats shows, published for the sibling apps.
+   *
+   * `currentStreak` above is the film streak and stays where it is — the
+   * streak-risk generator in supabase/notifications.sql reads that column by
+   * name. These two are the pair a reader can tell apart: `movieStreak` is
+   * written from the same figure in the same patch, so the two cannot drift.
+   */
+  movieStreak: number;
+  tvStreak: number;
 };
 
 export type UserSettingsRow = {
@@ -66,6 +76,8 @@ export type UserSettingsRow = {
   streak_updated_at: string | null;
   streak_week_start: string | null;
   streak_week_needed: number | null;
+  movie_streak: number | null;
+  tv_streak: number | null;
 };
 
 export const DEFAULT_SETTINGS: UserSettings = {
@@ -94,6 +106,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   streakUpdatedAt: null,
   streakWeekStart: null,
   streakWeekNeeded: 0,
+  movieStreak: 0,
+  tvStreak: 0,
 };
 
 // Every column added after the initial deploy is nullable on the way in, so a
@@ -135,6 +149,8 @@ export function normalizeSettings(row: UserSettingsRow): UserSettings {
     streakUpdatedAt: row.streak_updated_at ?? null,
     streakWeekStart: row.streak_week_start ?? null,
     streakWeekNeeded: num(row.streak_week_needed, 0),
+    movieStreak: num(row.movie_streak, 0),
+    tvStreak: num(row.tv_streak, 0),
   };
 }
 
@@ -164,6 +180,8 @@ const TO_COLUMN: Record<keyof UserSettings, keyof UserSettingsRow> = {
   streakUpdatedAt: 'streak_updated_at',
   streakWeekStart: 'streak_week_start',
   streakWeekNeeded: 'streak_week_needed',
+  movieStreak: 'movie_streak',
+  tvStreak: 'tv_streak',
 };
 
 /** A patch, keyed by column. Unknown keys are dropped rather than sent. */

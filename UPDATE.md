@@ -9,6 +9,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 - Sign-in screen names Pulsar too, so all four apps point at the one account
 - Library rows drop the coloured rule down their left edge
 
+### Fixed
+
+- Stats: the streak no longer reads zero at the start of a week, before the first film
+
 ## 2.15.0 — 2026-09-09
 
 ### Added

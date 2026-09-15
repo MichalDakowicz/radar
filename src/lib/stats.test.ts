@@ -89,6 +89,23 @@ describe('computeCurrentStreak', () => {
     const daily = { '2024-03-06': 1 };
     expect(computeCurrentStreak(daily, 5, new Date(2024, 2, 6))).toBe(1);
   });
+
+  // The week in progress has days left to run, so it cannot have failed yet.
+  // This used to read zero: an empty Monday meant the current week had no
+  // activity, so it did not qualify, so the walk stopped there instead of
+  // stepping back into a week that plainly did.
+  it('does not collapse on a week that has not been watched in yet', () => {
+    // Thu/Fri/Sat of the week Mon 2026-09-07 .. Sun 2026-09-13.
+    const daily = { '2026-09-10': 1, '2026-09-11': 1, '2026-09-12': 1 };
+    // now = Tue 2026-09-15, nothing watched yet this week.
+    expect(computeCurrentStreak(daily, 2, new Date(2026, 8, 15))).toBe(3);
+  });
+
+  it('still breaks on a finished week that came up short', () => {
+    // One film in the week Mon 2026-09-07 .. Sun 2026-09-13, threshold 2.
+    const daily = { '2026-09-10': 1 };
+    expect(computeCurrentStreak(daily, 2, new Date(2026, 8, 15))).toBe(0);
+  });
 });
 
 describe('computeLongestStreak', () => {
