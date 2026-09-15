@@ -11,6 +11,15 @@ import { shouldSyncStreak, weekShortfall } from '@/lib/streakSnapshot';
  * mounted from the tabs layout, where the library is loaded anyway — putting it
  * in the root layout would pull the whole library down on the login screen.
  *
+ * It does **not** check `notifyStreaks` before writing. It used to, back when
+ * the column existed only to feed that notification, and the effect was that
+ * turning streak warnings off in Radar silently emptied the cross-app streak
+ * strip in Pulsar — a setting about notifications quietly switching off a
+ * read-only figure on another app's home screen, with nothing anywhere saying
+ * so. The generator does its own gating (`notify_enabled and notify_streaks`
+ * in supabase/notifications.sql), so the warning still respects the setting;
+ * publishing the number is now a separate job from warning about it.
+ *
  * The maths is not repeated here: this is the same useStats the Stats screen
  * reads, so the number in the notification is the number on the page. The week's
  * shortfall rides along, because that — not "nothing logged today" — is what
@@ -31,7 +40,7 @@ export function StreakSnapshot() {
   useEffect(() => {
     // An empty library computes a zero streak; writing that over a real one
     // before the first fetch lands would cancel tonight's warning.
-    if (moviesLoading || settingsLoading || !settings.notifyStreaks) return;
+    if (moviesLoading || settingsLoading) return;
     if (!shouldSyncStreak({ currentStreak: streak, tvStreak, weekStart, needed }, settings)) return;
     void updateSettings({
       currentStreak: streak,
