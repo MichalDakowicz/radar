@@ -27,6 +27,8 @@ const FULL: UserSettingsRow = {
   streak_updated_at: '2026-08-02T10:00:00Z',
   streak_week_start: '2026-07-27',
   streak_week_needed: 2,
+  movie_streak: 12,
+  tv_streak: 4,
 };
 
 /** What the same row looks like before notifications.sql has been run. */
@@ -62,6 +64,8 @@ describe('normalizeSettings', () => {
       streakUpdatedAt: '2026-08-02T10:00:00Z',
       streakWeekStart: '2026-07-27',
       streakWeekNeeded: 2,
+      movieStreak: 12,
+      tvStreak: 4,
     });
   });
 

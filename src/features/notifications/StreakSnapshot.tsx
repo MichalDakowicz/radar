@@ -25,20 +25,27 @@ export function StreakSnapshot() {
     tvStreakThreshold: settings.tvStreakThreshold,
   });
   const streak = stats?.currentStreak ?? 0;
+  const tvStreak = stats?.currentTVStreak ?? 0;
   const { weekStart, needed } = weekShortfall(stats?.dailyCompletions ?? {}, settings.streakThreshold);
 
   useEffect(() => {
     // An empty library computes a zero streak; writing that over a real one
     // before the first fetch lands would cancel tonight's warning.
     if (moviesLoading || settingsLoading || !settings.notifyStreaks) return;
-    if (!shouldSyncStreak({ currentStreak: streak, weekStart, needed }, settings)) return;
+    if (!shouldSyncStreak({ currentStreak: streak, tvStreak, weekStart, needed }, settings)) return;
     void updateSettings({
       currentStreak: streak,
+      // The same figure under its own name, and the TV one beside it, for the
+      // sibling apps to read. Written in this patch rather than a second one so
+      // `movie_streak` and `current_streak` cannot end up describing different
+      // days — see docs/shared-database.md in Lidar, Sonar and Pulsar.
+      movieStreak: streak,
+      tvStreak,
       streakUpdatedAt: new Date().toISOString(),
       streakWeekStart: weekStart,
       streakWeekNeeded: needed,
     });
-  }, [streak, weekStart, needed, moviesLoading, settingsLoading, settings, updateSettings]);
+  }, [streak, tvStreak, weekStart, needed, moviesLoading, settingsLoading, settings, updateSettings]);
 
   return null;
 }

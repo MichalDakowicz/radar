@@ -14,6 +14,8 @@ export const SNAPSHOT_STALE_MS = 12 * 60 * 60 * 1000;
 
 export type StreakSnapshot = {
   currentStreak: number;
+  /** The TV streak as published. Films ride on `currentStreak`. */
+  tvStreak: number;
   streakUpdatedAt: string | null;
   /** Monday of the week the shortfall below was measured in, `YYYY-MM-DD`. */
   streakWeekStart: string | null;
@@ -24,6 +26,7 @@ export type StreakSnapshot = {
 /** What the client has just computed, ready to compare against the snapshot. */
 export type StreakState = {
   currentStreak: number;
+  tvStreak: number;
   weekStart: string;
   needed: number;
 };
@@ -55,6 +58,10 @@ export function weekShortfall(
  */
 export function shouldSyncStreak(current: StreakState, snapshot: StreakSnapshot, now: number = Date.now()): boolean {
   if (current.currentStreak !== snapshot.currentStreak) return true;
+  // The TV figure has no generator of its own; it is published for the sibling
+  // apps. Without this a TV streak that moved on a quiet film week would sit
+  // stale behind a snapshot that looks current in every other respect.
+  if (current.tvStreak !== snapshot.tvStreak) return true;
   // A snapshot describing last week is useless tonight, and one describing a
   // shortfall that has since been paid off would warn about nothing.
   if (current.weekStart !== snapshot.streakWeekStart) return true;

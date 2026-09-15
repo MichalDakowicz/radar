@@ -32,12 +32,13 @@ describe('weekShortfall', () => {
 describe('shouldSyncStreak', () => {
   const snapshot = (over: Partial<StreakSnapshot> = {}): StreakSnapshot => ({
     currentStreak: 5,
+    tvStreak: 3,
     streakUpdatedAt: fresh,
     streakWeekStart: MONDAY,
     streakWeekNeeded: 1,
     ...over,
   });
-  const state = { currentStreak: 5, weekStart: MONDAY, needed: 1 };
+  const state = { currentStreak: 5, tvStreak: 3, weekStart: MONDAY, needed: 1 };
 
   it('stays quiet when the figures match and the snapshot is fresh', () => {
     expect(shouldSyncStreak(state, snapshot(), NOW)).toBe(false);
@@ -46,6 +47,13 @@ describe('shouldSyncStreak', () => {
   it('syncs when the streak has moved', () => {
     expect(shouldSyncStreak({ ...state, currentStreak: 6 }, snapshot(), NOW)).toBe(true);
     expect(shouldSyncStreak({ ...state, currentStreak: 0 }, snapshot(), NOW)).toBe(true);
+  });
+
+  // It has no generator of its own, so nothing else would ever re-send it: a TV
+  // streak that moved on a quiet film week would sit stale behind a snapshot
+  // that matches in every other respect.
+  it('syncs when only the tv streak has moved', () => {
+    expect(shouldSyncStreak({ ...state, tvStreak: 4 }, snapshot(), NOW)).toBe(true);
   });
 
   // A snapshot describing last week would have the generator warning on a week

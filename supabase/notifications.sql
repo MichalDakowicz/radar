@@ -85,7 +85,14 @@ alter table public.user_settings
   -- meets the threshold — without these the generator warns every quiet evening.
   -- Monday-anchored, matching weekStart() in src/lib/stats.ts.
   add column if not exists streak_week_start       date,
-  add column if not exists streak_week_needed      int not null default 0;
+  add column if not exists streak_week_needed      int not null default 0,
+  -- The same two streaks Stats shows, published for the sibling apps to read.
+  -- current_streak above is the film streak and stays where it is: the
+  -- generator below reads that column by name. movie_streak is written from the
+  -- same figure in the same patch (src/features/notifications/StreakSnapshot),
+  -- so a reader can tell the two apart without the pair drifting.
+  add column if not exists movie_streak            int not null default 0,
+  add column if not exists tv_streak               int not null default 0;
 
 do $$
 begin
