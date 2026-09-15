@@ -73,8 +73,17 @@ export function countInWeek(daily: Record<string, number>, start: Date): number 
 
 /**
  * Consecutive-day streak walking back from `now`. A day contributes when it has
- * activity and its week meets `threshold` (the current week counts with any
- * activity). Empty days are skipped only while their week still qualifies.
+ * activity and its week meets `threshold`. Empty days are skipped only while
+ * their week still qualifies.
+ *
+ * The week in progress always qualifies, and that is the whole of the rule: it
+ * has days left to run, so it cannot have failed yet. The lenient version of
+ * this used to be "the current week counts if it has any activity", which reads
+ * the same until the moment it matters — on a Monday morning with nothing
+ * watched yet, the week had no activity, did not qualify, and the walk stopped
+ * on the spot rather than stepping back into last week. The streak read zero
+ * every week until the first film of it, which is both wrong and the one number
+ * two other apps read off this account.
  */
 export function computeCurrentStreak(daily: Record<string, number>, threshold: number, now: Date): number {
   if (Object.keys(daily).length === 0) return 0;
@@ -87,7 +96,7 @@ export function computeCurrentStreak(daily: Record<string, number>, threshold: n
     const start = weekStart(cursor);
     const inWeek = countInWeek(daily, start);
     const isCurrentWeek = start.getTime() === thisWeekStart;
-    const weekQualifies = inWeek >= threshold || (isCurrentWeek && inWeek > 0);
+    const weekQualifies = isCurrentWeek || inWeek >= threshold;
 
     if ((daily[dateKey(cursor)] || 0) > 0) {
       if (weekQualifies) streak++;
