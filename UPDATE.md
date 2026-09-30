@@ -10,6 +10,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ### Changed
 
+- Settings: signing out asks whether to leave just Radar or every Ping app
 - Sign-in screen names Pulsar too, so all four apps point at the one account
 - Library rows drop the coloured rule down their left edge
 

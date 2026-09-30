@@ -1,11 +1,10 @@
-import { BarChart3, Bell, Clock, Database, Globe, Info, LogOut, Monitor, Tv } from 'lucide-react-native';
+import { BarChart3, Bell, Clock, Database, Globe, Info, Monitor, Tv } from 'lucide-react-native';
 import { useRef } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { ContentShell } from '@/components/layout/ContentShell';
 import { NavIslands } from '@/components/layout/NavIslands';
 import type { BottomSheetModal } from '@/components/ui/Sheet';
-import { signOut } from '@/features/auth/authActions';
 import { CardSizeControl } from '@/features/settings/AppearanceExtras';
 import { AppUpdateControl } from '@/features/settings/AppUpdateControl';
 import { DataTools } from '@/features/settings/DataTools';
@@ -16,6 +15,7 @@ import { PrivacyControl } from '@/features/settings/PrivacyControl';
 import { RecentlyAddedControl } from '@/features/settings/RecentlyAddedControl';
 import { RegionControl } from '@/features/settings/RegionControl';
 import { SettingsSection } from '@/features/settings/SettingsSection';
+import { SignOutControl } from '@/features/settings/SignOutControl';
 import { StreakThresholdsControl } from '@/features/settings/StreakThresholdsControl';
 import { ThemeControl } from '@/features/settings/ThemeControl';
 import { NestedHeader } from '@/features/social/NestedHeader';
@@ -83,13 +83,7 @@ export default function Settings() {
             <AppUpdateControl />
           </SettingsSection>
 
-          <Pressable
-            onPress={signOut}
-            className="flex-row items-center justify-center gap-2 rounded-full border border-border py-3 active:opacity-80"
-          >
-            <LogOut size={16} color="hsl(0 0% 98%)" />
-            <Text className="font-medium text-foreground">Sign out</Text>
-          </Pressable>
+          <SignOutControl />
         </ScrollView>
       </ContentShell>
 

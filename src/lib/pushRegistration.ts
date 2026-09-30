@@ -107,3 +107,18 @@ export async function clearPushToken(): Promise<void> {
     console.warn('Could not unregister this device for push', error);
   }
 }
+
+/**
+ * Sign-out everywhere. Every device the account is on is about to lose its
+ * session, so every device's row goes — not just this one's — or the others keep
+ * getting banners for an account none of them is signed in to. Same timing rule
+ * as clearPushToken: before the session ends.
+ */
+export async function clearAllPushTokens(userId: string): Promise<void> {
+  storage.remove(TOKEN_KEY);
+  try {
+    await supabase.from('device_tokens').delete().eq('user_id', userId);
+  } catch (error) {
+    console.warn('Could not unregister devices for push', error);
+  }
+}
