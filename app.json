@@ -54,7 +54,8 @@
         }
       ],
       "./plugins/withUploadSigning",
-      "./plugins/withTrimmedMediaPermissions"
+      "./plugins/withTrimmedMediaPermissions",
+      "./plugins/withPingSiblings"
     ],
     "experiments": {
       "typedRoutes": false,

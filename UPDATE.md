@@ -4,6 +4,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.16.0 — Unreleased
 
+### Added
+
+- Sign-in screen can continue with a Ping app already signed in on this phone
+
 ### Changed
 
 - Sign-in screen names Pulsar too, so all four apps point at the one account
