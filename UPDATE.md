@@ -11,6 +11,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ### Fixed
 
+- Android notification icons are larger and show the mark without a background
 - Stats: the streak no longer reads zero at the start of a week, before the first film
 
 ## 2.15.0 — 2026-09-09
