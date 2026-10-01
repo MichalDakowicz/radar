@@ -88,7 +88,8 @@
   "jest": {
     "preset": "jest-expo",
     "roots": [
-      "<rootDir>/src"
+      "<rootDir>/src",
+      "<rootDir>/supabase/functions"
     ]
   },
   "private": true
