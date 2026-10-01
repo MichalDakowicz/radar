@@ -108,7 +108,10 @@ mv app/build/outputs/apk/release/app-release.apk \
 adb install -r app/build/outputs/apk/release/radar-v<version>.apk
 ```
 
-Release builds are signed with the debug keystore, so `adb install -r` upgrades in place.
+Release builds are signed with the Play upload key (`plugins/withUploadSigning.js`), read from
+`credentials/` — gitignored, so a fresh worktree has none and Gradle silently falls back to the
+debug keystore. That APK then fails `adb install -r` with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`;
+copy `credentials/` in first.
 Gradle emits `app-release.apk`; the `radar-v<version>.apk` name is applied by the rename
 above and is what gets attached to the GitHub release.
 
