@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Clock, Database, Globe, Info, Monitor, Tv } from 'lucide-react-native';
+import { BarChart3, Bell, Clock, Database, Globe, Info, Monitor, Smartphone, Tv } from 'lucide-react-native';
 import { useRef } from 'react';
 import { ScrollView, View } from 'react-native';
 
@@ -6,6 +6,7 @@ import { ContentShell } from '@/components/layout/ContentShell';
 import { NavIslands } from '@/components/layout/NavIslands';
 import type { BottomSheetModal } from '@/components/ui/Sheet';
 import { CardSizeControl } from '@/features/settings/AppearanceExtras';
+import { QrLoginControl } from '@/features/auth/qr/QrLoginControl';
 import { AppUpdateControl } from '@/features/settings/AppUpdateControl';
 import { DataTools } from '@/features/settings/DataTools';
 import { ImportExportSheet } from '@/features/settings/ImportExportSheet';
@@ -77,6 +78,10 @@ export default function Settings() {
 
           <SettingsSection icon={<Database size={18} color={MUTED} />} title="Data">
             <DataTools onOpenImportExport={() => importExportRef.current?.present()} />
+          </SettingsSection>
+
+          <SettingsSection icon={<Smartphone size={18} color={MUTED} />} title="Other devices">
+            <QrLoginControl />
           </SettingsSection>
 
           <SettingsSection icon={<Info size={18} color={MUTED} />} title="About">

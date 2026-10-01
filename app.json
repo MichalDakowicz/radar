@@ -45,6 +45,13 @@
           "isAccessMediaLocationEnabled": false
         }
       ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Radar uses the camera to scan a QR code that signs another device in.",
+          "recordAudioAndroid": false
+        }
+      ],
       "expo-background-task",
       [
         "expo-notifications",
