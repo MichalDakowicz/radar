@@ -5,10 +5,9 @@ server half because the account is shared; every Ping app speaks to it the same 
 (`PING.md` §9.14).
 
 **What exists:** the pairing table (`supabase/qr-login.sql`), the `qr-login` edge
-function (`supabase/functions/qr-login/`), and the pure client protocol in every app
-(`src/lib/qrLogin.ts`). **What does not yet:** the screens — the QR to show, the
-scanner, the approval sheet, the web login page. Nothing here is reachable from the
-apps until the SQL is applied and the function is deployed, and neither is done by
+function (`supabase/functions/qr-login/`), the pure client protocol in every app
+(`src/lib/qrLogin.ts`), and the screens that use it (see *The screens*). Nothing here is
+reachable until the SQL is applied and the function is deployed, and neither is done by
 any commit: both are applied by hand.
 
 ## Two directions, one pairing
@@ -48,6 +47,33 @@ The signed-out side polls `redeem` until it sees `approved`, then redeems the to
 with `auth.verifyOtp({ token_hash, type: 'email' })` — the same call the sibling
 sign-in handoff ends in. `PairView` in `lib/qrLogin` maps the server's states to what
 a screen shows.
+
+## The screens
+
+Identical in all five apps except `features/auth/qr/qrCopy.ts`, which is each app's own
+voice. Shared files: `lib/qr{Answers,DeviceLabel,Flow,Matrix,Poll}.ts`, `components/qr/*`,
+`features/auth/qr/**` and the two routes below.
+
+| Where | What it does |
+| --- | --- |
+| Sign-in screen, phone | *Sign in with a QR code* opens `qr-scan`, which scans a code a signed-in phone is showing (`join`, then polls `redeem`) |
+| Sign-in screen, web | *Sign in with your phone* opens a code of its own (`start`, then polls `redeem`) for a signed-in phone to scan. Nothing is created until the button is pressed |
+| Settings → Other devices | *Sign in another device* opens `qr-show`; *Scan a code* opens `qr-scan` (phones only) |
+| `qr-scan` | One camera, both meanings. Signed in, a browser's code becomes a request to approve (`claim`); signed out, a phone's code is a way in. A real Ping code meant for the other side gets a sentence, not silence |
+| `qr-show` | Signed in only. `offer`, shows the code and match code, polls `status`, and when somebody joins shows the same approval card |
+
+The approval card is the defence and has no shortcuts: the match code, what the requesting
+device *says* it is, where the server *saw* it, and two buttons. Leaving either signed-in
+screen while a code or a request is open declines it.
+
+A code that runs out is replaced by a new pairing, up to four times (`MAX_RENEWALS` in
+`lib/qrFlow`), then the screen offers a new one by hand. The signed-out side keeps its
+verifier in memory only, and its poll never restarts while a pairing is live: a second
+`redeem` racing the one that collects the token would find it gone.
+
+Android needs `CAMERA`, which `expo-camera`'s plugin declares. Radar strips unused
+permissions in `plugins/withTrimmedMediaPermissions.js` and no longer strips this one.
+The scanner needs a real build — it does not run in Expo Go.
 
 ## What it defends against, and what it does not
 

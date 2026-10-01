@@ -135,6 +135,16 @@ claiming it is running. Never `input keyevent`/`swipe` to get past a lock screen
 Report the actual result — if the build fails or the install rejects, say so with the
 error, do not describe the change as shipped.
 
+**The QR scanner needs a real build.** `expo-camera`'s native module is not in the Expo Go
+binary, so a scan silently never fires there. The sign-in QR screens (`qr-scan`, `qr-show`;
+PING.md §9.14) are only verified on a dev or release build, and the approve step needs a
+signed-in session of your own.
+
+**Radar must keep `CAMERA`.** `plugins/withTrimmedMediaPermissions.js` strips permissions
+the app does not use, and it once stripped `CAMERA` because only the avatar picker declared
+it. The QR scanner needs it now. If the scanner shows an "Allow camera" button that never
+works, check that list first.
+
 ### Then the web build, same pass
 
 Once the mobile install succeeds, ship web too — the user has standing authorization for

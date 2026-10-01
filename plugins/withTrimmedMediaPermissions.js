@@ -8,7 +8,7 @@
  * the "one-time or infrequent" case the policy tells you to serve with the system photo
  * picker instead.
  *
- * Radar needs none of them:
+ * Radar needs none of them (the camera is the exception, see below):
  *   - avatars go through ImagePicker.launchImageLibraryAsync, which is the Android photo
  *     picker on API 33+ and grants access to the single chosen image with no permission
  *   - saving a Recap card calls MediaLibrary with writeOnly, which never reads the gallery
@@ -24,11 +24,12 @@ const REMOVE = [
   'android.permission.READ_MEDIA_AUDIO',
   'android.permission.READ_MEDIA_VISUAL_USER_SELECTED',
   'android.permission.RECORD_AUDIO',
-  // expo-image-picker declares this "for picking images from camera directly". Radar only
-  // ever calls launchImageLibraryAsync, so the app would be asking for the camera it never
-  // opens - the kind of unexplained permission a Play reviewer stops on.
-  'android.permission.CAMERA',
 ];
+
+// CAMERA is deliberately not here. expo-image-picker declares it "for picking images from
+// camera directly", which Radar never does - but the QR scanner (expo-camera, PING.md 9.14)
+// does open the camera, to read a sign-in code. Stripping it would leave the scanner with a
+// permission prompt that can never be granted. RECORD_AUDIO stays removed: nothing here records.
 
 module.exports = function withTrimmedMediaPermissions(config) {
   return withAndroidManifest(config, (cfg) => {

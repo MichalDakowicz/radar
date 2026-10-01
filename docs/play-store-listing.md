@@ -229,12 +229,16 @@ channels keep working. Then `npm run deploy:web` to publish it.
    boxes. Radar's use is the "one-time or infrequent" case the policy tells you to serve
    with the photo picker, so claiming a frequent-access need would be untrue and gets
    rejected. Instead `plugins/withTrimmedMediaPermissions.js` removes `READ_MEDIA_IMAGES`,
-   `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO`, `READ_MEDIA_VISUAL_USER_SELECTED`, `RECORD_AUDIO`
-   and `CAMERA` from the merged manifest, and `EditProfileSheet.tsx` no longer calls
+   `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO`, `READ_MEDIA_VISUAL_USER_SELECTED` and
+   `RECORD_AUDIO` from the merged manifest, and `EditProfileSheet.tsx` no longer calls
    `requestMediaLibraryPermissionsAsync` — `launchImageLibraryAsync` is the system photo
    picker and needs no permission. `READ_EXTERNAL_STORAGE`/`WRITE_EXTERNAL_STORAGE` stay at
    `maxSdkVersion="32"`, which is what covers the versions predating the picker. With the
    permissions gone the declaration section disappears from App content entirely.
+
+   `CAMERA` is declared, and on purpose: the QR scanner (`expo-camera`) reads a code on
+   another device's screen to sign it in. It is used live and nothing it sees is stored or
+   uploaded, which is what the Data safety answers in §6 should say if they mention it.
 
    Still declared and left alone: `SYSTEM_ALERT_WINDOW`, which React Native's own manifest
    contributes. Removing it is a separate change that needs its own device pass.
