@@ -68,6 +68,8 @@ firebase-adminsdk*.json
 *.tsbuildinfo
 /ios
 /android
+# A local Expo module's own android/ is source; only its Gradle output is not.
+/modules/**/android/build
 
 # Supabase CLI scratch state — which project this checkout happens to be linked
 # to is per-machine, not part of the repo.
