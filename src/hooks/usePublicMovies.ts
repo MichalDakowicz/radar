@@ -33,6 +33,9 @@ export function usePublicMovies(userId: string | undefined) {
       return (data as MovieRow[]).map(normalizeMovie);
     },
     enabled: !!userId,
+    // A friend's whole shelf, every column. Opening shelf, compare and watch-together
+    // back to back must not pull it three times.
+    staleTime: 5 * 60 * 1000,
   });
   return { movies: query.data ?? [], loading: query.isLoading, error: query.error };
 }

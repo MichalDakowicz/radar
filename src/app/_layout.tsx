@@ -10,6 +10,7 @@ import { NAV_DESTINATIONS } from '@/components/layout/navDestinations';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AuthProvider, useAuth } from '@/features/auth/AuthProvider';
 import { SeasonPreload } from '@/features/movies/detail/SeasonPreload';
+import { MoviesSync } from '@/features/movies/MoviesSync';
 import { NotificationSync } from '@/features/notifications/NotificationSync';
 import { RefreshMetadataProvider } from '@/features/settings/RefreshMetadataProvider';
 import { UpdateNotice } from '@/features/updates/UpdateNotice';
@@ -60,6 +61,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       {children}
       <UpdateNotice />
       <NotificationSync />
+      <MoviesSync />
       <SeasonPreload />
     </>
   );
