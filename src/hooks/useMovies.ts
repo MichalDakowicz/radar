@@ -1,15 +1,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
 
 import { useAuth } from '@/features/auth/AuthProvider';
+import { dropMovie, moviesQueryKey, refreshMovie } from '@/hooks/moviesCache';
 import { normalizeMovie, toMovieRow, type MovieRow } from '@/lib/normalizeMovie';
 import { stripUndefined } from '@/lib/stripUndefined';
 import { supabase } from '@/lib/supabase';
 import type { ActivityType, MediaType, Movie } from '@/types/movie';
 
-function moviesQueryKey(userId: string | undefined) {
-  return ['movies', userId] as const;
-}
+// Realtime (useMoviesRealtime) and our own writes both patch single rows into this
+// list, so a full re-read is only the catch-up after the app was away - the socket
+// is not delivering while it is backgrounded.
+const LIBRARY_STALE_MS = 5 * 60 * 1000;
 
 async function fetchMovies(userId: string): Promise<Movie[]> {
   const { data, error } = await supabase
@@ -49,31 +50,8 @@ export function useMovies() {
     queryKey,
     queryFn: () => fetchMovies(user!.id),
     enabled: !!user,
+    staleTime: LIBRARY_STALE_MS,
   });
-
-  // Realtime replaces the old onValue subscription (doc 05 - data subscriptions):
-  // any change to this user's rows just invalidates the cached list.
-  //
-  // Channel name includes a random suffix: React's dev-mode double-invoke
-  // (mount -> cleanup -> mount) can run this effect twice before the first
-  // channel's removeChannel() finishes, and supabase-js caches channels by
-  // name - reusing an already-`subscribe()`d channel then throws on `.on()`.
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel(`movies:${user.id}:${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'movies', filter: `user_id=eq.${user.id}` },
-        () => queryClient.invalidateQueries({ queryKey }),
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, queryClient, queryKey]);
 
   const addMovie = async (movieData: Partial<Movie> & { title: string; type: MediaType }) => {
     if (!user) return;
@@ -91,7 +69,7 @@ export function useMovies() {
       mediaType: movieData.type,
       status: movieData.status ?? 'Watchlist',
     });
-    queryClient.invalidateQueries({ queryKey });
+    void refreshMovie(queryClient, user.id, data.id);
   };
 
   const updateMovie = async (movieId: string, updates: Partial<Movie>, options: { silent?: boolean } = {}) => {
@@ -152,7 +130,7 @@ export function useMovies() {
       }
     }
 
-    queryClient.invalidateQueries({ queryKey });
+    void refreshMovie(queryClient, user.id, movieId);
   };
 
   const removeMovie = async (movieId: string) => {
@@ -166,7 +144,7 @@ export function useMovies() {
       // movie row is gone, so movie_id must be null or the activity FK rejects the insert
       await logActivity(user.id, null, movie.title, 'removed', { mediaType: movie.type });
     }
-    queryClient.invalidateQueries({ queryKey });
+    dropMovie(queryClient, user.id, movieId);
   };
 
   return {
