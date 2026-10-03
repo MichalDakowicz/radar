@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { PanResponder, Pressable, Text, View } from 'react-native';
+import { type GestureResponderEvent, Pressable, Text, View } from 'react-native';
 
 type RatingSliderProps = {
   value: number;
@@ -13,7 +13,6 @@ type RatingSliderProps = {
 // the same 0.5 step. Tapping the current value clears the rating.
 export function RatingSlider({ value, onChange, step = 0.5, max = 5 }: RatingSliderProps) {
   const stepCount = Math.round(max / step);
-  const percent = Math.max(0, Math.min(100, (value / max) * 100));
 
   return (
     <View className="gap-2">
@@ -31,7 +30,9 @@ export function RatingSlider({ value, onChange, step = 0.5, max = 5 }: RatingSli
 // Continuous drag slider for the overall score (0.1 steps) - the tick-line
 // above reads great at coarse 0.5 steps but can't express 0.1 without 50
 // tap targets, so overall gets a real drag track (PanResponder, page-relative
-// via measure() so it tracks correctly inside scrolling parents).
+// via measure() so it tracks correctly inside scrolling parents). The responder
+// props are the same handlers PanResponder.panHandlers would spread on, minus
+// the ref PanResponder had to be held in during render.
 export function RatingSliderPrecise({ value, onChange, step = 0.1, max = 5 }: RatingSliderProps) {
   const trackRef = useRef<View>(null);
   const layout = useRef({ pageX: 0, width: 0 });
@@ -44,19 +45,13 @@ export function RatingSliderPrecise({ value, onChange, step = 0.1, max = 5 }: Ra
     onChange(Math.max(0, Math.min(max, Number(stepped.toFixed(2)))));
   };
 
-  const responder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt) => {
-        trackRef.current?.measure((_x, _y, width, _height, pageX) => {
-          layout.current = { pageX, width };
-          setFromPageX(evt.nativeEvent.pageX);
-        });
-      },
-      onPanResponderMove: (evt) => setFromPageX(evt.nativeEvent.pageX),
-    }),
-  ).current;
+  const onGrant = (evt: GestureResponderEvent) => {
+    const touchX = evt.nativeEvent.pageX;
+    trackRef.current?.measure((_x, _y, width, _height, pageX) => {
+      layout.current = { pageX, width };
+      setFromPageX(touchX);
+    });
+  };
 
   const percent = Math.max(0, Math.min(100, (value / max) * 100));
 
@@ -64,7 +59,10 @@ export function RatingSliderPrecise({ value, onChange, step = 0.1, max = 5 }: Ra
     <View className="px-3">
       <View
         ref={trackRef}
-        {...responder.panHandlers}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={onGrant}
+        onResponderMove={(evt) => setFromPageX(evt.nativeEvent.pageX)}
         className="h-8 w-full justify-center"
         onLayout={() => trackRef.current?.measure((_x, _y, width, _height, pageX) => (layout.current = { pageX, width }))}
       >

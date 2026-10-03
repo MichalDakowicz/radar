@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 
+import { useNow } from '@/hooks/useNow';
 import { matchesDirectorFilter, matchesGenreFilter, matchesTypeFilter, matchesYearFilter } from '@/lib/libraryFacets';
 import { movieMatchesSearchQuery } from '@/lib/librarySearch';
 import { compareMovies } from '@/lib/librarySort';
@@ -69,6 +70,7 @@ export function useLibraryFilters({
   showRecentlyAdded = false,
   ownedServices = NO_SERVICES,
 }: LibraryFilterInput): LibraryFilters {
+  const now = useNow();
   const serviceSelection = useMemo(
     () => effectiveServiceSelection(selectedServices, ownedServices),
     [selectedServices, ownedServices],
@@ -84,18 +86,18 @@ export function useLibraryFilters({
   // off so the section collapses.
   const recentlyAdded = useMemo(() => {
     if (!showRecentlyAdded) return [];
-    const cutoff = Date.now() - recentlyAddedDays * 24 * 60 * 60 * 1000;
+    const cutoff = now - recentlyAddedDays * 24 * 60 * 60 * 1000;
     const recent = movies
       .filter((m) => m.addedAt && new Date(m.addedAt).getTime() >= cutoff)
       .sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime())
       .slice(0, 30);
     return searchQuery.trim() ? recent.filter((m) => movieMatchesSearchQuery(m, searchQuery)) : recent;
-  }, [movies, searchQuery, showRecentlyAdded, recentlyAddedDays]);
+  }, [movies, searchQuery, showRecentlyAdded, recentlyAddedDays, now]);
 
   const comingSoon = useMemo(() => {
-    const upcoming = selectComingSoon(movies, Date.now());
+    const upcoming = selectComingSoon(movies, now);
     return searchQuery.trim() ? upcoming.filter((m) => movieMatchesSearchQuery(m, searchQuery)) : upcoming;
-  }, [movies, searchQuery]);
+  }, [movies, searchQuery, now]);
 
   const filteredMovies = useMemo(() => {
     let result = movies;

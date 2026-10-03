@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Bookmark, CheckCircle2, Edit, Plus, PlayCircle, Star, Trash2, type LucideIcon } from 'lucide-react-native';
+import { Bookmark, CheckCircle2, Edit, Plus, PlayCircle, Star, Trash2 } from 'lucide-react-native';
+import type { ReactElement } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { formatRelativeTime } from '@/lib/utils';
@@ -11,29 +12,33 @@ type HistoryPillProps = {
   event: ActivityEvent;
 };
 
-function iconFor(event: ActivityEvent): LucideIcon {
+const ICON_PROPS = { size: 16, color: 'hsl(0 0% 90%)' };
+
+// Returns elements, not component types, so render never picks a component
+// dynamically (react-hooks/static-components).
+function iconFor(event: ActivityEvent): ReactElement {
   switch (event.type) {
     case 'added':
-      return Plus;
+      return <Plus {...ICON_PROPS} />;
     case 'completed':
-      return CheckCircle2;
+      return <CheckCircle2 {...ICON_PROPS} />;
     case 'started_watching':
-      return PlayCircle;
+      return <PlayCircle {...ICON_PROPS} />;
     case 'added_to_watchlist':
-      return Bookmark;
+      return <Bookmark {...ICON_PROPS} />;
     case 'rating_changed':
-      return Star;
+      return <Star {...ICON_PROPS} />;
     case 'removed':
-      return Trash2;
+      return <Trash2 {...ICON_PROPS} />;
     case 'status_changed': {
       const s = event.details?.newStatus;
-      if (s === 'Completed') return CheckCircle2;
-      if (s === 'Watching') return PlayCircle;
-      if (s === 'Watchlist') return Bookmark;
-      return Edit;
+      if (s === 'Completed') return <CheckCircle2 {...ICON_PROPS} />;
+      if (s === 'Watching') return <PlayCircle {...ICON_PROPS} />;
+      if (s === 'Watchlist') return <Bookmark {...ICON_PROPS} />;
+      return <Edit {...ICON_PROPS} />;
     }
     default:
-      return Edit;
+      return <Edit {...ICON_PROPS} />;
   }
 }
 
@@ -62,14 +67,13 @@ function actionText(event: ActivityEvent): string {
 
 export function HistoryPill({ event }: HistoryPillProps) {
   const router = useRouter();
-  const Icon = iconFor(event);
   const isRemoved = event.type === 'removed';
   const timeAgo = formatRelativeTime(event.createdAt);
 
   const body = (
     <>
       <View className="h-10 w-10 items-center justify-center rounded-full bg-secondary">
-        <Icon size={16} color="hsl(0 0% 90%)" />
+        {iconFor(event)}
       </View>
       <View className="justify-center">
         <Text className="mb-0.5 text-sm font-semibold leading-tight text-foreground" numberOfLines={1}>
