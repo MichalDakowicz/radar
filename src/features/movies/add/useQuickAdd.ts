@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { useMovies } from '@/hooks/useMovies';
 import { normalizeAvailability } from '@/lib/services';
+import { addedDatedWatches } from '@/lib/watchCounts';
 import type { StatusFlags } from '@/lib/movieStatus';
 import { fetchMediaMetadata, type MediaMetadata } from '@/lib/tmdb';
 import type { MediaType, Movie, Ratings } from '@/types/movie';
@@ -32,8 +33,7 @@ function datedNow(status: QuickAddStatus): boolean {
 /** Today, once per dated watch - the rest of the count is the undated part. */
 function datedStamps(status: QuickAddStatus): string[] {
   const iso = new Date().toISOString();
-  const dated = Math.max(0, (status.timesWatched || 1) - status.undatedWatches);
-  return Array.from({ length: dated }, () => iso);
+  return Array.from({ length: addedDatedWatches(status) }, () => iso);
 }
 
 function metadataToPayload(

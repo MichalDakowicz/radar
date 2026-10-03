@@ -12,6 +12,7 @@ import { RatingSlider, RatingSliderPrecise, RatingValue } from '@/features/movie
 import { useMediaMetadata, useSearchMedia } from '@/hooks/useTmdb';
 import { directorToDisplayString } from '@/lib/utils';
 import type { MediaMetadata, MediaSummary } from '@/lib/tmdb';
+import { addedDatedWatches } from '@/lib/watchCounts';
 import type { MediaType, Ratings } from '@/types/movie';
 
 import { AddSearchResults } from './AddSearchResults';
@@ -363,7 +364,7 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
             <SelectedPreview summary={selected} metadata={metadata ?? undefined} isLoading={isLoadingMetadata} />
             <View className="gap-3">
               <SectionLabel>Watch status</SectionLabel>
-              <StatusPicker value={status} onChange={setStatus} datedPasses={status.watched ? 1 : 0} />
+              <StatusPicker value={status} onChange={setStatus} datedPasses={addedDatedWatches(status)} />
             </View>
             {status.watched && (
               <RatingSection overall={overallRating} onOverall={setOverallRating} categories={categories} onCategories={setCategories} />
@@ -392,7 +393,7 @@ export const QuickAddSheet = forwardRef<BottomSheetModal>(function QuickAddSheet
 
             <View className="gap-3">
               <SectionLabel>Watch status</SectionLabel>
-              <StatusPicker value={status} onChange={setStatus} datedPasses={status.watched ? 1 : 0} />
+              <StatusPicker value={status} onChange={setStatus} datedPasses={addedDatedWatches(status)} />
             </View>
 
             {status.watched && (

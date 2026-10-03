@@ -1,5 +1,6 @@
 import {
   datedPasses,
+  addedDatedWatches,
   retotalWatches,
   stepUndatedWatches,
   totalWatches,
@@ -155,55 +156,80 @@ describe('watchedMinutes', () => {
 });
 
 describe('stepUndatedWatches', () => {
-  const film = { datedPasses: 1, derived: false };
+  const film = { datedPasses: 0, derived: false };
 
-  it('makes the first plus of a sitting an undated watch', () => {
-    const step = stepUndatedWatches({ timesWatched: 1, undatedWatches: 0 }, 1, { ...film, undatedAddedThisOpen: 0 });
-    expect(step).toEqual({ timesWatched: 2, undatedWatches: 1, dated: false });
+  it('adds an undated watch to an unwatched film', () => {
+    expect(stepUndatedWatches({ timesWatched: 0, undatedWatches: 0 }, 1, film)).toEqual({
+      timesWatched: 1,
+      undatedWatches: 1,
+    });
   });
 
-  it('makes the second plus of the sitting a dated watch instead', () => {
-    const step = stepUndatedWatches({ timesWatched: 2, undatedWatches: 1 }, 1, { ...film, undatedAddedThisOpen: 1 });
-    expect(step).toEqual({ timesWatched: 3, undatedWatches: 1, dated: true });
+  // The bug: Quick Add told the picker "1 dated if watched", so the second tap
+  // rebuilt the total as 1 + 2 and the add stamped a dated watch besides.
+  it('keeps two taps undated, whatever dated count the caller assumes', () => {
+    const first = stepUndatedWatches({ timesWatched: 0, undatedWatches: 0 }, 1, { datedPasses: 0, derived: false });
+    const second = stepUndatedWatches(first, 1, { datedPasses: 1, derived: false });
+    expect(second).toEqual({ timesWatched: 2, undatedWatches: 2 });
   });
 
-  it('keeps every plus after the second dated', () => {
-    const step = stepUndatedWatches({ timesWatched: 3, undatedWatches: 1 }, 1, { ...film, undatedAddedThisOpen: 1 });
-    expect(step).toEqual({ timesWatched: 4, undatedWatches: 1, dated: true });
+  it('leaves a dated watch alone when an undated one is added beside it', () => {
+    expect(stepUndatedWatches({ timesWatched: 1, undatedWatches: 0 }, 1, { datedPasses: 1, derived: false })).toEqual({
+      timesWatched: 2,
+      undatedWatches: 1,
+    });
   });
 
-  it('counts the first plus as undated even when the title already has undated watches', () => {
-    const step = stepUndatedWatches({ timesWatched: 3, undatedWatches: 2 }, 1, { ...film, undatedAddedThisOpen: 0 });
-    expect(step.undatedWatches).toBe(3);
-    expect(step.dated).toBe(false);
-  });
-
-  it('takes an undated watch off on minus and leaves a pending dated one alone', () => {
-    // dated 1 in the log, 1 undated, and one more dated typed this sitting: total 3.
-    const step = stepUndatedWatches({ timesWatched: 3, undatedWatches: 1 }, -1, { ...film, undatedAddedThisOpen: 1 });
-    expect(step).toEqual({ timesWatched: 2, undatedWatches: 0, dated: false });
+  it('takes an undated watch off on minus and keeps the dated ones', () => {
+    expect(stepUndatedWatches({ timesWatched: 3, undatedWatches: 1 }, -1, { datedPasses: 2, derived: false })).toEqual({
+      timesWatched: 2,
+      undatedWatches: 0,
+    });
   });
 
   it('does not move the total when there is no undated watch to remove', () => {
-    const step = stepUndatedWatches({ timesWatched: 2, undatedWatches: 0 }, -1, { ...film, undatedAddedThisOpen: 0 });
-    expect(step).toEqual({ timesWatched: 2, undatedWatches: 0, dated: false });
+    expect(stepUndatedWatches({ timesWatched: 2, undatedWatches: 0 }, -1, { datedPasses: 2, derived: false })).toEqual({
+      timesWatched: 2,
+      undatedWatches: 0,
+    });
   });
 
-  it('adds a first watch to an unwatched film as undated', () => {
-    const step = stepUndatedWatches({ timesWatched: 0, undatedWatches: 0 }, 1, {
-      datedPasses: 0,
-      derived: false,
-      undatedAddedThisOpen: 0,
+  it('rebuilds a series total from its tracked passes', () => {
+    expect(stepUndatedWatches({ timesWatched: 3, undatedWatches: 1 }, 1, { datedPasses: 2, derived: true })).toEqual({
+      timesWatched: 4,
+      undatedWatches: 2,
     });
-    expect(step).toEqual({ timesWatched: 1, undatedWatches: 1, dated: false });
+  });
+});
+
+describe('addedDatedWatches', () => {
+  it('is nothing while the title is not watched', () => {
+    expect(addedDatedWatches({ watched: false, timesWatched: 0, undatedWatches: 0 })).toBe(0);
   });
 
-  it('never dates a series watch, whatever the sitting has done', () => {
-    const step = stepUndatedWatches({ timesWatched: 3, undatedWatches: 1 }, 1, {
-      datedPasses: 2,
-      derived: true,
-      undatedAddedThisOpen: 4,
-    });
-    expect(step).toEqual({ timesWatched: 4, undatedWatches: 2, dated: false });
+  it('counts the one watch the Watched tick means', () => {
+    expect(addedDatedWatches({ watched: true, timesWatched: 0, undatedWatches: 0 })).toBe(1);
+    expect(addedDatedWatches({ watched: true, timesWatched: 1, undatedWatches: 0 })).toBe(1);
+  });
+
+  it('leaves the undated watches out', () => {
+    expect(addedDatedWatches({ watched: true, timesWatched: 3, undatedWatches: 1 })).toBe(2);
+    expect(addedDatedWatches({ watched: true, timesWatched: 2, undatedWatches: 2 })).toBe(0);
+  });
+
+  it('never goes negative', () => {
+    expect(addedDatedWatches({ watched: true, timesWatched: 1, undatedWatches: 3 })).toBe(0);
+  });
+
+  // The Quick Add path end to end: two undated taps on a fresh add write no dated watch.
+  it('adds no dated watch after two undated taps from nothing', () => {
+    let tally = { timesWatched: 0, undatedWatches: 0 };
+    let watched = false;
+    for (let tap = 0; tap < 2; tap++) {
+      tally = stepUndatedWatches(tally, 1, { datedPasses: addedDatedWatches({ ...tally, watched }), derived: false });
+      watched = true;
+    }
+    expect(tally).toEqual({ timesWatched: 2, undatedWatches: 2 });
+    expect(addedDatedWatches({ ...tally, watched })).toBe(0);
   });
 });
