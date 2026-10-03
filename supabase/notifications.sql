@@ -713,6 +713,14 @@ begin
 
   -- Expo tokens rotate; one untouched for half a year is a phone that is gone.
   delete from public.device_tokens where updated_at < now() - interval '180 days';
+
+  -- An account with no session left has no phone to buzz. "Sign out of every
+  -- Ping app" from a sibling ends all of them (signOut scope global) without
+  -- Radar ever running, and siblings may not write this table, so the rows it
+  -- leaves behind are swept here. pending_push_notifications stops delivery to
+  -- them at once; this is only the tidy-up. A sign-in upserts its token again.
+  delete from public.device_tokens d
+   where not exists (select 1 from auth.sessions a where a.user_id = d.user_id);
   return removed;
 end $$;
 
@@ -743,6 +751,12 @@ $$;
  * Rows held back by quiet hours simply are not returned; the next drain picks
  * them up. Anything older than a day is abandoned as a push (stamped by the
  * function's own sweep) — a banner for yesterday's nudge is worse than none.
+ *
+ * A device only counts while its account still has a session. Signing out of
+ * every Ping app from a sibling revokes them all without Radar running, so the
+ * token it registered is still here and still valid to Expo — the phone would
+ * keep buzzing for an account nobody is signed in to. auth.sessions is the one
+ * place that outcome is visible; the daily prune then removes the stale rows.
  */
 create or replace function public.pending_push_notifications(p_limit int default 200)
 returns table (
@@ -766,6 +780,7 @@ as $$
     join public.device_tokens d on d.user_id = n.user_id
    where n.pushed_at is null
      and n.created_at > now() - interval '24 hours'
+     and exists (select 1 from auth.sessions a where a.user_id = n.user_id)
      and not private.in_quiet_hours(s.notify_quiet_start, s.notify_quiet_end, s.timezone)
    order by n.created_at
    limit p_limit;

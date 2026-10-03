@@ -15,6 +15,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Fixed
 
 - Sign-in screen: continuing with an app that is already open now signs you in
+- Notifications stop on this phone once you sign out of every Ping app from another app
 
 ## 2.16.0 — 2026-10-01
 
