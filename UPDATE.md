@@ -4,6 +4,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.17.0 — Unreleased
 
+### Changed
+
+- Sign-in screen: Ping apps on this phone sit behind one Choose an app button
+
 ## 2.16.0 — 2026-10-01
 
 ### Added
