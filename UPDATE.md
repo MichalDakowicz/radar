@@ -4,6 +4,18 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.17.0 — Unreleased
 
+### Added
+
+- Sign-in screen: continue with Bazaar when it is installed on this phone
+
+### Changed
+
+- Sign-in screen: Ping apps on this phone sit behind one Choose an app button
+
+### Fixed
+
+- Sign-in screen: continuing with an app that is already open now signs you in
+
 ## 2.16.0 — 2026-10-01
 
 ### Added
