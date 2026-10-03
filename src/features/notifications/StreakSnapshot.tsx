@@ -32,6 +32,7 @@ export function StreakSnapshot() {
   const stats = useStats(movies, {
     streakThreshold: settings.streakThreshold,
     tvStreakThreshold: settings.tvStreakThreshold,
+    thresholdHistory: settings.streakThresholdHistory,
   });
   const streak = stats?.currentStreak ?? 0;
   const tvStreak = stats?.currentTVStreak ?? 0;

@@ -1,5 +1,6 @@
 import { allEpisodeStamps } from '@/lib/episodes';
 import { isWatched } from '@/lib/movieStatus';
+import { thresholdForWeek, type ThresholdHistory, type ThresholdKind } from '@/lib/streakThresholds';
 import { watchedMinutes } from '@/lib/watchCounts';
 import { normalizeWatchDates } from '@/lib/watchDates';
 import type { Movie } from '@/types/movie';
@@ -72,6 +73,24 @@ export function countInWeek(daily: Record<string, number>, start: Date): number 
 }
 
 /**
+ * A weekly threshold: one number for every week, or a function of the week's
+ * Monday when earlier weeks were measured against a different one
+ * (lib/streakThresholds).
+ */
+export type WeeklyThreshold = number | ((weekStartDate: Date) => number);
+
+function resolveThreshold(threshold: WeeklyThreshold, start: Date): number {
+  return typeof threshold === 'number' ? threshold : threshold(start);
+}
+
+/** The threshold for one kind of streak, honouring any history; a plain number when there is none. */
+function weeklyThreshold(current: number, history: ThresholdHistory | undefined, kind: ThresholdKind): WeeklyThreshold {
+  const steps = history?.[kind];
+  if (!steps || steps.length === 0) return current;
+  return (start) => thresholdForWeek(dateKey(start), current, steps);
+}
+
+/**
  * Consecutive-day streak walking back from `now`. A day contributes when it has
  * activity and its week meets `threshold`. Empty days are skipped only while
  * their week still qualifies.
@@ -85,7 +104,7 @@ export function countInWeek(daily: Record<string, number>, start: Date): number 
  * every week until the first film of it, which is both wrong and the one number
  * two other apps read off this account.
  */
-export function computeCurrentStreak(daily: Record<string, number>, threshold: number, now: Date): number {
+export function computeCurrentStreak(daily: Record<string, number>, threshold: WeeklyThreshold, now: Date): number {
   if (Object.keys(daily).length === 0) return 0;
 
   const thisWeekStart = weekStart(now).getTime();
@@ -96,7 +115,7 @@ export function computeCurrentStreak(daily: Record<string, number>, threshold: n
     const start = weekStart(cursor);
     const inWeek = countInWeek(daily, start);
     const isCurrentWeek = start.getTime() === thisWeekStart;
-    const weekQualifies = isCurrentWeek || inWeek >= threshold;
+    const weekQualifies = isCurrentWeek || inWeek >= resolveThreshold(threshold, start);
 
     if ((daily[dateKey(cursor)] || 0) > 0) {
       if (weekQualifies) streak++;
@@ -111,7 +130,7 @@ export function computeCurrentStreak(daily: Record<string, number>, threshold: n
 }
 
 /** Longest historical run under the same weekly-threshold rules. */
-export function computeLongestStreak(daily: Record<string, number>, threshold: number): number {
+export function computeLongestStreak(daily: Record<string, number>, threshold: WeeklyThreshold): number {
   const keys = Object.keys(daily).sort();
   if (keys.length === 0) return 0;
 
@@ -121,13 +140,15 @@ export function computeLongestStreak(daily: Record<string, number>, threshold: n
   let longest = 0;
 
   while (cursor <= end) {
-    const inWeek = countInWeek(daily, weekStart(cursor));
+    const start = weekStart(cursor);
+    const inWeek = countInWeek(daily, start);
+    const weekThreshold = resolveThreshold(threshold, start);
     if ((daily[dateKey(cursor)] || 0) > 0) {
-      if (inWeek >= threshold) {
+      if (inWeek >= weekThreshold) {
         temp++;
         longest = Math.max(longest, temp);
       }
-    } else if (inWeek < threshold) {
+    } else if (inWeek < weekThreshold) {
       temp = 0;
     }
     cursor.setDate(cursor.getDate() + 1);
@@ -138,6 +159,8 @@ export function computeLongestStreak(daily: Record<string, number>, threshold: n
 type ComputeOpts = {
   streakThreshold?: number;
   tvStreakThreshold?: number;
+  /** What earlier weeks were measured against, when a threshold was changed "from now on". */
+  thresholdHistory?: ThresholdHistory;
   now?: Date;
 };
 
@@ -147,6 +170,8 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
   const streakThreshold = opts.streakThreshold ?? DEFAULT_STREAK_THRESHOLD;
   const tvStreakThreshold = opts.tvStreakThreshold ?? DEFAULT_TV_STREAK_THRESHOLD;
   const now = opts.now ?? new Date();
+  const movieThreshold = weeklyThreshold(streakThreshold, opts.thresholdHistory, 'movie');
+  const tvThreshold = weeklyThreshold(tvStreakThreshold, opts.thresholdHistory, 'tv');
 
   const totalMovies = movies.length;
   const statusCounts: Record<string, number> = { Watchlist: 0, Watching: 0, Completed: 0 };
@@ -292,10 +317,10 @@ export function computeStats(movies: Movie[], opts: ComputeOpts = {}): Stats | n
     sortedDecades,
     completionRate,
     watchedCount,
-    currentStreak: computeCurrentStreak(dailyCompletions, streakThreshold, now),
-    longestStreak: computeLongestStreak(dailyCompletions, streakThreshold),
-    currentTVStreak: computeCurrentStreak(dailyEpisodes, tvStreakThreshold, now),
-    longestTVStreak: computeLongestStreak(dailyEpisodes, tvStreakThreshold),
+    currentStreak: computeCurrentStreak(dailyCompletions, movieThreshold, now),
+    longestStreak: computeLongestStreak(dailyCompletions, movieThreshold),
+    currentTVStreak: computeCurrentStreak(dailyEpisodes, tvThreshold, now),
+    longestTVStreak: computeLongestStreak(dailyEpisodes, tvThreshold),
     dailyCompletions,
     dailyEpisodes,
   };

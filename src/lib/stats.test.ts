@@ -121,6 +121,43 @@ describe('computeLongestStreak', () => {
   });
 });
 
+describe('streaks with a threshold history', () => {
+  // Week Mon 2026-09-07 .. Sun 2026-09-13: two films. Week Mon 2026-09-14: one more.
+  const daily = { '2026-09-10': 1, '2026-09-11': 1, '2026-09-15': 1 };
+  const now = new Date(2026, 8, 17); // Thu 2026-09-17, in the week of 2026-09-14
+
+  it('measures earlier weeks against the old number once the change is "from now on"', () => {
+    // Raised 2 -> 3 from the week of 2026-09-14: the earlier week still needed 2.
+    const perWeek = (start: Date) => (dateKey(start) < '2026-09-14' ? 2 : 3);
+    expect(computeCurrentStreak(daily, perWeek, now)).toBe(3);
+    // Whole history, the same change: that earlier week of two films no longer counts.
+    expect(computeCurrentStreak(daily, 3, now)).toBe(1);
+  });
+
+  it('applies the same rule to the longest streak', () => {
+    const perWeek = (start: Date) => (dateKey(start) < '2026-09-14' ? 2 : 3);
+    // The earlier week's two films still count against its own threshold of 2.
+    expect(computeLongestStreak(daily, perWeek)).toBe(2);
+    expect(computeLongestStreak(daily, 3)).toBe(0);
+  });
+
+  it('reads the history out of computeStats', () => {
+    const films = [
+      movie({ watched: true, completedAt: new Date(2026, 8, 10, 12).toISOString(), watchDates: [new Date(2026, 8, 10, 12).toISOString()] }),
+      movie({ watched: true, completedAt: new Date(2026, 8, 11, 12).toISOString(), watchDates: [new Date(2026, 8, 11, 12).toISOString()] }),
+      movie({ watched: true, completedAt: new Date(2026, 8, 15, 12).toISOString(), watchDates: [new Date(2026, 8, 15, 12).toISOString()] }),
+    ];
+    const withHistory = computeStats(films, {
+      streakThreshold: 3,
+      now,
+      thresholdHistory: { movie: [{ before: '2026-09-14', threshold: 2 }], tv: [] },
+    });
+    const without = computeStats(films, { streakThreshold: 3, now });
+    expect(withHistory?.currentStreak).toBe(3);
+    expect(without?.currentStreak).toBe(1);
+  });
+});
+
 describe('computeStats', () => {
   it('returns null for an empty library', () => {
     expect(computeStats([])).toBeNull();

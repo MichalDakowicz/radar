@@ -7,6 +7,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Added
 
 - Sign-in screen: continue with Bazaar when it is installed on this phone
+- Settings: changing a streak threshold asks whether it applies from now on or to your whole history
 
 ### Changed
 

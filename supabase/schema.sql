@@ -212,6 +212,13 @@ end $$;
 alter table public.user_settings
   add column if not exists owned_services text[] not null default '{}';
 
+-- user_settings.streak_threshold_history (a streak threshold changed "from now on"
+-- keeps the number earlier weeks were measured against). Shape, per kind:
+-- {"movie": [{"before": "2026-09-07", "threshold": 2}], "tv": []} - weeks that
+-- start before `before` used `threshold`. Empty means one number for every week.
+alter table public.user_settings
+  add column if not exists streak_threshold_history jsonb not null default '{}';
+
 -- movies.metadata_synced_at (background metadata refresh queue cursor).
 alter table public.movies
   add column if not exists metadata_synced_at timestamptz;

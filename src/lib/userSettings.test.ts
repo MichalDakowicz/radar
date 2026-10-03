@@ -8,6 +8,7 @@ const FULL: UserSettingsRow = {
   friends_visibility: 'public',
   streak_threshold: 3,
   tv_streak_threshold: 7,
+  streak_threshold_history: { movie: [{ before: '2026-09-07', threshold: 2 }], tv: [] },
   theme: 'light',
   owned_services: ['Netflix'],
   notify_enabled: true,
@@ -45,6 +46,7 @@ describe('normalizeSettings', () => {
       friendsVisibility: 'public',
       streakThreshold: 3,
       tvStreakThreshold: 7,
+      streakThresholdHistory: { movie: [{ before: '2026-09-07', threshold: 2 }], tv: [] },
       theme: 'light',
       ownedServices: ['Netflix'],
       notifyEnabled: true,
@@ -91,6 +93,17 @@ describe('normalizeSettings', () => {
     const settings = normalizeSettings({ ...FULL, streak_week_start: null, streak_week_needed: null });
     expect(settings.streakWeekStart).toBeNull();
     expect(settings.streakWeekNeeded).toBe(0);
+  });
+
+  // The history column arrives with a migration of its own; before it, every
+  // week is measured against the one number, exactly as it always was.
+  it('reads a row from before the threshold-history migration as no history', () => {
+    const { streak_threshold_history: _omitted, ...before } = FULL;
+    expect(normalizeSettings(before).streakThresholdHistory).toEqual({ movie: [], tv: [] });
+    expect(normalizeSettings({ ...FULL, streak_threshold_history: 'garbled' }).streakThresholdHistory).toEqual({
+      movie: [],
+      tv: [],
+    });
   });
 
   it('keeps a deliberate false rather than treating it as absent', () => {

@@ -3,6 +3,8 @@
 // row written before a column migration should read as — are testable without a
 // network or a React tree. The hook (hooks/useUserSettings) owns the I/O.
 
+import { EMPTY_THRESHOLD_HISTORY, normalizeThresholdHistory, type ThresholdHistory } from './streakThresholds';
+
 export type ThemePref = 'dark' | 'light' | 'system';
 export type FriendsVisibility = 'public' | 'friends' | 'noone';
 /** How much of a friend's watching earns a notification. */
@@ -15,6 +17,8 @@ export type UserSettings = {
   friendsVisibility: FriendsVisibility;
   streakThreshold: number;
   tvStreakThreshold: number;
+  /** What earlier weeks were measured against, when a threshold changed "from now on". */
+  streakThresholdHistory: ThresholdHistory;
   theme: ThemePref;
   ownedServices: string[];
   notifyEnabled: boolean;
@@ -57,6 +61,8 @@ export type UserSettingsRow = {
   friends_visibility: FriendsVisibility;
   streak_threshold: number;
   tv_streak_threshold: number;
+  /** Added by a column migration; absent on a database that has not run it. */
+  streak_threshold_history?: unknown;
   theme: string | null;
   owned_services: string[] | null;
   notify_enabled: boolean | null;
@@ -87,6 +93,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   friendsVisibility: 'friends',
   streakThreshold: 2,
   tvStreakThreshold: 5,
+  streakThresholdHistory: EMPTY_THRESHOLD_HISTORY,
   theme: 'dark',
   ownedServices: [],
   notifyEnabled: true,
@@ -130,6 +137,7 @@ export function normalizeSettings(row: UserSettingsRow): UserSettings {
     friendsVisibility: row.friends_visibility,
     streakThreshold: row.streak_threshold,
     tvStreakThreshold: row.tv_streak_threshold,
+    streakThresholdHistory: normalizeThresholdHistory(row.streak_threshold_history),
     theme: row.theme === 'light' || row.theme === 'system' ? row.theme : 'dark',
     ownedServices: Array.isArray(row.owned_services) ? row.owned_services : [],
     notifyEnabled: bool(row.notify_enabled, true),
@@ -161,6 +169,7 @@ const TO_COLUMN: Record<keyof UserSettings, keyof UserSettingsRow> = {
   friendsVisibility: 'friends_visibility',
   streakThreshold: 'streak_threshold',
   tvStreakThreshold: 'tv_streak_threshold',
+  streakThresholdHistory: 'streak_threshold_history',
   theme: 'theme',
   ownedServices: 'owned_services',
   notifyEnabled: 'notify_enabled',

@@ -54,6 +54,7 @@ function StatsScreen() {
           activities={activities}
           streakThreshold={settings.streakThreshold}
           tvStreakThreshold={settings.tvStreakThreshold}
+          thresholdHistory={settings.streakThresholdHistory}
           period={period}
           onOpenMovie={openMovie}
           onManageMovies={(date) => router.push({ pathname: '/manage-completions', params: { date } })}

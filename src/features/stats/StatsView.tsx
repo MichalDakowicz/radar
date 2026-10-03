@@ -17,6 +17,7 @@ import { useStats } from '@/features/stats/useStats';
 import { useNavBarSpace } from '@/hooks/useNavBarSpace';
 import type { LibraryFacet } from '@/lib/libraryFacetView';
 import { periodShortLabel, periodStart, scopeMoviesToPeriod, type StatsPeriodId } from '@/lib/statsPeriod';
+import type { ThresholdHistory } from '@/lib/streakThresholds';
 import type { ActivityEvent, Movie } from '@/types/movie';
 
 const MUTED = 'hsl(0 0% 63.9%)';
@@ -46,6 +47,7 @@ type StatsViewProps = {
   // the defaults.
   streakThreshold?: number;
   tvStreakThreshold?: number;
+  thresholdHistory?: ThresholdHistory;
   // Own screen only: which window the numbers cover. The picker itself lives in
   // the nav bar's left action, not on the page. The public shelf omits this and
   // always reads all-time.
@@ -64,6 +66,7 @@ export function StatsView({
   onOpenFacet,
   streakThreshold,
   tvStreakThreshold,
+  thresholdHistory,
   period = 'all',
 }: StatsViewProps) {
   const router = useRouter();
@@ -71,7 +74,7 @@ export function StatsView({
   // Everything below reads the scoped list, the Masterpieces rail included, so
   // no section can quietly stay all-time while the rest narrows.
   const scoped = useMemo(() => scopeMoviesToPeriod(movies, periodStart(period)), [movies, period]);
-  const stats = useStats(scoped, { streakThreshold, tvStreakThreshold });
+  const stats = useStats(scoped, { streakThreshold, tvStreakThreshold, thresholdHistory });
   const [calendarView, setCalendarView] = useState<'movies' | 'tv'>('movies');
 
   if (!stats) {
