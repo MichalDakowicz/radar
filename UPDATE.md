@@ -16,6 +16,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ### Fixed
 
+- Stats: the streak moves on at midnight instead of waiting for the next watch
 - Sign-in screen: continuing with an app that is already open now signs you in
 - Notifications stop on this phone once you sign out of every Ping app from another app
 
