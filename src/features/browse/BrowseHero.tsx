@@ -22,9 +22,15 @@ export function BrowseHero({ items, onPress, onAdd, onRemove, isAdded }: BrowseH
   const { height } = useWindowDimensions();
   const heroItems = items.slice(0, 6);
   const [index, setIndex] = useState(0);
+  const [slideCount, setSlideCount] = useState(heroItems.length);
 
   // Reset to the first slide whenever the underlying set changes (tab / reroll).
-  useEffect(() => setIndex(0), [heroItems.length]);
+  // Adjusted during render rather than in an effect, so the stale slide is never
+  // painted for a frame.
+  if (slideCount !== heroItems.length) {
+    setSlideCount(heroItems.length);
+    setIndex(0);
+  }
 
   useEffect(() => {
     if (heroItems.length <= 1) return;

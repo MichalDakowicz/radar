@@ -88,7 +88,7 @@ export default function ManageTVCompletions() {
   const { date } = useLocalSearchParams<{ date?: string }>();
   const { movies, updateMovie } = useMovies();
 
-  const selectedDate = date ? new Date(`${date}T12:00:00`) : new Date();
+  const selectedDate = useMemo(() => (date ? new Date(`${date}T12:00:00`) : new Date()), [date]);
   const dateStr = dateKey(selectedDate);
 
   const [selectedShow, setSelectedShow] = useState<Movie | null>(null);
