@@ -6,6 +6,7 @@ import {
   recalcSeasonsAverage,
   type EditForm,
 } from './editForm';
+import { stepUndatedWatches } from '@/lib/watchCounts';
 import type { Movie } from '@/types/movie';
 
 const ISO = '2026-08-01T20:00:00.000Z';
@@ -132,6 +133,27 @@ describe('fromMovie / buildMoviePayload round trip', () => {
     if (!result.remove) {
       expect(result.updates.timesWatched).toBe(2);
       expect(Date.parse(result.updates.completedAt!)).toBeGreaterThan(Date.parse('2019-05-05T00:00:00.000Z'));
+    }
+  });
+
+  // The two plus taps on "Watched before, no date" in one sitting, end to end: the
+  // first is a watch the user only remembers, the second a dated one for today.
+  it('saves a second undated plus as one undated and one dated watch', () => {
+    const movie: Movie = { ...BASE_MOVIE, watched: false, inWatchlist: true, timesWatched: 0, completedAt: null, watchDates: [] };
+    const form = fromMovie(movie);
+    const opts = { datedPasses: form.watchDates.length, derived: false };
+
+    const first = stepUndatedWatches(form.status, 1, { ...opts, undatedAddedThisOpen: 0 });
+    form.status = { ...form.status, watched: true, timesWatched: first.timesWatched, undatedWatches: first.undatedWatches };
+    const second = stepUndatedWatches(form.status, 1, { ...opts, undatedAddedThisOpen: 1 });
+    form.status = { ...form.status, watched: true, timesWatched: second.timesWatched, undatedWatches: second.undatedWatches };
+
+    const result = buildMoviePayload(form, movie);
+    expect(result.remove).toBe(false);
+    if (!result.remove) {
+      expect(result.updates.timesWatched).toBe(2);
+      expect(result.updates.watchDates).toHaveLength(1);
+      expect(Date.parse(result.updates.completedAt!)).toBeGreaterThan(Date.now() - 60_000);
     }
   });
 

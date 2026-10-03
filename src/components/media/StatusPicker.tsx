@@ -164,11 +164,11 @@ export function StatusPicker({ value, onChange, datedPasses = 0, derived = false
           </View>
           {value.watched && (
             <Text className="text-[11px] text-muted-foreground">
-              {datedPasses > 0
-                ? `${datedPasses} dated${derived ? ' from the episode tracker' : ''}`
+              {datedPasses + pendingDated > 0
+                ? `${datedPasses + pendingDated} dated${derived ? ' from the episode tracker' : ''}`
                 : 'none dated'}
+              {pendingDated > 0 ? ` (${pendingDated} today)` : ''}
               {undated > 0 ? ` · ${undated} undated` : ''}
-              {pendingDated > 0 ? ` · ${pendingDated} dated today` : ''}
               {derived ? ' · rewatch a season to add a dated one' : ''}
             </Text>
           )}
