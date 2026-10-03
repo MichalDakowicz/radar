@@ -21,6 +21,11 @@ async function fetchMovieRow(id: string): Promise<Movie | null> {
   return data ? normalizeMovie(data as MovieRow) : null;
 }
 
+/** Puts one title into the cached list, in place or where its added_at belongs. */
+export function patchMovie(queryClient: QueryClient, userId: string, movie: Movie) {
+  queryClient.setQueryData<Movie[]>(moviesQueryKey(userId), (list) => (list ? upsertMovie(list, movie) : list));
+}
+
 export function dropMovie(queryClient: QueryClient, userId: string, id: string) {
   queryClient.setQueryData<Movie[]>(moviesQueryKey(userId), (list) => (list ? removeMovieById(list, id) : list));
 }
@@ -47,7 +52,7 @@ export function refreshMovie(queryClient: QueryClient, userId: string, id: strin
   const task = fetchMovieRow(id)
     .then((movie) => {
       if (!movie) return dropMovie(queryClient, userId, id);
-      queryClient.setQueryData<Movie[]>(moviesQueryKey(userId), (list) => (list ? upsertMovie(list, movie) : list));
+      patchMovie(queryClient, userId, movie);
     })
     .catch(() => {
       queryClient.invalidateQueries({ queryKey: moviesQueryKey(userId) });

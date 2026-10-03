@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/AuthProvider';
-import { dropMovie, moviesQueryKey, refreshMovie } from '@/hooks/moviesCache';
+import { dropMovie, moviesQueryKey, patchMovie, refreshMovie } from '@/hooks/moviesCache';
+import { applyMovieUpdate } from '@/lib/movieUpdate';
 import { normalizeMovie, toMovieRow, type MovieRow } from '@/lib/normalizeMovie';
 import { stripUndefined } from '@/lib/stripUndefined';
 import { supabase } from '@/lib/supabase';
@@ -62,14 +63,16 @@ export function useMovies() {
       title: movieData.title,
       type: movieData.type,
     });
-    const { data, error } = await supabase.from('movies').insert(row).select('id').single();
+    const { data, error } = await supabase.from('movies').insert(row).select('*').single();
     if (error) throw error;
 
+    // The insert hands the whole row back, so the title is on screen before the
+    // activity write - and a second read of it - would have let it in.
+    patchMovie(queryClient, user.id, normalizeMovie(data as MovieRow));
     await logActivity(user.id, data.id, movieData.title, 'added', {
       mediaType: movieData.type,
       status: movieData.status ?? 'Watchlist',
     });
-    void refreshMovie(queryClient, user.id, data.id);
   };
 
   const updateMovie = async (movieId: string, updates: Partial<Movie>, options: { silent?: boolean } = {}) => {
@@ -78,8 +81,16 @@ export function useMovies() {
     const currentMovie = query.data?.find((m) => m.id === movieId);
     const row = stripUndefined(toMovieRow(updates));
 
+    // Show the change at once and let the write catch up: the list used to move
+    // only after the update, the activity insert and a re-read had each come back.
+    if (currentMovie) patchMovie(queryClient, user.id, applyMovieUpdate(currentMovie, updates));
+
     const { error } = await supabase.from('movies').update(row).eq('id', movieId);
-    if (error) throw error;
+    if (error) {
+      // The preview was wrong; the server's copy is the truth.
+      void refreshMovie(queryClient, user.id, movieId);
+      throw error;
+    }
 
     if (currentMovie && !options.silent) {
       const details = { mediaType: currentMovie.type };
@@ -140,11 +151,11 @@ export function useMovies() {
     const { error } = await supabase.from('movies').delete().eq('id', movieId);
     if (error) throw error;
 
+    dropMovie(queryClient, user.id, movieId);
     if (movie) {
       // movie row is gone, so movie_id must be null or the activity FK rejects the insert
       await logActivity(user.id, null, movie.title, 'removed', { mediaType: movie.type });
     }
-    dropMovie(queryClient, user.id, movieId);
   };
 
   return {

@@ -11,6 +11,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Changed
 
 - Sign-in screen: Ping apps on this phone sit behind one Choose an app button
+- Library: edits, adds and removals show up at once instead of after they finish saving
 
 ### Fixed
 
