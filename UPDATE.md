@@ -4,6 +4,12 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.18.0 — Unreleased
 
+### Fixed
+
+- Add: tapping Watched before, no date twice adds two undated watches, not a dated one too
+- Edit: every tap on Watched before, no date adds an undated watch, never a dated one
+- Edit: the watch summary no longer says none dated while a dated watch is waiting to save
+
 ## 2.17.0 — 2026-10-03
 
 ### Added

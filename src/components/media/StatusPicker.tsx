@@ -1,5 +1,4 @@
 import { Check, Library, Minus, Plus, PlayCircle } from 'lucide-react-native';
-import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { setToInProgress, setToWatched, setToWatchlist, type StatusFlags } from '@/lib/movieStatus';
@@ -28,9 +27,6 @@ const MUTED = 'hsl(0 0% 63.9%)';
 export function StatusPicker({ value, onChange, datedPasses = 0, derived = false }: StatusPickerProps) {
   const undated = value.undatedWatches ?? 0;
   const total = value.timesWatched || 0;
-  // Plus taps on the undated row that added an undated watch since this screen
-  // opened - the next one adds a dated watch instead (lib/watchCounts).
-  const [undatedAdded, setUndatedAdded] = useState(0);
 
   const toggleWatchlist = () => {
     if (value.inWatchlist) onChange({ ...value, inWatchlist: false });
@@ -52,12 +48,11 @@ export function StatusPicker({ value, onChange, datedPasses = 0, derived = false
    * invisible to every calendar and streak because there is no day to put it on.
    * This is how "I saw it years ago and never logged it" gets recorded.
    *
-   * Tapping plus a second time in one sitting adds a dated watch instead (see
-   * stepUndatedWatches), which the save stamps today.
+   * Every plus is another undated watch, however many times it is tapped
+   * (stepUndatedWatches).
    */
   const bumpUndated = (delta: 1 | -1) => {
-    const step = stepUndatedWatches(value, delta, { datedPasses, derived, undatedAddedThisOpen: undatedAdded });
-    if (!step.dated) setUndatedAdded((n) => Math.max(0, n + (step.undatedWatches - undated)));
+    const step = stepUndatedWatches(value, delta, { datedPasses, derived });
     onChange({
       ...value,
       watched: value.watched || step.undatedWatches > 0,
@@ -164,11 +159,11 @@ export function StatusPicker({ value, onChange, datedPasses = 0, derived = false
           </View>
           {value.watched && (
             <Text className="text-[11px] text-muted-foreground">
-              {datedPasses > 0
-                ? `${datedPasses} dated${derived ? ' from the episode tracker' : ''}`
+              {datedPasses + pendingDated > 0
+                ? `${datedPasses + pendingDated} dated${derived ? ' from the episode tracker' : ''}`
                 : 'none dated'}
+              {pendingDated > 0 ? ` (${pendingDated} today)` : ''}
               {undated > 0 ? ` · ${undated} undated` : ''}
-              {pendingDated > 0 ? ` · ${pendingDated} dated today` : ''}
               {derived ? ' · rewatch a season to add a dated one' : ''}
             </Text>
           )}
