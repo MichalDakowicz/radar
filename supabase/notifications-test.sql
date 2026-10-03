@@ -467,8 +467,8 @@ select n.actor_id, count(*) as rows_24h
 -- ============================================================================
 
 -- Exactly what the edge function would receive on its next call. Empty while
--- rows exist and are unpushed = quiet hours, no device token, or the row is
--- over 24h old.
+-- rows exist and are unpushed = quiet hours, no device token, no live session
+-- (signed out of every Ping app), or the row is over 24h old.
 select * from public.pending_push_notifications(50);
 
 -- Why a specific row is not in that list:
@@ -476,7 +476,8 @@ select n.id, n.kind, n.title,
        n.pushed_at is not null                     as already_pushed,
        n.created_at < now() - interval '24 hours'  as aged_out,
        private.in_quiet_hours(s.notify_quiet_start, s.notify_quiet_end, s.timezone) as quiet,
-       exists (select 1 from public.device_tokens d where d.user_id = n.user_id)    as has_device
+       exists (select 1 from public.device_tokens d where d.user_id = n.user_id)    as has_device,
+       exists (select 1 from auth.sessions a where a.user_id = n.user_id)           as has_session
   from public.notifications n
   join public.user_settings s on s.user_id = n.user_id
   join public.zz_test_user u on u.user_id = n.user_id
