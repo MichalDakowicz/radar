@@ -14,6 +14,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ### Fixed
 
+- Stats: the streak moves on at midnight instead of waiting for the next watch
 - Sign-in screen: continuing with an app that is already open now signs you in
 
 ## 2.16.0 — 2026-10-01
