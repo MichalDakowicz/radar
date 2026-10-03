@@ -88,6 +88,50 @@ export function retotalWatches(before: WatchCountSource, after: WatchCountSource
   return totalWatches(dated, absorbUndatedWatches(undatedWatches(before), datedPasses(before), dated));
 }
 
+export type WatchTally = { timesWatched: number; undatedWatches: number };
+
+export type UndatedStep = WatchTally & {
+  /** True when the tap added a watch that will be dated (stamped today on save). */
+  dated: boolean;
+};
+
+/**
+ * One tap on the plus or minus of the "watched before, no date" row.
+ *
+ * The first plus in a sitting is what the row is for: a watch the user only
+ * remembers. A second is a different intent - they are still adding watches, and
+ * a second one in the same breath is far more likely something just watched than
+ * another they have to recall - so it adds a *dated* watch instead: the total
+ * rises, the undated count holds, and the save stamps today for the difference
+ * (editForm.buildMoviePayload). `undatedAddedThisOpen` counts the plus taps that
+ * added an undated watch since the screen opened; a minus gives one back.
+ *
+ * A series cannot take a dated watch from here - its dated passes are the episode
+ * tracker's - so for one every plus stays undated.
+ *
+ * A film's total is moved by the same amount as the count, which keeps a dated
+ * watch already added this sitting (total above dated + undated) instead of
+ * resetting it to what the stored log holds.
+ */
+export function stepUndatedWatches(
+  tally: WatchTally,
+  delta: 1 | -1,
+  opts: { datedPasses: number; derived: boolean; undatedAddedThisOpen: number },
+): UndatedStep {
+  const total = Math.max(0, tally.timesWatched || 0);
+  const undated = Math.max(0, tally.undatedWatches || 0);
+
+  if (delta > 0 && !opts.derived && opts.undatedAddedThisOpen >= 1) {
+    return { timesWatched: total + 1, undatedWatches: undated, dated: true };
+  }
+
+  const nextUndated = Math.max(0, undated + delta);
+  const timesWatched = opts.derived
+    ? totalWatches(opts.datedPasses, nextUndated)
+    : Math.max(0, total + (nextUndated - undated));
+  return { timesWatched, undatedWatches: nextUndated, dated: false };
+}
+
 /**
  * Minutes a title has taken, dated and undated alike.
  *
