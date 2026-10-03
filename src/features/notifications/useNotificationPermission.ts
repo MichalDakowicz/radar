@@ -18,12 +18,21 @@ export function useNotificationPermission(userId?: string) {
   }, []);
 
   useEffect(() => {
-    void check();
+    let live = true;
+    const sync = () => {
+      void hasNotificationPermission().then((allowed) => {
+        if (live) setGranted(allowed);
+      });
+    };
+    sync();
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void check();
+      if (state === 'active') sync();
     });
-    return () => subscription.remove();
-  }, [check]);
+    return () => {
+      live = false;
+      subscription.remove();
+    };
+  }, []);
 
   /**
    * Ask, or send the user to system settings when Android has stopped honouring
