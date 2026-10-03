@@ -10,6 +10,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ### Changed
 
+- Edit: a second tap on Watched before, no date adds a dated watch for today
 - Sign-in screen: Ping apps on this phone sit behind one Choose an app button
 
 ### Fixed

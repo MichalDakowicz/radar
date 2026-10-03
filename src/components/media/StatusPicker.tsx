@@ -1,8 +1,9 @@
 import { Check, Library, Minus, Plus, PlayCircle } from 'lucide-react-native';
+import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { setToInProgress, setToWatched, setToWatchlist, type StatusFlags } from '@/lib/movieStatus';
-import { totalWatches } from '@/lib/watchCounts';
+import { stepUndatedWatches } from '@/lib/watchCounts';
 
 export type StatusPickerValue = StatusFlags & { timesWatched: number; undatedWatches: number };
 
@@ -27,6 +28,9 @@ const MUTED = 'hsl(0 0% 63.9%)';
 export function StatusPicker({ value, onChange, datedPasses = 0, derived = false }: StatusPickerProps) {
   const undated = value.undatedWatches ?? 0;
   const total = value.timesWatched || 0;
+  // Plus taps on the undated row that added an undated watch since this screen
+  // opened - the next one adds a dated watch instead (lib/watchCounts).
+  const [undatedAdded, setUndatedAdded] = useState(0);
 
   const toggleWatchlist = () => {
     if (value.inWatchlist) onChange({ ...value, inWatchlist: false });
@@ -47,14 +51,18 @@ export function StatusPicker({ value, onChange, datedPasses = 0, derived = false
    * A watch with no date on it: counts towards hours and the number on the card,
    * invisible to every calendar and streak because there is no day to put it on.
    * This is how "I saw it years ago and never logged it" gets recorded.
+   *
+   * Tapping plus a second time in one sitting adds a dated watch instead (see
+   * stepUndatedWatches), which the save stamps today.
    */
-  const bumpUndated = (delta: number) => {
-    const next = Math.max(0, undated + delta);
+  const bumpUndated = (delta: 1 | -1) => {
+    const step = stepUndatedWatches(value, delta, { datedPasses, derived, undatedAddedThisOpen: undatedAdded });
+    if (!step.dated) setUndatedAdded((n) => Math.max(0, n + (step.undatedWatches - undated)));
     onChange({
       ...value,
-      watched: value.watched || next > 0,
-      undatedWatches: next,
-      timesWatched: totalWatches(datedPasses, next),
+      watched: value.watched || step.undatedWatches > 0,
+      undatedWatches: step.undatedWatches,
+      timesWatched: step.timesWatched,
     });
   };
 
@@ -70,6 +78,9 @@ export function StatusPicker({ value, onChange, datedPasses = 0, derived = false
     const nextUndated = delta < 0 ? undated + delta : undated;
     onChange({ ...value, timesWatched: next, undatedWatches: Math.max(0, Math.min(nextUndated, next)) });
   };
+
+  // Films: watches added this sitting that the save will stamp with today.
+  const pendingDated = derived ? 0 : Math.max(0, total - datedPasses - undated);
 
   return (
     <View className="gap-3">
@@ -157,6 +168,7 @@ export function StatusPicker({ value, onChange, datedPasses = 0, derived = false
                 ? `${datedPasses} dated${derived ? ' from the episode tracker' : ''}`
                 : 'none dated'}
               {undated > 0 ? ` · ${undated} undated` : ''}
+              {pendingDated > 0 ? ` · ${pendingDated} dated today` : ''}
               {derived ? ' · rewatch a season to add a dated one' : ''}
             </Text>
           )}
