@@ -1,5 +1,27 @@
 {
   "permissions": {
-    "allow": ["Bash(gh pr merge:*)", "Bash(gh pr merge *)"]
+    "allow": [
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr merge *)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npm test)",
+      "Bash(npm run lint)",
+      "Bash(adb devices)",
+      "Bash(adb devices *)",
+      "Bash(adb logcat -d)",
+      "Bash(adb logcat -d *)",
+      "Bash(adb shell pidof *)",
+      "Bash(adb shell dumpsys *)",
+      "mcp__cellar__cellar_get_entry",
+      "mcp__cellar__cellar_orient",
+      "mcp__cellar__cellar_check_answers",
+      "mcp__cellar__cellar_list_entries",
+      "mcp__cellar__cellar_list_projects",
+      "mcp__ccd_pr__get_status",
+      "mcp__t3-code__list_thread_pull_requests",
+      "mcp__claude-in-chrome__tabs_context_mcp",
+      "mcp__Claude_Browser__find",
+      "mcp__Claude_Browser__get_page_text"
+    ]
   }
 }
