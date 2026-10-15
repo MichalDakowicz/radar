@@ -7,6 +7,7 @@ Written per `UPDATE-schema.md`. Newest version first.
 ### Fixed
 
 - Section headers follow the current theme accent
+- Bottom sheets keep fields and buttons above the Android keyboard
 
 ## 2.17.1 — 2026-10-03
 
