@@ -4,6 +4,10 @@ Written per `UPDATE-schema.md`. Newest version first.
 
 ## 2.18.0 — Unreleased
 
+### Fixed
+
+- Section headers follow the current theme accent
+
 ## 2.17.1 — 2026-10-03
 
 ### Fixed
