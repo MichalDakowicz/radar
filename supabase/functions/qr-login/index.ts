@@ -29,6 +29,8 @@
 // the app's tsconfig, so this specifier is never resolved by `tsc`.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 
+import { readSignInCode, signInCodeFrom } from './signInCode.ts';
+
 import {
   approvedPatch,
   cleanCountry,
@@ -129,6 +131,15 @@ async function rest(url: string, init: RequestInit): Promise<Response> {
 
 async function getRow(id: string): Promise<QrRow | null> {
   const response = await rest(`${REST}?id=eq.${id}&select=*`, { headers: REST_HEADERS });
+  const rows = (await response.json()) as QrRow[];
+  return rows[0] ?? null;
+}
+
+async function rowForCode(body: Body): Promise<QrRow | null> {
+  const code = readSignInCode(body.code);
+  if (!code) return null;
+  const hash = await sha256Hex(code);
+  const response = await rest(`${REST}?code_hash=eq.${hash}&select=*&limit=1`, { headers: REST_HEADERS });
   const rows = (await response.json()) as QrRow[];
   return rows[0] ?? null;
 }
@@ -235,7 +246,9 @@ async function start(request: Request, body: Body): Promise<Response> {
   if (await startedTooMany(ipHash)) return json(429, { error: 'Too many codes — wait a minute' });
   sweep();
 
+  const signInCode = signInCodeFrom(crypto.getRandomValues(new Uint8Array(16)));
   const row = await insertRow({
+    code_hash: await sha256Hex(signInCode),
     mode: 'web',
     state: 'pending',
     match_code: newMatchCode(),
@@ -245,7 +258,7 @@ async function start(request: Request, body: Body): Promise<Response> {
     requester_ip_hash: ipHash,
     expires_at: new Date(Date.now() + TTL_MS.shown).toISOString(),
   });
-  return json(200, { id: row.id, match_code: row.match_code, expires_at: row.expires_at });
+  return json(200, { id: row.id, sign_in_code: signInCode, match_code: row.match_code, expires_at: row.expires_at });
 }
 
 async function offer(request: Request, user: GoTrueUser): Promise<Response> {
@@ -254,7 +267,9 @@ async function offer(request: Request, user: GoTrueUser): Promise<Response> {
   sweep();
 
   const nonce = randomBase64Url(16);
+  const signInCode = signInCodeFrom(crypto.getRandomValues(new Uint8Array(16)));
   const row = await insertRow({
+    code_hash: await sha256Hex(signInCode),
     mode: 'phone',
     state: 'pending',
     match_code: newMatchCode(),
@@ -263,24 +278,26 @@ async function offer(request: Request, user: GoTrueUser): Promise<Response> {
     requester_ip_hash: ipHash,
     expires_at: new Date(Date.now() + TTL_MS.shown).toISOString(),
   });
-  return json(200, { id: row.id, nonce, match_code: row.match_code, expires_at: row.expires_at });
+  return json(200, { id: row.id, nonce, sign_in_code: signInCode, match_code: row.match_code, expires_at: row.expires_at });
 }
 
-async function claim(body: Body, user: GoTrueUser): Promise<Response> {
-  const row = await rowFor(body);
+async function claim(body: Body, user: GoTrueUser, byCode = false): Promise<Response> {
+  const row = await (byCode ? rowForCode(body) : rowFor(body));
   if (!row) return unknownCode();
   const decision = decideClaim(row, user.id, Date.now());
   if (!decision.ok) return refuse(decision);
   if (!(await updateIf(row.id, 'pending', decision.patch!))) return json(409, { error: 'This code has already been used' });
-  return json(200, decision.value);
+  return json(200, { ...decision.value, id: row.id });
 }
 
-async function join(request: Request, body: Body): Promise<Response> {
-  const row = await rowFor(body);
+async function join(request: Request, body: Body, byCode = false): Promise<Response> {
+  const row = await (byCode ? rowForCode(body) : rowFor(body));
   const nonce = text(body, 'nonce');
-  if (!row || !nonce || !NONCE.test(nonce)) return unknownCode();
+  if (!row || (!byCode && (!nonce || !NONCE.test(nonce)))) return unknownCode();
 
-  const nonceMatches = row.nonce_hash ? sameHex(await sha256Hex(nonce), row.nonce_hash) : false;
+  // Manual lookup proves possession of the independent 80-bit code. Both paths
+  // still pass through the same expiry, mode, approval and atomic claim rules.
+  const nonceMatches = byCode ? true : Boolean(row.nonce_hash && sameHex(await sha256Hex(nonce!), row.nonce_hash));
   const decision = decideJoin(
     row,
     { nonceMatches, challenge: body.challenge, label: body.label, country: request.headers.get('cf-ipcountry') },
@@ -288,7 +305,7 @@ async function join(request: Request, body: Body): Promise<Response> {
   );
   if (!decision.ok) return refuse(decision);
   if (!(await updateIf(row.id, 'pending', decision.patch!))) return json(409, { error: 'This code has already been used' });
-  return json(200, decision.value);
+  return json(200, { ...decision.value, id: row.id });
 }
 
 async function status(body: Body, user: GoTrueUser): Promise<Response> {
@@ -356,15 +373,17 @@ Deno.serve(async (request: Request) => {
     // right party holds: the challenge they hash, the secret in the code, the verifier.
     if (action === 'start') return await start(request, body);
     if (action === 'join') return await join(request, body);
+    if (action === 'join-code') return await join(request, body, true);
     if (action === 'redeem') return await redeem(body);
 
     // Called by the signed-in side.
-    if (action === 'offer' || action === 'claim' || action === 'status' || action === 'approve' || action === 'deny') {
+    if (action === 'offer' || action === 'claim' || action === 'claim-code' || action === 'status' || action === 'approve' || action === 'deny') {
       const user = await callerOf(request.headers.get('Authorization'));
       if (!user) return json(401, { error: 'Sign in first' });
       try {
         if (action === 'offer') return await offer(request, user);
         if (action === 'claim') return await claim(body, user);
+        if (action === 'claim-code') return await claim(body, user, true);
         if (action === 'status') return await status(body, user);
         if (action === 'approve') return await approve(body, user);
         return await deny(body, user);

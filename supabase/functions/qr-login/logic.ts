@@ -10,6 +10,8 @@ export type QrState = 'pending' | 'claimed' | 'approved' | 'denied' | 'consumed'
 
 export type QrRow = {
   id: string;
+  /** Hash of the independent human-entered sign-in code. Never the code itself. */
+  code_hash?: string | null;
   /** `web`: the signed-out side shows the code. `phone`: the signed-in side does. */
   mode: QrMode;
   state: QrState;
