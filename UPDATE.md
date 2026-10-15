@@ -2,7 +2,11 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.18.0 — Unreleased
+## 2.19.0 — Unreleased
+
+### Added
+
+- Sign-in: enter a code from another Ping app without using the camera
 
 ## 2.17.1 — 2026-10-03
 
