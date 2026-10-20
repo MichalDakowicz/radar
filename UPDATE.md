@@ -2,7 +2,14 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.18.0 — Unreleased
+## 2.18.1 — Unreleased
+
+## 2.18.0 — 2026-10-15
+
+### Fixed
+
+- Section headers follow the current theme accent
+- Bottom sheets keep fields and buttons above the Android keyboard
 
 ## 2.17.1 — 2026-10-03
 
