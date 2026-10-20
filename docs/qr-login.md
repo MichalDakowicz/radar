@@ -4,6 +4,29 @@ Sign a signed-out device in from a signed-in one by scanning a code. Radar owns 
 server half because the account is shared; every Ping app speaks to it the same way
 (`PING.md` §9.14).
 
+## Manual sign-in codes
+
+`start` and `offer` also return `sign_in_code`: sixteen unambiguous letters/digits,
+displayed in four groups. Settings and the sign-in screen offer **Enter or scan a code**;
+the camera opens only after **Scan a QR code** is pressed. Manual input works on web too.
+The two-digit match code appears during approval and is never accepted as a sign-in code.
+
+The edge function stores only SHA-256 of an independent, uniformly random 80-bit code in
+`qr_logins.code_hash`, with a unique partial index. Case, spaces and hyphens are normalized
+before lookup. A code expires after sixty seconds and cannot start another pairing after
+the first atomic claim. Existing QR payloads and actions stay compatible.
+
+- `join-code` (signed out): `{code, challenge, label}` returns `{id, match_code, expires_at}`
+- `claim-code` (signed in): `{code}` returns `{id, match_code, requester, expires_at}`
+
+Both use the original mode checks, expiry, explicit approval, verifier-bound collection,
+and single-use token rules. They never return a token during lookup or approval.
+
+Deployment order: run the updated `supabase/qr-login.sql` in the Dashboard SQL Editor,
+then deploy `qr-login`, then ship clients. Old clients continue to work. New clients can
+still scan when connected to an old server, but manual input needs the updated function.
+The SQL remains idempotent and keeps client roles unable to access the pairing table.
+
 **What exists:** the pairing table (`supabase/qr-login.sql`), the `qr-login` edge
 function (`supabase/functions/qr-login/`), the pure client protocol in every app
 (`src/lib/qrLogin.ts`), and the screens that use it (see *The screens*). Nothing here is

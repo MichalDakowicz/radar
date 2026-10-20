@@ -64,6 +64,12 @@ create table if not exists public.qr_logins (
   expires_at        timestamptz not null
 );
 
+-- COLUMN MIGRATIONS: safe on existing pairing tables and old clients.
+alter table public.qr_logins add column if not exists code_hash text
+  check (code_hash ~ '^[0-9a-f]{64}$');
+create unique index if not exists qr_logins_code_hash_idx
+  on public.qr_logins (code_hash) where code_hash is not null;
+
 -- Counting what one connection started in the last minute.
 create index if not exists qr_logins_ip_created_idx
   on public.qr_logins (requester_ip_hash, created_at);
