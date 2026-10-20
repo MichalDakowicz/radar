@@ -2,7 +2,15 @@
 
 Written per `UPDATE-schema.md`. Newest version first.
 
-## 2.18.1 — Unreleased
+## 2.19.0 — 2026-10-20
+
+### Added
+
+- Sign-in: enter a code from another Ping app without using the camera
+
+### Fixed
+
+- Inputs stay above the Android keyboard on full-screen forms
 
 ## 2.18.0 — 2026-10-15
 
